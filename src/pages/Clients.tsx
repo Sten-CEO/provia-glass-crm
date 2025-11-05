@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,50 +9,164 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Client {
   id: string;
   nom: string;
   email: string;
-  telephone: string;
-  ville: string;
+  telephone: string | null;
+  ville: string | null;
+  adresse: string | null;
+  tva: string | null;
+  notes: string | null;
 }
 
-const initialClients: Client[] = [
-  { id: "1", nom: "Entreprise ABC", email: "contact@abc.com", telephone: "01 23 45 67 89", ville: "Paris" },
-  { id: "2", nom: "Société XYZ", email: "info@xyz.com", telephone: "01 98 76 54 32", ville: "Lyon" },
-  { id: "3", nom: "Client Premium", email: "hello@premium.com", telephone: "01 11 22 33 44", ville: "Marseille" },
-];
-
 const Clients = () => {
-  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [newClient, setNewClient] = useState({ nom: "", email: "", telephone: "", ville: "" });
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [newClient, setNewClient] = useState({ nom: "", email: "", telephone: "", ville: "", adresse: "", tva: "", notes: "" });
   const navigate = useNavigate();
 
-  const handleAddClient = () => {
-    const client: Client = {
-      id: Date.now().toString(),
-      ...newClient,
+  // Load clients
+  const loadClients = async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Erreur de chargement");
+      return;
+    }
+
+    setClients(data || []);
+  };
+
+  useEffect(() => {
+    loadClients();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("clients-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "clients",
+        },
+        () => {
+          loadClients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-    setClients([...clients, client]);
-    setNewClient({ nom: "", email: "", telephone: "", ville: "" });
+  }, []);
+
+  const handleAddClient = async () => {
+    if (!newClient.nom || !newClient.email) {
+      toast.error("Nom et email requis");
+      return;
+    }
+
+    const { error } = await supabase.from("clients").insert([
+      {
+        nom: newClient.nom,
+        email: newClient.email,
+        telephone: newClient.telephone || null,
+        ville: newClient.ville || null,
+        adresse: newClient.adresse || null,
+        tva: newClient.tva || null,
+        notes: newClient.notes || null,
+      },
+    ]);
+
+    if (error) {
+      toast.error("Échec de création");
+      return;
+    }
+
+    toast.success("Client créé avec succès");
+    setNewClient({ nom: "", email: "", telephone: "", ville: "", adresse: "", tva: "", notes: "" });
     setOpen(false);
   };
 
-  const filteredClients = clients.filter((client) =>
-    client.nom.toLowerCase().includes(search.toLowerCase()) ||
-    client.email.toLowerCase().includes(search.toLowerCase())
+  const handleEditClient = async () => {
+    if (!selectedClient) return;
+
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        nom: selectedClient.nom,
+        email: selectedClient.email,
+        telephone: selectedClient.telephone,
+        ville: selectedClient.ville,
+        adresse: selectedClient.adresse,
+        tva: selectedClient.tva,
+        notes: selectedClient.notes,
+      })
+      .eq("id", selectedClient.id);
+
+    if (error) {
+      toast.error("Échec de modification");
+      return;
+    }
+
+    toast.success("Client modifié avec succès");
+    setEditOpen(false);
+    setSelectedClient(null);
+  };
+
+  const handleDeleteClient = async () => {
+    if (!selectedClient) return;
+
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", selectedClient.id);
+
+    if (error) {
+      toast.error("Échec de suppression");
+      return;
+    }
+
+    toast.success("Client supprimé avec succès");
+    setDeleteOpen(false);
+    setSelectedClient(null);
+  };
+
+  const filteredClients = clients.filter(
+    (client) =>
+      client.nom.toLowerCase().includes(search.toLowerCase()) ||
+      client.email.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold uppercase tracking-wide">Clients</h1>
-        
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
@@ -60,13 +174,13 @@ const Clients = () => {
               Nouveau Client
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass-modal">
+          <DialogContent className="glass-modal max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="uppercase tracking-wide">Nouveau Client</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="nom">Nom</Label>
+                <Label htmlFor="nom">Nom *</Label>
                 <Input
                   id="nom"
                   value={newClient.nom}
@@ -75,7 +189,7 @@ const Clients = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -102,8 +216,29 @@ const Clients = () => {
                   className="glass-card"
                 />
               </div>
-              <Button onClick={handleAddClient} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
-                Ajouter
+              <div>
+                <Label htmlFor="adresse">Adresse</Label>
+                <Input
+                  id="adresse"
+                  value={newClient.adresse}
+                  onChange={(e) => setNewClient({ ...newClient, adresse: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tva">Numéro TVA</Label>
+                <Input
+                  id="tva"
+                  value={newClient.tva}
+                  onChange={(e) => setNewClient({ ...newClient, tva: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <Button
+                onClick={handleAddClient}
+                className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
+              >
+                Créer
               </Button>
             </div>
           </DialogContent>
@@ -138,15 +273,40 @@ const Clients = () => {
               {filteredClients.map((client) => (
                 <tr
                   key={client.id}
-                  className="border-b border-white/5 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/clients/${client.id}`)}
+                  className="border-b border-white/5 hover:bg-muted/30 transition-colors"
                 >
-                  <td className="p-4 font-medium">{client.nom}</td>
+                  <td
+                    className="p-4 font-medium cursor-pointer"
+                    onClick={() => navigate(`/clients/${client.id}`)}
+                  >
+                    {client.nom}
+                  </td>
                   <td className="p-4 text-muted-foreground">{client.email}</td>
-                  <td className="p-4 text-muted-foreground">{client.telephone}</td>
-                  <td className="p-4 text-muted-foreground">{client.ville}</td>
+                  <td className="p-4 text-muted-foreground">{client.telephone || "-"}</td>
+                  <td className="p-4 text-muted-foreground">{client.ville || "-"}</td>
                   <td className="p-4">
-                    <Button variant="ghost" size="sm">Voir</Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedClient(client);
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedClient(client);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -154,6 +314,86 @@ const Clients = () => {
           </table>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="glass-modal max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-wide">Modifier Client</DialogTitle>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nom *</Label>
+                <Input
+                  value={selectedClient.nom}
+                  onChange={(e) =>
+                    setSelectedClient({ ...selectedClient, nom: e.target.value })
+                  }
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Email *</Label>
+                <Input
+                  value={selectedClient.email}
+                  onChange={(e) =>
+                    setSelectedClient({ ...selectedClient, email: e.target.value })
+                  }
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Téléphone</Label>
+                <Input
+                  value={selectedClient.telephone || ""}
+                  onChange={(e) =>
+                    setSelectedClient({ ...selectedClient, telephone: e.target.value })
+                  }
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Ville</Label>
+                <Input
+                  value={selectedClient.ville || ""}
+                  onChange={(e) =>
+                    setSelectedClient({ ...selectedClient, ville: e.target.value })
+                  }
+                  className="glass-card"
+                />
+              </div>
+              <Button
+                onClick={handleEditClient}
+                className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
+              >
+                Enregistrer
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="glass-modal">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

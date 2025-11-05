@@ -1,42 +1,262 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Invoice {
   id: string;
   numero: string;
-  client: string;
+  client_id: string | null;
+  client_nom: string;
   montant: string;
   statut: "Payée" | "En attente" | "En retard";
   echeance: string;
 }
 
-const initialInvoices: Invoice[] = [
-  { id: "1", numero: "FAC-2024-001", client: "Entreprise ABC", montant: "€2,500", statut: "Payée", echeance: "15/12/2024" },
-  { id: "2", numero: "FAC-2024-002", client: "Société XYZ", montant: "€4,200", statut: "En attente", echeance: "20/12/2024" },
-  { id: "3", numero: "FAC-2024-003", client: "Client Premium", montant: "€1,800", statut: "En retard", echeance: "10/11/2024" },
-];
+interface Client {
+  id: string;
+  nom: string;
+}
 
 const Factures = () => {
-  const [invoices] = useState<Invoice[]>(initialInvoices);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [newInvoice, setNewInvoice] = useState({
+    numero: `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
+    client_id: "",
+    montant: "",
+    statut: "En attente" as const,
+    echeance: new Date().toISOString().split("T")[0],
+  });
+
+  const loadInvoices = async () => {
+    const { data, error } = await supabase
+      .from("factures")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Erreur de chargement");
+      return;
+    }
+
+    setInvoices((data || []) as Invoice[]);
+  };
+
+  const loadClients = async () => {
+    const { data } = await supabase.from("clients").select("id, nom");
+    setClients(data || []);
+  };
+
+  useEffect(() => {
+    loadInvoices();
+    loadClients();
+
+    const channel = supabase
+      .channel("factures-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
+        loadInvoices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleAddInvoice = async () => {
+    if (!newInvoice.client_id || !newInvoice.montant) {
+      toast.error("Client et montant requis");
+      return;
+    }
+
+    const client = clients.find((c) => c.id === newInvoice.client_id);
+
+    const { error } = await supabase.from("factures").insert([
+      {
+        numero: newInvoice.numero,
+        client_id: newInvoice.client_id,
+        client_nom: client?.nom || "",
+        montant: newInvoice.montant,
+        statut: newInvoice.statut,
+        echeance: newInvoice.echeance,
+      },
+    ]);
+
+    if (error) {
+      toast.error("Échec de création");
+      return;
+    }
+
+    toast.success("Facture créée avec succès");
+    setNewInvoice({
+      numero: `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
+      client_id: "",
+      montant: "",
+      statut: "En attente",
+      echeance: new Date().toISOString().split("T")[0],
+    });
+    setOpen(false);
+  };
+
+  const handleEditInvoice = async () => {
+    if (!selectedInvoice) return;
+
+    const { error } = await supabase
+      .from("factures")
+      .update({
+        montant: selectedInvoice.montant,
+        statut: selectedInvoice.statut,
+        echeance: selectedInvoice.echeance,
+      })
+      .eq("id", selectedInvoice.id);
+
+    if (error) {
+      toast.error("Échec de modification");
+      return;
+    }
+
+    toast.success("Facture modifiée avec succès");
+    setEditOpen(false);
+    setSelectedInvoice(null);
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!selectedInvoice) return;
+
+    const { error } = await supabase.from("factures").delete().eq("id", selectedInvoice.id);
+
+    if (error) {
+      toast.error("Échec de suppression");
+      return;
+    }
+
+    toast.success("Facture supprimée avec succès");
+    setDeleteOpen(false);
+    setSelectedInvoice(null);
+  };
 
   const getStatusColor = (statut: Invoice["statut"]) => {
     switch (statut) {
-      case "Payée": return "bg-green-500/20 text-green-700";
-      case "En attente": return "bg-blue-500/20 text-blue-700";
-      case "En retard": return "bg-red-500/20 text-red-700";
+      case "Payée":
+        return "bg-green-500/20 text-green-700";
+      case "En attente":
+        return "bg-blue-500/20 text-blue-700";
+      case "En retard":
+        return "bg-red-500/20 text-red-700";
     }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("fr-FR");
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold uppercase tracking-wide">Factures</h1>
-        <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvelle Facture
-        </Button>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
+              <Plus className="mr-2 h-4 w-4" />
+              Nouvelle Facture
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="glass-modal">
+            <DialogHeader>
+              <DialogTitle className="uppercase tracking-wide">Nouvelle Facture</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Numéro</Label>
+                <Input value={newInvoice.numero} disabled className="glass-card" />
+              </div>
+              <div>
+                <Label>Client *</Label>
+                <Select value={newInvoice.client_id} onValueChange={(v) => setNewInvoice({ ...newInvoice, client_id: v })}>
+                  <SelectTrigger className="glass-card">
+                    <SelectValue placeholder="Sélectionner un client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Montant *</Label>
+                <Input
+                  placeholder="€2,500"
+                  value={newInvoice.montant}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, montant: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Échéance *</Label>
+                <Input
+                  type="date"
+                  value={newInvoice.echeance}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, echeance: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Statut</Label>
+                <Select value={newInvoice.statut} onValueChange={(v: any) => setNewInvoice({ ...newInvoice, statut: v })}>
+                  <SelectTrigger className="glass-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="En attente">En attente</SelectItem>
+                    <SelectItem value="Payée">Payée</SelectItem>
+                    <SelectItem value="En retard">En retard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAddInvoice} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
+                Créer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="glass-card overflow-hidden">
@@ -54,21 +274,37 @@ const Factures = () => {
             </thead>
             <tbody>
               {invoices.map((invoice) => (
-                <tr
-                  key={invoice.id}
-                  className="border-b border-white/5 hover:bg-muted/30 transition-colors"
-                >
+                <tr key={invoice.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
                   <td className="p-4 font-medium">{invoice.numero}</td>
-                  <td className="p-4 text-muted-foreground">{invoice.client}</td>
+                  <td className="p-4 text-muted-foreground">{invoice.client_nom}</td>
                   <td className="p-4 font-semibold">{invoice.montant}</td>
-                  <td className="p-4 text-muted-foreground">{invoice.echeance}</td>
+                  <td className="p-4 text-muted-foreground">{formatDate(invoice.echeance)}</td>
                   <td className="p-4">
-                    <Badge className={getStatusColor(invoice.statut)}>
-                      {invoice.statut}
-                    </Badge>
+                    <Badge className={getStatusColor(invoice.statut)}>{invoice.statut}</Badge>
                   </td>
                   <td className="p-4">
-                    <Button variant="ghost" size="sm">Voir</Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedInvoice(invoice);
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedInvoice(invoice);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -76,6 +312,73 @@ const Factures = () => {
           </table>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="glass-modal">
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-wide">Modifier Facture</DialogTitle>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="space-y-4">
+              <div>
+                <Label>Montant</Label>
+                <Input
+                  value={selectedInvoice.montant}
+                  onChange={(e) => setSelectedInvoice({ ...selectedInvoice, montant: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Échéance</Label>
+                <Input
+                  type="date"
+                  value={selectedInvoice.echeance}
+                  onChange={(e) => setSelectedInvoice({ ...selectedInvoice, echeance: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Statut</Label>
+                <Select
+                  value={selectedInvoice.statut}
+                  onValueChange={(v: any) => setSelectedInvoice({ ...selectedInvoice, statut: v })}
+                >
+                  <SelectTrigger className="glass-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="En attente">En attente</SelectItem>
+                    <SelectItem value="Payée">Payée</SelectItem>
+                    <SelectItem value="En retard">En retard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleEditInvoice} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
+                Enregistrer
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="glass-modal">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette facture ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

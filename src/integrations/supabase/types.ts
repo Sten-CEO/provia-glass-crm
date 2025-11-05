@@ -14,7 +14,268 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          adresse: string | null
+          created_at: string
+          email: string
+          id: string
+          nom: string
+          notes: string | null
+          statut: string | null
+          tags: string[] | null
+          telephone: string | null
+          tva: string | null
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          nom: string
+          notes?: string | null
+          statut?: string | null
+          tags?: string[] | null
+          telephone?: string | null
+          tva?: string | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          nom?: string
+          notes?: string | null
+          statut?: string | null
+          tags?: string[] | null
+          telephone?: string | null
+          tva?: string | null
+          ville?: string | null
+        }
+        Relationships: []
+      }
+      devis: {
+        Row: {
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          id: string
+          lignes: Json | null
+          montant: string
+          numero: string
+          statut: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          id?: string
+          lignes?: Json | null
+          montant: string
+          numero: string
+          statut?: string
+        }
+        Update: {
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          id?: string
+          lignes?: Json | null
+          montant?: string
+          numero?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devis_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipe: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nom: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          nom: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nom?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      factures: {
+        Row: {
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          echeance: string
+          id: string
+          lignes: Json | null
+          montant: string
+          numero: string
+          statut: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          echeance: string
+          id?: string
+          lignes?: Json | null
+          montant: string
+          numero: string
+          statut?: string
+        }
+        Update: {
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          echeance?: string
+          id?: string
+          lignes?: Json | null
+          montant?: string
+          numero?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          date: string
+          description: string | null
+          employe_id: string | null
+          employe_nom: string
+          id: string
+          lieu: string | null
+          notes: string | null
+          statut: string
+          titre: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          date: string
+          description?: string | null
+          employe_id?: string | null
+          employe_nom: string
+          id?: string
+          lieu?: string | null
+          notes?: string | null
+          statut?: string
+          titre: string
+        }
+        Update: {
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          employe_id?: string | null
+          employe_nom?: string
+          id?: string
+          lieu?: string | null
+          notes?: string | null
+          statut?: string
+          titre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheets: {
+        Row: {
+          created_at: string
+          debut: string
+          employe_id: string | null
+          employe_nom: string
+          fin: string
+          id: string
+          job_id: string | null
+          job_titre: string
+          total: string
+        }
+        Insert: {
+          created_at?: string
+          debut: string
+          employe_id?: string | null
+          employe_nom: string
+          fin: string
+          id?: string
+          job_id?: string | null
+          job_titre: string
+          total: string
+        }
+        Update: {
+          created_at?: string
+          debut?: string
+          employe_id?: string | null
+          employe_nom?: string
+          fin?: string
+          id?: string
+          job_id?: string | null
+          job_titre?: string
+          total?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
