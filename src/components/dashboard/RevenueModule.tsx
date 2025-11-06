@@ -34,6 +34,18 @@ export const RevenueModule = () => {
 
   useEffect(() => {
     loadRevenueData();
+
+    // Subscribe to real-time changes on factures
+    const channel = supabase
+      .channel("revenue-factures-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
+        loadRevenueData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [period, displayMode, dateRange]);
 
   const loadRevenueData = async () => {

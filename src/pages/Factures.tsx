@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ interface Client {
 }
 
 const Factures = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [open, setOpen] = useState(false);
@@ -275,7 +277,12 @@ const Factures = () => {
             <tbody>
               {invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
-                  <td className="p-4 font-medium">{invoice.numero}</td>
+                  <td 
+                    className="p-4 font-medium cursor-pointer hover:text-primary transition-colors" 
+                    onClick={() => navigate(`/factures/${invoice.id}`)}
+                  >
+                    {invoice.numero}
+                  </td>
                   <td className="p-4 text-muted-foreground">{invoice.client_nom}</td>
                   <td className="p-4 font-semibold">{invoice.montant}</td>
                   <td className="p-4 text-muted-foreground">{formatDate(invoice.echeance)}</td>

@@ -19,6 +19,8 @@ import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
+import DevisDetail from "./pages/DevisDetail";
+import FactureDetail from "./pages/FactureDetail";
 import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
@@ -39,7 +41,9 @@ const App = () => (
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/planning" element={<Planning />} />
             <Route path="/devis" element={<Devis />} />
+            <Route path="/devis/:id" element={<DevisDetail />} />
             <Route path="/factures" element={<Factures />} />
+            <Route path="/factures/:id" element={<FactureDetail />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/equipe" element={<Equipe />} />

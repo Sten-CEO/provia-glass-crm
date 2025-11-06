@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ interface Client {
 }
 
 const Devis = () => {
+  const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [open, setOpen] = useState(false);
@@ -260,7 +262,12 @@ const Devis = () => {
             <tbody>
               {quotes.map((quote) => (
                 <tr key={quote.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
-                  <td className="p-4 font-medium">{quote.numero}</td>
+                  <td 
+                    className="p-4 font-medium cursor-pointer hover:text-primary transition-colors" 
+                    onClick={() => navigate(`/devis/${quote.id}`)}
+                  >
+                    {quote.numero}
+                  </td>
                   <td className="p-4 text-muted-foreground">{quote.client_nom}</td>
                   <td className="p-4 font-semibold">{quote.montant}</td>
                   <td className="p-4">
