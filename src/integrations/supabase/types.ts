@@ -14,11 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          filename: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          filename: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          filename?: string
+          id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           adresse: string | null
           created_at: string
+          debut: string | null
+          demande: string | null
           email: string
+          fin: string | null
           id: string
           nom: string
           notes: string | null
@@ -31,7 +67,10 @@ export type Database = {
         Insert: {
           adresse?: string | null
           created_at?: string
+          debut?: string | null
+          demande?: string | null
           email: string
+          fin?: string | null
           id?: string
           nom: string
           notes?: string | null
@@ -44,7 +83,10 @@ export type Database = {
         Update: {
           adresse?: string | null
           created_at?: string
+          debut?: string | null
+          demande?: string | null
           email?: string
+          fin?: string | null
           id?: string
           nom?: string
           notes?: string | null
@@ -58,34 +100,67 @@ export type Database = {
       }
       devis: {
         Row: {
+          acompte: number | null
           client_id: string | null
           client_nom: string
+          conditions: string | null
           created_at: string
+          date_envoi: string | null
           id: string
           lignes: Json | null
+          message_client: string | null
           montant: string
+          notes_internes: string | null
           numero: string
+          remise: number | null
+          signature_date: string | null
+          signature_image: string | null
           statut: string
+          total_ht: number | null
+          total_ttc: number | null
+          vendeur: string | null
         }
         Insert: {
+          acompte?: number | null
           client_id?: string | null
           client_nom: string
+          conditions?: string | null
           created_at?: string
+          date_envoi?: string | null
           id?: string
           lignes?: Json | null
+          message_client?: string | null
           montant: string
+          notes_internes?: string | null
           numero: string
+          remise?: number | null
+          signature_date?: string | null
+          signature_image?: string | null
           statut?: string
+          total_ht?: number | null
+          total_ttc?: number | null
+          vendeur?: string | null
         }
         Update: {
+          acompte?: number | null
           client_id?: string | null
           client_nom?: string
+          conditions?: string | null
           created_at?: string
+          date_envoi?: string | null
           id?: string
           lignes?: Json | null
+          message_client?: string | null
           montant?: string
+          notes_internes?: string | null
           numero?: string
+          remise?: number | null
+          signature_date?: string | null
+          signature_image?: string | null
           statut?: string
+          total_ht?: number | null
+          total_ttc?: number | null
+          vendeur?: string | null
         }
         Relationships: [
           {
@@ -99,24 +174,33 @@ export type Database = {
       }
       equipe: {
         Row: {
+          access_controls: Json | null
+          competences: string[] | null
           created_at: string
           email: string
           id: string
           nom: string
+          note: string | null
           role: string
         }
         Insert: {
+          access_controls?: Json | null
+          competences?: string[] | null
           created_at?: string
           email: string
           id?: string
           nom: string
+          note?: string | null
           role?: string
         }
         Update: {
+          access_controls?: Json | null
+          competences?: string[] | null
           created_at?: string
           email?: string
           id?: string
           nom?: string
+          note?: string | null
           role?: string
         }
         Relationships: []
@@ -126,34 +210,49 @@ export type Database = {
           client_id: string | null
           client_nom: string
           created_at: string
+          date_paiement: string | null
           echeance: string
           id: string
           lignes: Json | null
           montant: string
           numero: string
+          pdf_url: string | null
+          remise: number | null
           statut: string
+          total_ht: number | null
+          total_ttc: number | null
         }
         Insert: {
           client_id?: string | null
           client_nom: string
           created_at?: string
+          date_paiement?: string | null
           echeance: string
           id?: string
           lignes?: Json | null
           montant: string
           numero: string
+          pdf_url?: string | null
+          remise?: number | null
           statut?: string
+          total_ht?: number | null
+          total_ttc?: number | null
         }
         Update: {
           client_id?: string | null
           client_nom?: string
           created_at?: string
+          date_paiement?: string | null
           echeance?: string
           id?: string
           lignes?: Json | null
           montant?: string
           numero?: string
+          pdf_url?: string | null
+          remise?: number | null
           statut?: string
+          total_ht?: number | null
+          total_ttc?: number | null
         }
         Relationships: [
           {
@@ -167,6 +266,8 @@ export type Database = {
       }
       jobs: {
         Row: {
+          adresse: string | null
+          checklist: Json | null
           client_id: string | null
           client_nom: string
           created_at: string
@@ -174,13 +275,20 @@ export type Database = {
           description: string | null
           employe_id: string | null
           employe_nom: string
+          heure_debut: string | null
+          heure_fin: string | null
           id: string
           lieu: string | null
           notes: string | null
+          notes_timeline: Json | null
           statut: string
           titre: string
+          type: string | null
+          zone: string | null
         }
         Insert: {
+          adresse?: string | null
+          checklist?: Json | null
           client_id?: string | null
           client_nom: string
           created_at?: string
@@ -188,13 +296,20 @@ export type Database = {
           description?: string | null
           employe_id?: string | null
           employe_nom: string
+          heure_debut?: string | null
+          heure_fin?: string | null
           id?: string
           lieu?: string | null
           notes?: string | null
+          notes_timeline?: Json | null
           statut?: string
           titre: string
+          type?: string | null
+          zone?: string | null
         }
         Update: {
+          adresse?: string | null
+          checklist?: Json | null
           client_id?: string | null
           client_nom?: string
           created_at?: string
@@ -202,11 +317,16 @@ export type Database = {
           description?: string | null
           employe_id?: string | null
           employe_nom?: string
+          heure_debut?: string | null
+          heure_fin?: string | null
           id?: string
           lieu?: string | null
           notes?: string | null
+          notes_timeline?: Json | null
           statut?: string
           titre?: string
+          type?: string | null
+          zone?: string | null
         }
         Relationships: [
           {
@@ -224,6 +344,74 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      paiements: {
+        Row: {
+          created_at: string
+          date_paiement: string
+          facture_id: string | null
+          facture_numero: string
+          id: string
+          methode: string
+          montant: number
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_paiement: string
+          facture_id?: string | null
+          facture_numero: string
+          id?: string
+          methode: string
+          montant: number
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_paiement?: string
+          facture_id?: string | null
+          facture_numero?: string
+          id?: string
+          methode?: string
+          montant?: number
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paiements_facture_id_fkey"
+            columns: ["facture_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_from_support: boolean | null
+          message: string
+          user_name: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_from_support?: boolean | null
+          message: string
+          user_name: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_from_support?: boolean | null
+          message?: string
+          user_name?: string
+        }
+        Relationships: []
       }
       timesheets: {
         Row: {

@@ -9,12 +9,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { RevenueModule } from "@/components/dashboard/RevenueModule";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
     jobsCount: 0,
     devisCount: 0,
     facturesTotal: "€0",
+    facturesCount: 0,
     employesCount: 0,
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -43,13 +45,19 @@ const Dashboard = () => {
 
     const { data: jobsData } = await supabase.from("jobs").select("*").eq("date", today);
     const { data: devisData } = await supabase.from("devis").select("*").eq("statut", "Envoyé");
-    const { data: facturesData } = await supabase.from("factures").select("montant").eq("statut", "En attente");
+    const { data: facturesData } = await supabase.from("factures").select("*").eq("statut", "En attente");
     const { data: employesData } = await supabase.from("equipe").select("*");
+
+    const facturesTotal = facturesData?.reduce((sum, f) => {
+      const amount = f.total_ttc || f.montant || "0";
+      return sum + parseFloat(String(amount));
+    }, 0) || 0;
 
     setStats({
       jobsCount: jobsData?.length || 0,
       devisCount: devisData?.length || 0,
-      facturesTotal: `€${facturesData?.length ? facturesData.length * 1500 : 0}`,
+      facturesTotal: `€${facturesTotal.toFixed(2)}`,
+      facturesCount: facturesData?.length || 0,
       employesCount: employesData?.length || 0,
     });
   };
@@ -69,12 +77,14 @@ const Dashboard = () => {
   const statsDisplay = [
     { label: "Jobs du jour", value: stats.jobsCount.toString(), icon: Briefcase, color: "text-primary" },
     { label: "Devis en attente", value: stats.devisCount.toString(), icon: FileText, color: "text-secondary" },
-    { label: "Factures à encaisser", value: stats.facturesTotal, icon: Receipt, color: "text-primary" },
+    { label: "Factures à encaisser", value: `${stats.facturesCount} · ${stats.facturesTotal}`, icon: Receipt, color: "text-primary" },
     { label: "Employés actifs", value: stats.employesCount.toString(), icon: Users, color: "text-secondary" },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <RevenueModule />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold uppercase tracking-wide mb-2">Bienvenue, Entreprise</h1>

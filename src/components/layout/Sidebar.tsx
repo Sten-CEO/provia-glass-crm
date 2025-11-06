@@ -26,6 +26,7 @@ const navItems = [
   { title: "Jobs", icon: Briefcase, path: "/jobs" },
   { title: "Équipe", icon: UserCog, path: "/equipe" },
   { title: "Timesheets", icon: Clock, path: "/timesheets" },
+  { title: "Paiements", icon: Receipt, path: "/paiements" },
   { title: "Paramètres", icon: Settings, path: "/parametres" },
   { title: "Support", icon: HelpCircle, path: "/support" },
 ];

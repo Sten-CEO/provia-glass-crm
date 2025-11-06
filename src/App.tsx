@@ -15,9 +15,11 @@ import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import Equipe from "./pages/Equipe";
 import Timesheets from "./pages/Timesheets";
+import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
+import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,7 @@ const App = () => (
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/equipe" element={<Equipe />} />
             <Route path="/timesheets" element={<Timesheets />} />
+            <Route path="/paiements" element={<Paiements />} />
             <Route path="/parametres" element={<Parametres />} />
             <Route path="/support" element={<Support />} />
           </Route>
@@ -49,6 +52,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <SupportBubble />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
