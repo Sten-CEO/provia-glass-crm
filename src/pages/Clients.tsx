@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Download, Upload, X } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -44,11 +45,16 @@ interface Client {
 
 interface ClientSummary {
   devisCount: number;
+  devisStatus: string | null;
   devisAcceptes: number;
   facturesCount: number;
-  facturesEnAttente: number;
+  facturesUnpaid: number;
+  facturesAmountDue: number;
+  facturesOverdue: boolean;
   jobsCount: number;
-  jobsEnCours: number;
+  jobsStatus: string;
+  nextPlanning: { date: string; employee: string } | null;
+  lastActivity: string;
 }
 
 const Clients = () => {
@@ -57,6 +63,11 @@ const Clients = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterTag, setFilterTag] = useState<string>("all");
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    const saved = localStorage.getItem("clients-filters-open");
+    return saved ? JSON.parse(saved) : false;
+  });
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -78,6 +89,10 @@ const Clients = () => {
   const [tagInput, setTagInput] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    localStorage.setItem("clients-filters-open", JSON.stringify(filtersOpen));
+  }, [filtersOpen]);
+
   // Get all unique tags from clients
   const allTags = Array.from(new Set(clients.flatMap(c => c.tags || [])));
 
@@ -95,24 +110,64 @@ const Clients = () => {
 
     setClients(data || []);
     
-    // Load summaries for all clients
+    // Load detailed summaries for all clients
     if (data) {
       const summaries = new Map<string, ClientSummary>();
       
       for (const client of data) {
-        const [devisData, facturesData, jobsData] = await Promise.all([
-          supabase.from("devis").select("statut").eq("client_id", client.id),
-          supabase.from("factures").select("statut").eq("client_id", client.id),
-          supabase.from("jobs").select("statut").eq("client_id", client.id),
+        const [devisData, facturesData, jobsData, planningData] = await Promise.all([
+          supabase.from("devis").select("statut, created_at, numero").eq("client_id", client.id).order("created_at", { ascending: false }),
+          supabase.from("factures").select("statut, total_ttc, created_at, numero, date_paiement, echeance").eq("client_id", client.id).order("created_at", { ascending: false }),
+          supabase.from("jobs").select("statut, created_at, titre").eq("client_id", client.id).order("created_at", { ascending: false }),
+          supabase.from("jobs").select("date, heure_debut, employe_nom").eq("client_id", client.id).gte("date", new Date().toISOString().split("T")[0]).order("date", { ascending: true }).limit(1),
         ]);
+
+        // Devis status priority
+        let devisStatus = null;
+        if (devisData.data?.some(d => d.statut === "Accepté")) devisStatus = "Accepté";
+        else if (devisData.data?.some(d => d.statut === "Envoyé")) devisStatus = "Envoyé";
+        else if (devisData.data?.some(d => d.statut === "Brouillon")) devisStatus = "Brouillon";
+        else if (devisData.data?.some(d => d.statut === "Refusé")) devisStatus = "Refusé";
+
+        // Factures unpaid
+        const unpaidFactures = facturesData.data?.filter(f => f.statut !== "Payée") || [];
+        const amountDue = unpaidFactures.reduce((sum, f) => sum + (Number(f.total_ttc) || 0), 0);
+        const hasOverdue = unpaidFactures.some(f => f.echeance && new Date(f.echeance) < new Date());
+
+        // Jobs status summary
+        const jobsInProgress = jobsData.data?.filter(j => j.statut === "En cours").length || 0;
+        const jobsDone = jobsData.data?.filter(j => j.statut === "Terminé").length || 0;
+        const jobsStatus = jobsInProgress > 0 ? `${jobsInProgress} en cours` + (jobsDone > 0 ? ` · ${jobsDone} terminé${jobsDone > 1 ? "s" : ""}` : "") : jobsDone > 0 ? `${jobsDone} terminé${jobsDone > 1 ? "s" : ""}` : "—";
+
+        // Next planning
+        const nextPlanning = planningData.data?.[0] ? { date: planningData.data[0].date, employee: planningData.data[0].employe_nom || "" } : null;
+
+        // Last activity
+        let lastActivity = "—";
+        const allEvents = [
+          ...(devisData.data?.map(d => ({ type: "devis", date: d.created_at, ref: d.numero, status: d.statut })) || []),
+          ...(facturesData.data?.map(f => ({ type: "facture", date: f.date_paiement || f.created_at, ref: f.numero, status: f.statut })) || []),
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        if (allEvents.length > 0) {
+          const latest = allEvents[0];
+          const daysAgo = Math.floor((Date.now() - new Date(latest.date).getTime()) / (1000 * 60 * 60 * 24));
+          const timeStr = daysAgo === 0 ? "aujourd'hui" : daysAgo === 1 ? "hier" : `il y a ${daysAgo}j`;
+          lastActivity = `${latest.type === "devis" ? "Devis" : "Facture"} ${latest.ref} ${latest.status.toLowerCase()} ${timeStr}`;
+        }
 
         summaries.set(client.id, {
           devisCount: devisData.data?.length || 0,
+          devisStatus,
           devisAcceptes: devisData.data?.filter(d => d.statut === "Accepté").length || 0,
           facturesCount: facturesData.data?.length || 0,
-          facturesEnAttente: facturesData.data?.filter(f => ["Envoyé", "En attente", "En retard"].includes(f.statut)).length || 0,
+          facturesUnpaid: unpaidFactures.length,
+          facturesAmountDue: amountDue,
+          facturesOverdue: hasOverdue,
           jobsCount: jobsData.data?.length || 0,
-          jobsEnCours: jobsData.data?.filter(j => j.statut === "En cours").length || 0,
+          jobsStatus,
+          nextPlanning,
+          lastActivity,
         });
       }
       
@@ -327,29 +382,27 @@ const Clients = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase tracking-wide">Clients</h1>
-
+    <div className="space-y-4 animate-fade-in">
+      {/* Compact Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold uppercase tracking-wide">Clients</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            Exporter CSV
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="h-4 w-4" />
           </Button>
           <label>
-            <Button variant="outline" asChild>
+            <Button variant="outline" size="sm" asChild>
               <span>
-                <Upload className="mr-2 h-4 w-4" />
-                Importer CSV
+                <Upload className="h-4 w-4" />
               </span>
             </Button>
             <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
           </label>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
+            <Button size="sm" className="bg-primary hover:bg-primary/90 text-foreground font-semibold">
               <Plus className="mr-2 h-4 w-4" />
-              Nouveau Client
+              Nouveau client
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-modal max-h-[80vh] overflow-y-auto">
@@ -478,141 +531,255 @@ const Clients = () => {
         </div>
       </div>
 
-      <div className="glass-card p-4 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un client..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 glass-card"
-          />
-        </div>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label className="text-xs text-muted-foreground mb-1 block">Filtrer par statut</Label>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="glass-card">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="Actif">Actif</SelectItem>
-                <SelectItem value="Inactif">Inactif</SelectItem>
-                <SelectItem value="Nouveau">Nouveau</SelectItem>
-                <SelectItem value="En cours">En cours</SelectItem>
-                <SelectItem value="Fermé">Fermé</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Compact Search & Filters */}
+      <div className="glass-card p-3 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 glass-card h-9"
+            />
           </div>
-          <div className="flex-1">
-            <Label className="text-xs text-muted-foreground mb-1 block">Filtrer par tag</Label>
-            <Select value={filterTag} onValueChange={setFilterTag}>
-              <SelectTrigger className="glass-card">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les tags</SelectItem>
-                {allTags.map(tag => (
-                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="whitespace-nowrap">
+                <Filter className="h-4 w-4 mr-2" />
+                Filtres
+                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="glass-card p-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Statut</Label>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="glass-card h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="Actif">Actif</SelectItem>
+                        <SelectItem value="Inactif">Inactif</SelectItem>
+                        <SelectItem value="Nouveau">Nouveau</SelectItem>
+                        <SelectItem value="En cours">En cours</SelectItem>
+                        <SelectItem value="Fermé">Fermé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">Tag</Label>
+                    <Select value={filterTag} onValueChange={setFilterTag}>
+                      <SelectTrigger className="glass-card h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous</SelectItem>
+                        {allTags.map(tag => (
+                          <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden">
+      {/* New Table with Synthesis Columns */}
+      <div className="glass-card overflow-hidden pb-20">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="border-b border-white/10">
+            <thead className="border-b border-white/10 sticky top-0 glass-card z-10">
               <tr>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Nom</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Statut</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Tags</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Activité</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs w-8"></th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Nom</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Statut</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Tags</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Devis</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Factures</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Jobs</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Planning</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Activité</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredClients.map((client) => {
                 const summary = clientsSummary.get(client.id);
+                const isExpanded = expandedRows.has(client.id);
                 return (
-                  <tr
-                    key={client.id}
-                    className="border-b border-white/5 hover:bg-muted/30 transition-colors"
-                  >
-                    <td
-                      className="p-4 font-medium cursor-pointer"
-                      onClick={() => navigate(`/clients/${client.id}`)}
+                  <>
+                    <tr
+                      key={client.id}
+                      className="border-b border-white/5 hover:bg-muted/20 transition-colors"
                     >
-                      <div>
-                        <div className="font-semibold">{client.nom}</div>
+                      <td className="p-2">
+                        <button
+                          onClick={() => {
+                            const newExpanded = new Set(expandedRows);
+                            if (isExpanded) newExpanded.delete(client.id);
+                            else newExpanded.add(client.id);
+                            setExpandedRows(newExpanded);
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </button>
+                      </td>
+                      <td
+                        className="p-2 font-medium cursor-pointer"
+                        onClick={() => navigate(`/clients/${client.id}`)}
+                      >
+                        <div className="font-semibold text-sm">{client.nom}</div>
                         <div className="text-xs text-muted-foreground">{client.email || client.telephone}</div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <Badge className={getStatutBadgeColor(client.statut)}>
-                        {client.statut || "Actif"}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-1 flex-wrap">
-                        {(client.tags || []).slice(0, 2).map((tag, i) => (
-                          <Badge key={i} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {(client.tags || []).length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{(client.tags || []).length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      {summary && (
-                        <div className="text-xs text-muted-foreground space-y-0.5">
-                          {summary.devisAcceptes > 0 && (
-                            <div>{summary.devisAcceptes} devis accepté{summary.devisAcceptes > 1 ? "s" : ""}</div>
-                          )}
-                          {summary.facturesEnAttente > 0 && (
-                            <div>{summary.facturesEnAttente} facture{summary.facturesEnAttente > 1 ? "s" : ""} en attente</div>
-                          )}
-                          {summary.jobsEnCours > 0 && (
-                            <div>{summary.jobsEnCours} job{summary.jobsEnCours > 1 ? "s" : ""} en cours</div>
-                          )}
-                          {!summary.devisAcceptes && !summary.facturesEnAttente && !summary.jobsEnCours && (
-                            <div className="text-muted-foreground/50">Aucune activité</div>
+                      </td>
+                      <td className="p-2">
+                        <Badge className={`${getStatutBadgeColor(client.statut)} text-xs`}>
+                          {client.statut || "Actif"}
+                        </Badge>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-1 flex-wrap">
+                          {(client.tags || []).slice(0, 2).map((tag, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {(client.tags || []).length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{(client.tags || []).length - 2}
+                            </Badge>
                           )}
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedClient(client);
-                            setEditOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedClient(client);
-                            setDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="p-2">
+                        {summary && (
+                          <button
+                            onClick={() => navigate(`/devis?client_id=${client.id}`)}
+                            className="text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="text-xs font-medium">{summary.devisCount} devis</div>
+                            {summary.devisStatus && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {summary.devisStatus}
+                              </Badge>
+                            )}
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {summary && (
+                          <button
+                            onClick={() => navigate(`/factures?client_id=${client.id}`)}
+                            className="text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="text-xs font-medium">
+                              {summary.facturesUnpaid}/{summary.facturesCount}
+                            </div>
+                            {summary.facturesAmountDue > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                {summary.facturesAmountDue.toLocaleString()} € dû
+                              </div>
+                            )}
+                            {summary.facturesOverdue && (
+                              <Badge variant="destructive" className="text-xs mt-1">En retard</Badge>
+                            )}
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {summary && (
+                          <button
+                            onClick={() => navigate(`/jobs?client_id=${client.id}`)}
+                            className="text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="text-xs text-muted-foreground">{summary.jobsStatus}</div>
+                          </button>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {summary?.nextPlanning ? (
+                          <button
+                            onClick={() => navigate(`/planning?client_id=${client.id}`)}
+                            className="text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="text-xs font-medium">
+                              {new Date(summary.nextPlanning.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                            </div>
+                            {summary.nextPlanning.employee && (
+                              <div className="text-xs text-muted-foreground">{summary.nextPlanning.employee.split(" ").map(n => n[0]).join("")}</div>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">—</div>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={summary?.lastActivity}>
+                          {summary?.lastActivity || "—"}
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setEditOpen(true);
+                            }}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`${client.id}-expanded`} className="border-b border-white/5 bg-muted/10">
+                        <td colSpan={10} className="p-3">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <div className="font-semibold mb-1 text-muted-foreground">Derniers devis</div>
+                              <div className="space-y-1">
+                                {/* Placeholder - would need actual data */}
+                                <div className="text-muted-foreground">Chargement...</div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-semibold mb-1 text-muted-foreground">Dernières factures</div>
+                              <div className="space-y-1">
+                                <div className="text-muted-foreground">Chargement...</div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-semibold mb-1 text-muted-foreground">Jobs en cours</div>
+                              <div className="space-y-1">
+                                <div className="text-muted-foreground">Chargement...</div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
