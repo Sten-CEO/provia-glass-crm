@@ -234,39 +234,52 @@ const FactureDetail = () => {
               <span className="text-muted-foreground">TVA (20%)</span>
               <span className="font-semibold">{(totalApresRemise * 0.2).toFixed(2)} €</span>
             </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/factures")} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
-              <Save className="h-4 w-4 mr-2" />
-              Enregistrer
-            </Button>
-            <Button
-              onClick={async () => {
-                const { error } = await supabase
-                  .from("factures")
-                  .update({ statut: "Payée", date_paiement: new Date().toISOString() })
-                  .eq("id", id);
-                if (error) toast.error("Erreur");
-                else { toast.success("Facture marquée payée"); loadFacture(); }
-              }}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Marquer payée
-            </Button>
-            <Button
-              onClick={async () => {
-                const { error } = await supabase.from("factures").update({ statut: "En retard" }).eq("id", id);
-                if (!error) { toast.success("Facture en retard"); loadFacture(); }
-              }}
-              variant="destructive"
-            >
-              En retard
-            </Button>
-            <Button variant="outline" onClick={() => toast.success("PDF généré (stub)")}>
-              <FileDown className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
+            <div className="flex justify-between text-lg font-bold border-t border-white/10 pt-3">
+              <span>Total TTC</span>
+              <span>{totalTTC.toFixed(2)} €</span>
+            </div>
           </div>
+        </Card>
+      </div>
+
+      <div className="flex gap-2 mt-6">
+        <Button onClick={() => navigate("/factures")} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Retour
+        </Button>
+        <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
+          <Save className="h-4 w-4 mr-2" />
+          Enregistrer
+        </Button>
+        <Button
+          onClick={async () => {
+            const { error } = await supabase
+              .from("factures")
+              .update({ statut: "Payée", date_paiement: new Date().toISOString() })
+              .eq("id", id);
+            if (error) toast.error("Erreur");
+            else { toast.success("Facture marquée payée"); loadFacture(); }
+          }}
+          className="bg-primary hover:bg-primary/90"
+        >
+          Marquer payée
+        </Button>
+        <Button
+          onClick={async () => {
+            const { error } = await supabase.from("factures").update({ statut: "En retard" }).eq("id", id);
+            if (!error) { toast.success("Facture en retard"); loadFacture(); }
+          }}
+          variant="destructive"
+        >
+          En retard
+        </Button>
+        <Button variant="outline" onClick={() => toast.success("PDF généré (stub)")}>
+          <FileDown className="h-4 w-4 mr-2" />
+          PDF
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default FactureDetail;

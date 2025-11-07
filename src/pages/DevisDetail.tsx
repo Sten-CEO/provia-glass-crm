@@ -270,41 +270,54 @@ const DevisDetail = () => {
                 className="w-24 glass-card text-right"
               />
             </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/devis")} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
-            <Button
-              onClick={async () => {
-                await handleSave();
-                const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
-                if (!error) toast.success("Devis en brouillon");
-              }}
-              variant="outline"
-            >
-              Mettre en brouillon
-            </Button>
-            <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
-              <Save className="h-4 w-4 mr-2" />
-              Enregistrer
-            </Button>
-            <Button
-              onClick={async () => {
-                await handleSave();
-                setEmailModalOpen(true);
-              }}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Envoyer
-            </Button>
+            <div className="flex justify-between text-lg font-bold">
+              <span>Reste à payer</span>
+              <span>{(totalTTC - acompte).toFixed(2)} €</span>
+            </div>
           </div>
+        </Card>
+      </div>
 
-          <EmailDevisModal
-            open={emailModalOpen}
-            onClose={() => setEmailModalOpen(false)}
-            devisNumero={devis?.numero || ""}
-            clientEmail={clients.find((c) => c.id === devis?.client_id)?.email || ""}
-            clientNom={devis?.client_nom || ""}
-          />
+      <div className="flex gap-2 mt-6">
+        <Button onClick={() => navigate("/devis")} variant="outline">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Retour
+        </Button>
+        <Button
+          onClick={async () => {
+            await handleSave();
+            const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
+            if (!error) toast.success("Devis en brouillon");
+          }}
+          variant="outline"
+        >
+          Mettre en brouillon
+        </Button>
+        <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
+          <Save className="h-4 w-4 mr-2" />
+          Enregistrer
+        </Button>
+        <Button
+          onClick={async () => {
+            await handleSave();
+            setEmailModalOpen(true);
+          }}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Send className="h-4 w-4 mr-2" />
+          Envoyer
+        </Button>
+      </div>
+
+      <EmailDevisModal
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        devisNumero={devis?.numero || ""}
+        clientEmail={clients.find((c) => c.id === devis?.client_id)?.email || ""}
+        clientNom={devis?.client_nom || ""}
+      />
+    </div>
+  );
+};
+
+export default DevisDetail;
