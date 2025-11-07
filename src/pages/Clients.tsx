@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { StatusChip } from "@/components/ui/status-chip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -47,13 +48,17 @@ interface Client {
 interface ClientSummary {
   devisCount: number;
   devisStatus: string | null;
+  devisStatusVariant: "green" | "blue" | "gray" | "red" | null;
   devisAcceptes: number;
   facturesCount: number;
   facturesUnpaid: number;
   facturesAmountDue: number;
   facturesOverdue: boolean;
+  factureStatus: string | null;
+  factureStatusVariant: "green" | "red" | "amber" | null;
   jobsCount: number;
   jobsStatus: string;
+  jobStatusVariant: "blue" | "gray" | null;
   nextPlanning: { date: string; employee: string } | null;
   lastActivity: string;
 }
@@ -80,7 +85,7 @@ const ExpandedClientView = ({ clientId }: { clientId: string }) => {
       const [devisRes, facturesRes, jobsRes] = await Promise.all([
         supabase.from("devis").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
         supabase.from("factures").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
-        supabase.from("jobs").select("titre, date, statut").eq("client_id", clientId).eq("statut", "En cours").limit(2),
+        supabase.from("jobs").select("titre, date, statut").eq("client_id", clientId).in("statut", ["En cours", "À faire", "Assigné"]).limit(2),
       ]);
 
       if (mounted) {
@@ -257,20 +262,50 @@ const Clients = () => {
 
         // Devis status priority
         let devisStatus = null;
-        if (devisData.data?.some(d => d.statut === "Accepté")) devisStatus = "Accepté";
-        else if (devisData.data?.some(d => d.statut === "Envoyé")) devisStatus = "Envoyé";
-        else if (devisData.data?.some(d => d.statut === "Brouillon")) devisStatus = "Brouillon";
-        else if (devisData.data?.some(d => d.statut === "Refusé")) devisStatus = "Refusé";
+        let devisStatusVariant: "green" | "blue" | "gray" | "red" | null = null;
+        if (devisData.data?.some(d => d.statut === "Accepté")) {
+          devisStatus = "Accepté";
+          devisStatusVariant = "green";
+        } else if (devisData.data?.some(d => d.statut === "Envoyé")) {
+          devisStatus = "Envoyé";
+          devisStatusVariant = "blue";
+        } else if (devisData.data?.some(d => d.statut === "Brouillon")) {
+          devisStatus = "Brouillon";
+          devisStatusVariant = "gray";
+        } else if (devisData.data?.some(d => d.statut === "Refusé")) {
+          devisStatus = "Refusé";
+          devisStatusVariant = "red";
+        }
 
-        // Factures unpaid
+        // Factures status
         const unpaidFactures = facturesData.data?.filter(f => f.statut !== "Payée") || [];
         const amountDue = unpaidFactures.reduce((sum, f) => sum + (Number(f.total_ttc) || 0), 0);
         const hasOverdue = unpaidFactures.some(f => f.echeance && new Date(f.echeance) < new Date());
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let factureStatus: string | null = null;
+        let factureStatusVariant: "green" | "red" | "amber" | null = null;
+        
+        if (facturesData.data?.some(f => f.statut === "Payée")) {
+          factureStatus = "Payée";
+          factureStatusVariant = "green";
+        } else if (hasOverdue) {
+          factureStatus = "En retard";
+          factureStatusVariant = "red";
+        } else if (unpaidFactures.length > 0) {
+          factureStatus = "À encaisser";
+          factureStatusVariant = "amber";
+        }
 
         // Jobs status summary
-        const jobsInProgress = jobsData.data?.filter(j => j.statut === "En cours").length || 0;
+        const jobsInProgress = jobsData.data?.filter(j => j.statut === "En cours" || j.statut === "À faire" || j.statut === "Assigné").length || 0;
         const jobsDone = jobsData.data?.filter(j => j.statut === "Terminé").length || 0;
         const jobsStatus = jobsInProgress > 0 ? `${jobsInProgress} en cours` + (jobsDone > 0 ? ` · ${jobsDone} terminé${jobsDone > 1 ? "s" : ""}` : "") : jobsDone > 0 ? `${jobsDone} terminé${jobsDone > 1 ? "s" : ""}` : "—";
+        
+        let jobStatusVariant: "blue" | "gray" | null = null;
+        if (jobsInProgress > 0) jobStatusVariant = "blue";
+        else if (jobsDone > 0) jobStatusVariant = "gray";
 
         // Next planning
         const nextPlanning = planningData.data?.[0] ? { date: planningData.data[0].date, employee: planningData.data[0].employe_nom || "" } : null;
@@ -292,13 +327,17 @@ const Clients = () => {
         summaries.set(client.id, {
           devisCount: devisData.data?.length || 0,
           devisStatus,
+          devisStatusVariant,
           devisAcceptes: devisData.data?.filter(d => d.statut === "Accepté").length || 0,
           facturesCount: facturesData.data?.length || 0,
           facturesUnpaid: unpaidFactures.length,
           facturesAmountDue: amountDue,
           facturesOverdue: hasOverdue,
+          factureStatus,
+          factureStatusVariant,
           jobsCount: jobsData.data?.length || 0,
           jobsStatus,
+          jobStatusVariant,
           nextPlanning,
           lastActivity,
         });
@@ -879,11 +918,11 @@ const Clients = () => {
                             onClick={() => navigate(`/devis?client_id=${client.id}`)}
                             className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
-                            <div className="text-xs font-medium">{summary.devisCount} devis</div>
-                            {summary.devisStatus && (
-                              <Badge variant="outline" className="text-xs mt-1">
+                            <div className="text-xs font-medium mb-1">{summary.devisCount} devis</div>
+                            {summary.devisStatus && summary.devisStatusVariant && (
+                              <StatusChip variant={summary.devisStatusVariant}>
                                 {summary.devisStatus}
-                              </Badge>
+                              </StatusChip>
                             )}
                           </button>
                         )}
@@ -894,16 +933,13 @@ const Clients = () => {
                             onClick={() => navigate(`/factures?client_id=${client.id}`)}
                             className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
-                            <div className="text-xs font-medium">
-                              {summary.facturesUnpaid}/{summary.facturesCount}
+                            <div className="text-xs font-medium mb-1">
+                              {summary.facturesUnpaid}/{summary.facturesCount} · {summary.facturesAmountDue.toLocaleString()}€
                             </div>
-                            {summary.facturesAmountDue > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                {summary.facturesAmountDue.toLocaleString()} € dû
-                              </div>
-                            )}
-                            {summary.facturesOverdue && (
-                              <Badge variant="destructive" className="text-xs mt-1">En retard</Badge>
+                            {summary.factureStatus && summary.factureStatusVariant && (
+                              <StatusChip variant={summary.factureStatusVariant}>
+                                {summary.factureStatus}
+                              </StatusChip>
                             )}
                           </button>
                         )}
@@ -914,7 +950,12 @@ const Clients = () => {
                             onClick={() => navigate(`/jobs?client_id=${client.id}`)}
                             className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
-                            <div className="text-xs text-muted-foreground">{summary.jobsStatus}</div>
+                            <div className="text-xs font-medium mb-1">{summary.jobsStatus}</div>
+                            {summary.jobStatusVariant && (
+                              <StatusChip variant={summary.jobStatusVariant}>
+                                {summary.jobStatusVariant === "blue" ? "En cours" : "Terminé"}
+                              </StatusChip>
+                            )}
                           </button>
                         )}
                       </td>
@@ -923,13 +964,11 @@ const Clients = () => {
                           <button
                             onClick={() => navigate(`/planning?client_id=${client.id}`)}
                             className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
+                            title={summary.nextPlanning.employee || ""}
                           >
                             <div className="text-xs font-medium">
                               {new Date(summary.nextPlanning.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
                             </div>
-                            {summary.nextPlanning.employee && (
-                              <div className="text-xs text-muted-foreground">{summary.nextPlanning.employee.split(" ").map(n => n[0]).join("")}</div>
-                            )}
                           </button>
                         ) : (
                           <div className="text-xs text-muted-foreground">—</div>
