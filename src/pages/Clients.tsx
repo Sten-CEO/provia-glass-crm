@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -57,6 +58,138 @@ interface ClientSummary {
   lastActivity: string;
 }
 
+// Component for expanded row view
+const ExpandedClientView = ({ clientId }: { clientId: string }) => {
+  const [data, setData] = useState<{
+    devis: any[];
+    factures: any[];
+    jobs: any[];
+    loading: boolean;
+  }>({ devis: [], factures: [], jobs: [], loading: true });
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    const timeout = setTimeout(() => {
+      if (mounted && data.loading) {
+        setData({ devis: [], factures: [], jobs: [], loading: false });
+      }
+    }, 4000);
+
+    const loadData = async () => {
+      const [devisRes, facturesRes, jobsRes] = await Promise.all([
+        supabase.from("devis").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
+        supabase.from("factures").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
+        supabase.from("jobs").select("titre, date, statut").eq("client_id", clientId).eq("statut", "En cours").limit(2),
+      ]);
+
+      if (mounted) {
+        setData({
+          devis: devisRes.data || [],
+          factures: facturesRes.data || [],
+          jobs: jobsRes.data || [],
+          loading: false,
+        });
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+    };
+  }, [clientId]);
+
+  if (data.loading) {
+    return (
+      <div className="text-center py-4 text-muted-foreground text-xs">
+        Chargement des détails...
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs animate-in fade-in duration-200">
+      <div>
+        <div className="font-semibold mb-2 text-muted-foreground flex items-center justify-between">
+          Derniers devis
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/devis?client_id=${clientId}`)}
+            className="h-6 text-xs"
+          >
+            Voir tout
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {data.devis.length > 0 ? (
+            data.devis.map((d) => (
+              <div key={d.numero} className="flex items-center justify-between p-2 glass-card rounded">
+                <span>{d.numero}</span>
+                <Badge variant="outline" className="text-xs">{d.statut}</Badge>
+              </div>
+            ))
+          ) : (
+            <div className="text-muted-foreground">Aucun devis</div>
+          )}
+        </div>
+      </div>
+      <div>
+        <div className="font-semibold mb-2 text-muted-foreground flex items-center justify-between">
+          Dernières factures
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/factures?client_id=${clientId}`)}
+            className="h-6 text-xs"
+          >
+            Voir tout
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {data.factures.length > 0 ? (
+            data.factures.map((f) => (
+              <div key={f.numero} className="flex items-center justify-between p-2 glass-card rounded">
+                <span>{f.numero}</span>
+                <Badge variant="outline" className="text-xs">{f.statut}</Badge>
+              </div>
+            ))
+          ) : (
+            <div className="text-muted-foreground">Aucune facture</div>
+          )}
+        </div>
+      </div>
+      <div>
+        <div className="font-semibold mb-2 text-muted-foreground flex items-center justify-between">
+          Jobs en cours
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/jobs?client_id=${clientId}`)}
+            className="h-6 text-xs"
+          >
+            Voir tout
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {data.jobs.length > 0 ? (
+            data.jobs.map((j, i) => (
+              <div key={i} className="p-2 glass-card rounded">
+                <div className="font-medium">{j.titre}</div>
+                <div className="text-muted-foreground">{j.date}</div>
+              </div>
+            ))
+          ) : (
+            <div className="text-muted-foreground">Aucun job en cours</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsSummary, setClientsSummary] = useState<Map<string, ClientSummary>>(new Map());
@@ -81,7 +214,7 @@ const Clients = () => {
     tva: "", 
     notes: "",
     tags: [] as string[],
-    statut: "Actif",
+    statut: "nouveau",
     demande: "",
     debut: "",
     fin: ""
@@ -228,7 +361,7 @@ const Clients = () => {
     }
 
     toast.success("Client créé avec succès");
-    setNewClient({ nom: "", email: "", telephone: "", ville: "", adresse: "", tva: "", notes: "", tags: [], statut: "Actif", demande: "", debut: "", fin: "" });
+    setNewClient({ nom: "", email: "", telephone: "", ville: "", adresse: "", tva: "", notes: "", tags: [], statut: "nouveau", demande: "", debut: "", fin: "" });
     setOpen(false);
   };
 
@@ -367,18 +500,16 @@ const Clients = () => {
     reader.readAsText(file);
   };
 
-  const getStatutBadgeColor = (statut: string | null) => {
-    const colors: Record<string, string> = {
-      "Actif": "bg-green-500",
-      "Inactif": "bg-gray-500",
-      "Nouveau": "bg-blue-500",
-      "En cours": "bg-yellow-500",
-      "Attente de réponses": "bg-orange-500",
-      "Résolues": "bg-green-600",
-      "Fermé": "bg-gray-600",
-      "Rejeté": "bg-red-500",
+  const getStatutBadge = (statut: string | null) => {
+    const statusMap: Record<string, { color: string; label: string }> = {
+      nouveau: { color: "text-[#3B82F6] border-[#3B82F6]/30 bg-[rgba(59,130,246,0.08)]", label: "Nouveau" },
+      en_cours: { color: "text-[#22C55E] border-[#22C55E]/30 bg-[rgba(34,197,94,0.08)]", label: "En cours" },
+      attente: { color: "text-[#F59E0B] border-[#F59E0B]/30 bg-[rgba(245,158,11,0.08)]", label: "Attente" },
+      resolues: { color: "text-[#10B981] border-[#10B981]/30 bg-[rgba(16,185,129,0.08)]", label: "Résolues" },
+      ferme: { color: "text-[#6B7280] border-[#6B7280]/30 bg-[rgba(107,114,128,0.08)]", label: "Fermé" },
+      rejete: { color: "text-[#EF4444] border-[#EF4444]/30 bg-[rgba(239,68,68,0.08)]", label: "Rejeté" },
     };
-    return colors[statut || "Actif"] || "bg-gray-500";
+    return statusMap[statut || "nouveau"] || statusMap.nouveau;
   };
 
   return (
@@ -409,116 +540,166 @@ const Clients = () => {
             <DialogHeader>
               <DialogTitle className="uppercase tracking-wide">Nouveau Client</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="nom">Nom *</Label>
-                <Input
-                  id="nom"
-                  value={newClient.nom}
-                  onChange={(e) => setNewClient({ ...newClient, nom: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newClient.email}
-                  onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="telephone">Téléphone</Label>
-                <Input
-                  id="telephone"
-                  value={newClient.telephone}
-                  onChange={(e) => setNewClient({ ...newClient, telephone: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="ville">Ville</Label>
-                <Input
-                  id="ville"
-                  value={newClient.ville}
-                  onChange={(e) => setNewClient({ ...newClient, ville: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="adresse">Adresse</Label>
-                <Input
-                  id="adresse"
-                  value={newClient.adresse}
-                  onChange={(e) => setNewClient({ ...newClient, adresse: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="tva">Numéro TVA</Label>
-                <Input
-                  id="tva"
-                  value={newClient.tva}
-                  onChange={(e) => setNewClient({ ...newClient, tva: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label htmlFor="statut">Statut</Label>
-                <select
-                  id="statut"
-                  value={newClient.statut}
-                  onChange={(e) => setNewClient({ ...newClient, statut: e.target.value })}
-                  className="w-full p-2 glass-card rounded-md"
-                >
-                  <option value="Actif">Actif</option>
-                  <option value="Inactif">Inactif</option>
-                  <option value="Nouveau">Nouveau</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="tags">Tags</Label>
-                <div className="flex gap-2 mb-2 flex-wrap">
-                  {newClient.tags.map((tag, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
-                      {tag}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => setNewClient({ ...newClient, tags: newClient.tags.filter((_, idx) => idx !== i) })}
+            <div className="space-y-6">
+              {/* Section Coordonnées */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide border-b border-white/10 pb-2">Coordonnées</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="nom">Nom *</Label>
+                    <Input
+                      id="nom"
+                      value={newClient.nom}
+                      onChange={(e) => setNewClient({ ...newClient, nom: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newClient.email}
+                      onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                      className="glass-card"
+                      placeholder="email@exemple.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="telephone">Téléphone</Label>
+                    <Input
+                      id="telephone"
+                      value={newClient.telephone}
+                      onChange={(e) => setNewClient({ ...newClient, telephone: e.target.value })}
+                      className="glass-card"
+                      placeholder="+33..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="ville">Ville</Label>
+                    <Input
+                      id="ville"
+                      value={newClient.ville}
+                      onChange={(e) => setNewClient({ ...newClient, ville: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="adresse">Adresse</Label>
+                    <Input
+                      id="adresse"
+                      value={newClient.adresse}
+                      onChange={(e) => setNewClient({ ...newClient, adresse: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="tva">Numéro TVA</Label>
+                    <Input
+                      id="tva"
+                      value={newClient.tva}
+                      onChange={(e) => setNewClient({ ...newClient, tva: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="tags">Tags</Label>
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      {newClient.tags.map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => setNewClient({ ...newClient, tags: newClient.tags.filter((_, idx) => idx !== i) })}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tagInput.trim()) {
+                            e.preventDefault();
+                            setNewClient({ ...newClient, tags: [...newClient.tags, tagInput.trim()] });
+                            setTagInput("");
+                          }
+                        }}
+                        placeholder="Ajouter un tag..."
+                        className="glass-card"
                       />
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && tagInput.trim()) {
-                        e.preventDefault();
-                        setNewClient({ ...newClient, tags: [...newClient.tags, tagInput.trim()] });
-                        setTagInput("");
-                      }
-                    }}
-                    placeholder="Ajouter un tag..."
-                    className="glass-card"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if (tagInput.trim()) {
-                        setNewClient({ ...newClient, tags: [...newClient.tags, tagInput.trim()] });
-                        setTagInput("");
-                      }
-                    }}
-                  >
-                    +
-                  </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          if (tagInput.trim()) {
+                            setNewClient({ ...newClient, tags: [...newClient.tags, tagInput.trim()] });
+                            setTagInput("");
+                          }
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Section Suivi chantier */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide border-b border-white/10 pb-2">Suivi chantier</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="demande">Demande</Label>
+                    <Textarea
+                      id="demande"
+                      value={newClient.demande}
+                      onChange={(e) => setNewClient({ ...newClient, demande: e.target.value })}
+                      className="glass-card"
+                      rows={3}
+                      placeholder="Description de la demande du client..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="debut">Date début</Label>
+                    <Input
+                      id="debut"
+                      type="date"
+                      value={newClient.debut}
+                      onChange={(e) => setNewClient({ ...newClient, debut: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="fin">Date fin</Label>
+                    <Input
+                      id="fin"
+                      type="date"
+                      value={newClient.fin}
+                      onChange={(e) => setNewClient({ ...newClient, fin: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="statut">Statut</Label>
+                    <select
+                      id="statut"
+                      value={newClient.statut}
+                      onChange={(e) => setNewClient({ ...newClient, statut: e.target.value })}
+                      className="w-full p-2 glass-card rounded-md"
+                    >
+                      <option value="nouveau">Nouveau</option>
+                      <option value="en_cours">En cours</option>
+                      <option value="attente">Attente</option>
+                      <option value="resolues">Résolues</option>
+                      <option value="ferme">Fermé</option>
+                      <option value="rejete">Rejeté</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={handleAddClient}
                 className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
@@ -562,11 +743,12 @@ const Clients = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Tous</SelectItem>
-                        <SelectItem value="Actif">Actif</SelectItem>
-                        <SelectItem value="Inactif">Inactif</SelectItem>
-                        <SelectItem value="Nouveau">Nouveau</SelectItem>
-                        <SelectItem value="En cours">En cours</SelectItem>
-                        <SelectItem value="Fermé">Fermé</SelectItem>
+                        <SelectItem value="nouveau">Nouveau</SelectItem>
+                        <SelectItem value="en_cours">En cours</SelectItem>
+                        <SelectItem value="attente">Attente</SelectItem>
+                        <SelectItem value="resolues">Résolues</SelectItem>
+                        <SelectItem value="ferme">Fermé</SelectItem>
+                        <SelectItem value="rejete">Rejeté</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -601,6 +783,9 @@ const Clients = () => {
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Nom</th>
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Statut</th>
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Tags</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Téléphone</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Ville</th>
+                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Adresse</th>
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Devis</th>
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Factures</th>
                 <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Jobs</th>
@@ -632,17 +817,26 @@ const Clients = () => {
                           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                       </td>
-                      <td
-                        className="p-2 font-medium cursor-pointer"
-                        onClick={() => navigate(`/clients/${client.id}`)}
-                      >
-                        <div className="font-semibold text-sm">{client.nom}</div>
-                        <div className="text-xs text-muted-foreground">{client.email || client.telephone}</div>
+                      <td className="p-2">
+                        <div 
+                          className="font-semibold text-sm hover:underline cursor-pointer"
+                          onClick={() => navigate(`/clients/${client.id}`)}
+                        >
+                          {client.nom}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{client.email}</div>
                       </td>
                       <td className="p-2">
-                        <Badge className={`${getStatutBadgeColor(client.statut)} text-xs`}>
-                          {client.statut || "Actif"}
-                        </Badge>
+                        {(() => {
+                          const badge = getStatutBadge(client.statut);
+                          return (
+                            <span 
+                              className={`inline-block rounded-full px-3 py-1 text-[13px] font-medium tracking-[.01em] backdrop-blur-[8px] border transition-all hover:translate-y-[0.5px] hover:border-current/45 shadow-[0_2px_8px_rgba(0,0,0,.06)] ${badge.color}`}
+                            >
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="p-2">
                         <div className="flex gap-1 flex-wrap">
@@ -659,10 +853,31 @@ const Clients = () => {
                         </div>
                       </td>
                       <td className="p-2">
+                        {client.telephone ? (
+                          <a 
+                            href={`tel:${client.telephone}`}
+                            className="text-xs flex items-center gap-1 hover:text-primary transition-colors"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {client.telephone}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <span className="text-xs">{client.ville || "—"}</span>
+                      </td>
+                      <td className="p-2">
+                        <span className="text-xs truncate max-w-[150px] block" title={client.adresse || ""}>
+                          {client.adresse || "—"}
+                        </span>
+                      </td>
+                      <td className="p-2">
                         {summary && (
                           <button
                             onClick={() => navigate(`/devis?client_id=${client.id}`)}
-                            className="text-left hover:opacity-80 transition-opacity"
+                            className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
                             <div className="text-xs font-medium">{summary.devisCount} devis</div>
                             {summary.devisStatus && (
@@ -677,7 +892,7 @@ const Clients = () => {
                         {summary && (
                           <button
                             onClick={() => navigate(`/factures?client_id=${client.id}`)}
-                            className="text-left hover:opacity-80 transition-opacity"
+                            className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
                             <div className="text-xs font-medium">
                               {summary.facturesUnpaid}/{summary.facturesCount}
@@ -697,7 +912,7 @@ const Clients = () => {
                         {summary && (
                           <button
                             onClick={() => navigate(`/jobs?client_id=${client.id}`)}
-                            className="text-left hover:opacity-80 transition-opacity"
+                            className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
                             <div className="text-xs text-muted-foreground">{summary.jobsStatus}</div>
                           </button>
@@ -707,7 +922,7 @@ const Clients = () => {
                         {summary?.nextPlanning ? (
                           <button
                             onClick={() => navigate(`/planning?client_id=${client.id}`)}
-                            className="text-left hover:opacity-80 transition-opacity"
+                            className="text-left hover:outline hover:outline-1 hover:outline-primary/30 rounded px-2 py-1 -mx-2 -my-1 transition-all cursor-pointer"
                           >
                             <div className="text-xs font-medium">
                               {new Date(summary.nextPlanning.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
@@ -730,7 +945,16 @@ const Clients = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 hover:bg-primary/10"
+                            title="Voir fiche"
+                            onClick={() => navigate(`/clients/${client.id}`)}
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 hover:bg-primary/10"
                             onClick={() => {
                               setSelectedClient(client);
                               setEditOpen(true);
@@ -741,7 +965,7 @@ const Clients = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 w-7 p-0"
+                            className="h-7 w-7 p-0 hover:bg-destructive/10"
                             onClick={() => {
                               setSelectedClient(client);
                               setDeleteOpen(true);
@@ -754,28 +978,8 @@ const Clients = () => {
                     </tr>
                     {isExpanded && (
                       <tr key={`${client.id}-expanded`} className="border-b border-white/5 bg-muted/10">
-                        <td colSpan={10} className="p-3">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                            <div>
-                              <div className="font-semibold mb-1 text-muted-foreground">Derniers devis</div>
-                              <div className="space-y-1">
-                                {/* Placeholder - would need actual data */}
-                                <div className="text-muted-foreground">Chargement...</div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="font-semibold mb-1 text-muted-foreground">Dernières factures</div>
-                              <div className="space-y-1">
-                                <div className="text-muted-foreground">Chargement...</div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="font-semibold mb-1 text-muted-foreground">Jobs en cours</div>
-                              <div className="space-y-1">
-                                <div className="text-muted-foreground">Chargement...</div>
-                              </div>
-                            </div>
-                          </div>
+                        <td colSpan={13} className="p-4">
+                          <ExpandedClientView clientId={client.id} />
                         </td>
                       </tr>
                     )}
@@ -794,113 +998,164 @@ const Clients = () => {
             <DialogTitle className="uppercase tracking-wide">Modifier Client</DialogTitle>
           </DialogHeader>
           {selectedClient && (
-            <div className="space-y-4">
-              <div>
-                <Label>Nom *</Label>
-                <Input
-                  value={selectedClient.nom}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, nom: e.target.value })
-                  }
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Email *</Label>
-                <Input
-                  value={selectedClient.email}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, email: e.target.value })
-                  }
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Téléphone</Label>
-                <Input
-                  value={selectedClient.telephone || ""}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, telephone: e.target.value })
-                  }
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Ville</Label>
-                <Input
-                  value={selectedClient.ville || ""}
-                  onChange={(e) =>
-                    setSelectedClient({ ...selectedClient, ville: e.target.value })
-                  }
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Statut</Label>
-                <select
-                  value={selectedClient.statut || "Actif"}
-                  onChange={(e) => setSelectedClient({ ...selectedClient, statut: e.target.value })}
-                  className="w-full p-2 glass-card rounded-md"
-                >
-                  <option value="Actif">Actif</option>
-                  <option value="Inactif">Inactif</option>
-                  <option value="Nouveau">Nouveau</option>
-                  <option value="En cours">En cours</option>
-                  <option value="Fermé">Fermé</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <Label>Tags</Label>
-                <div className="flex gap-2 mb-2 flex-wrap">
-                  {(selectedClient.tags || []).map((tag, i) => (
-                    <Badge key={i} variant="secondary" className="gap-1">
-                      {tag}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => 
-                          setSelectedClient({ 
-                            ...selectedClient, 
-                            tags: (selectedClient.tags || []).filter((_, idx) => idx !== i) 
-                          })
-                        }
+            <div className="space-y-6">
+              {/* Section Coordonnées */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide border-b border-white/10 pb-2">Coordonnées</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label>Nom *</Label>
+                    <Input
+                      value={selectedClient.nom}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, nom: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input
+                      value={selectedClient.email}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, email: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>Téléphone</Label>
+                    <Input
+                      value={selectedClient.telephone || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, telephone: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>Ville</Label>
+                    <Input
+                      value={selectedClient.ville || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, ville: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>Adresse</Label>
+                    <Input
+                      value={selectedClient.adresse || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, adresse: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Numéro TVA</Label>
+                    <Input
+                      value={selectedClient.tva || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, tva: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Tags</Label>
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      {(selectedClient.tags || []).map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1">
+                          {tag}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() => 
+                              setSelectedClient({ 
+                                ...selectedClient, 
+                                tags: (selectedClient.tags || []).filter((_, idx) => idx !== i) 
+                              })
+                            }
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && tagInput.trim()) {
+                            e.preventDefault();
+                            setSelectedClient({ 
+                              ...selectedClient, 
+                              tags: [...(selectedClient.tags || []), tagInput.trim()] 
+                            });
+                            setTagInput("");
+                          }
+                        }}
+                        placeholder="Ajouter un tag..."
+                        className="glass-card"
                       />
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && tagInput.trim()) {
-                        e.preventDefault();
-                        setSelectedClient({ 
-                          ...selectedClient, 
-                          tags: [...(selectedClient.tags || []), tagInput.trim()] 
-                        });
-                        setTagInput("");
-                      }
-                    }}
-                    placeholder="Ajouter un tag..."
-                    className="glass-card"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      if (tagInput.trim()) {
-                        setSelectedClient({ 
-                          ...selectedClient, 
-                          tags: [...(selectedClient.tags || []), tagInput.trim()] 
-                        });
-                        setTagInput("");
-                      }
-                    }}
-                  >
-                    +
-                  </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          if (tagInput.trim()) {
+                            setSelectedClient({ 
+                              ...selectedClient, 
+                              tags: [...(selectedClient.tags || []), tagInput.trim()] 
+                            });
+                            setTagInput("");
+                          }
+                        }}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Section Suivi chantier */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide border-b border-white/10 pb-2">Suivi chantier</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label>Demande</Label>
+                    <Textarea
+                      value={selectedClient.demande || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, demande: e.target.value })}
+                      className="glass-card"
+                      rows={3}
+                      placeholder="Description de la demande du client..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Date début</Label>
+                    <Input
+                      type="date"
+                      value={selectedClient.debut || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, debut: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>Date fin</Label>
+                    <Input
+                      type="date"
+                      value={selectedClient.fin || ""}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, fin: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Statut</Label>
+                    <select
+                      value={selectedClient.statut || "nouveau"}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, statut: e.target.value })}
+                      className="w-full p-2 glass-card rounded-md"
+                    >
+                      <option value="nouveau">Nouveau</option>
+                      <option value="en_cours">En cours</option>
+                      <option value="attente">Attente</option>
+                      <option value="resolues">Résolues</option>
+                      <option value="ferme">Fermé</option>
+                      <option value="rejete">Rejeté</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={handleEditClient}
                 className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"

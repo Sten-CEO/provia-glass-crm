@@ -59,13 +59,25 @@ const ClientDetail = () => {
   const getStatutColor = (statut: string) => {
     const colors: any = {
       nouveau: "bg-blue-500",
-      "en cours": "bg-yellow-500",
-      "attente de réponses": "bg-orange-500",
-      "résolues": "bg-green-500",
-      "fermé": "bg-gray-500",
-      "rejeté": "bg-red-500",
+      en_cours: "bg-green-500",
+      attente: "bg-yellow-500",
+      resolues: "bg-green-600",
+      ferme: "bg-gray-500",
+      rejete: "bg-red-500",
     };
     return colors[statut?.toLowerCase()] || "bg-gray-500";
+  };
+
+  const getStatutBadge = (statut: string | null) => {
+    const statusMap: Record<string, { color: string; label: string }> = {
+      nouveau: { color: "text-[#3B82F6] border-[#3B82F6]/30 bg-[rgba(59,130,246,0.08)]", label: "Nouveau" },
+      en_cours: { color: "text-[#22C55E] border-[#22C55E]/30 bg-[rgba(34,197,94,0.08)]", label: "En cours" },
+      attente: { color: "text-[#F59E0B] border-[#F59E0B]/30 bg-[rgba(245,158,11,0.08)]", label: "Attente" },
+      resolues: { color: "text-[#10B981] border-[#10B981]/30 bg-[rgba(16,185,129,0.08)]", label: "Résolues" },
+      ferme: { color: "text-[#6B7280] border-[#6B7280]/30 bg-[rgba(107,114,128,0.08)]", label: "Fermé" },
+      rejete: { color: "text-[#EF4444] border-[#EF4444]/30 bg-[rgba(239,68,68,0.08)]", label: "Rejeté" },
+    };
+    return statusMap[statut || "nouveau"] || statusMap.nouveau;
   };
 
   if (!client) return <div className="p-6">Chargement...</div>;
@@ -86,6 +98,95 @@ const ClientDetail = () => {
           <Save className="mr-2 h-4 w-4" />
           Sauvegarder
         </Button>
+      </div>
+
+      {/* Recap Strip */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        {/* Suivi chantier */}
+        <Card className="glass-card p-3">
+          <div className="text-xs text-muted-foreground mb-1">Suivi chantier</div>
+          <div className="flex items-center gap-2">
+            {(() => {
+              const badge = getStatutBadge(client.statut);
+              return (
+                <span 
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badge.color}`}
+                  title={client.demande?.slice(0, 120) || "Aucune demande"}
+                >
+                  {badge.label}
+                </span>
+              );
+            })()}
+          </div>
+          {(client.debut || client.fin) && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {client.debut && new Date(client.debut).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+              {client.debut && client.fin && " → "}
+              {client.fin && new Date(client.fin).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+            </div>
+          )}
+        </Card>
+
+        {/* Devis */}
+        <Card 
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          onClick={() => navigate(`/devis?client_id=${id}`)}
+        >
+          <div className="text-xs text-muted-foreground mb-1">Devis</div>
+          <div className="text-lg font-bold">{devis.length}</div>
+          {devis.some(d => d.statut === "Accepté") && (
+            <Badge variant="outline" className="text-xs mt-1">Accepté</Badge>
+          )}
+        </Card>
+
+        {/* Factures */}
+        <Card 
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          onClick={() => navigate(`/factures?client_id=${id}`)}
+        >
+          <div className="text-xs text-muted-foreground mb-1">Factures</div>
+          <div className="text-lg font-bold">
+            {factures.filter(f => f.statut !== "Payée").length}/{factures.length}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {factures.filter(f => f.statut !== "Payée").reduce((sum, f) => sum + (Number(f.total_ttc) || 0), 0).toLocaleString()} € dû
+          </div>
+        </Card>
+
+        {/* Jobs */}
+        <Card 
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          onClick={() => navigate(`/jobs?client_id=${id}`)}
+        >
+          <div className="text-xs text-muted-foreground mb-1">Jobs</div>
+          <div className="text-sm">
+            {jobs.filter(j => j.statut === "En cours").length} en cours
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {jobs.filter(j => j.statut === "Terminé").length} terminés
+          </div>
+        </Card>
+
+        {/* Planning */}
+        <Card 
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          onClick={() => navigate(`/planning?client_id=${id}`)}
+        >
+          <div className="text-xs text-muted-foreground mb-1">Planning</div>
+          {(() => {
+            const futureJobs = jobs.filter(j => new Date(j.date) >= new Date()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            return futureJobs.length > 0 ? (
+              <>
+                <div className="text-sm font-medium">
+                  {new Date(futureJobs[0].date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                </div>
+                <div className="text-xs text-muted-foreground">{futureJobs[0].employe_nom || "—"}</div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">—</div>
+            );
+          })()}
+        </Card>
       </div>
 
       <Tabs defaultValue="infos">
@@ -149,18 +250,16 @@ const ClientDetail = () => {
               <div>
                 <Label>Statut</Label>
                 <select
-                  value={formData.statut || "Actif"}
+                  value={formData.statut || "nouveau"}
                   onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
                   className="w-full p-2 glass-card rounded-md"
                 >
-                  <option value="Actif">Actif</option>
-                  <option value="Inactif">Inactif</option>
-                  <option value="Nouveau">Nouveau</option>
-                  <option value="En cours">En cours</option>
-                  <option value="Attente de réponses">Attente de réponses</option>
-                  <option value="Résolues">Résolues</option>
-                  <option value="Fermé">Fermé</option>
-                  <option value="Rejeté">Rejeté</option>
+                  <option value="nouveau">Nouveau</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="attente">Attente</option>
+                  <option value="resolues">Résolues</option>
+                  <option value="ferme">Fermé</option>
+                  <option value="rejete">Rejeté</option>
                 </select>
               </div>
               <div className="col-span-2">
