@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone, ChevronUp, ChevronsUpDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -57,11 +57,24 @@ interface ClientSummary {
   factureStatus: string | null;
   factureStatusVariant: "green" | "red" | "amber" | null;
   jobsCount: number;
+  jobsInProgress: number;
+  jobsDone: number;
   jobsStatus: string;
   jobStatusVariant: "blue" | "gray" | null;
   nextPlanning: { date: string; employee: string } | null;
   lastActivity: string;
+  lastActivityTimestamp: number;
 }
+
+type SortDirection = "asc" | "desc";
+type SortField = "nom" | "statut" | "ville" | "devis" | "factures" | "jobs" | "planning" | "activite";
+
+interface SortConfig {
+  field: SortField;
+  direction: SortDirection;
+}
+
+type QuickFilter = "actifs" | "factures_encaisser" | "en_retard" | "devis_acceptes" | "jobs_cours" | "echeance_semaine" | "sans_activite";
 
 // Component for expanded row view
 const ExpandedClientView = ({ clientId }: { clientId: string }) => {
@@ -199,12 +212,33 @@ const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsSummary, setClientsSummary] = useState<Map<string, ClientSummary>>(new Map());
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filtersOpen, setFiltersOpen] = useState(() => {
     const saved = localStorage.getItem("clients-filters-open");
     return saved ? JSON.parse(saved) : false;
   });
+  
+  // Sort state with localStorage persistence
+  const [sortConfigs, setSortConfigs] = useState<SortConfig[]>(() => {
+    const saved = localStorage.getItem("pv_clients_sort");
+    return saved ? JSON.parse(saved) : [{ field: "nom", direction: "asc" }];
+  });
+
+  // Quick filters state with localStorage persistence
+  const [activeQuickFilters, setActiveQuickFilters] = useState<Set<QuickFilter>>(() => {
+    const saved = localStorage.getItem("pv_clients_filters");
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = localStorage.getItem("pv_clients_pageSize");
+    return saved ? parseInt(saved) : 50;
+  });
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -226,6 +260,27 @@ const Clients = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const navigate = useNavigate();
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Persist sort config
+  useEffect(() => {
+    localStorage.setItem("pv_clients_sort", JSON.stringify(sortConfigs));
+  }, [sortConfigs]);
+
+  // Persist quick filters
+  useEffect(() => {
+    localStorage.setItem("pv_clients_filters", JSON.stringify(Array.from(activeQuickFilters)));
+  }, [activeQuickFilters]);
+
+  // Persist page size
+  useEffect(() => {
+    localStorage.setItem("pv_clients_pageSize", pageSize.toString());
+  }, [pageSize]);
 
   useEffect(() => {
     localStorage.setItem("clients-filters-open", JSON.stringify(filtersOpen));
@@ -312,6 +367,7 @@ const Clients = () => {
 
         // Last activity
         let lastActivity = "—";
+        let lastActivityTimestamp = 0;
         const allEvents = [
           ...(devisData.data?.map(d => ({ type: "devis", date: d.created_at, ref: d.numero, status: d.statut })) || []),
           ...(facturesData.data?.map(f => ({ type: "facture", date: f.date_paiement || f.created_at, ref: f.numero, status: f.statut })) || []),
@@ -319,7 +375,8 @@ const Clients = () => {
         
         if (allEvents.length > 0) {
           const latest = allEvents[0];
-          const daysAgo = Math.floor((Date.now() - new Date(latest.date).getTime()) / (1000 * 60 * 60 * 24));
+          lastActivityTimestamp = new Date(latest.date).getTime();
+          const daysAgo = Math.floor((Date.now() - lastActivityTimestamp) / (1000 * 60 * 60 * 24));
           const timeStr = daysAgo === 0 ? "aujourd'hui" : daysAgo === 1 ? "hier" : `il y a ${daysAgo}j`;
           lastActivity = `${latest.type === "devis" ? "Devis" : "Facture"} ${latest.ref} ${latest.status.toLowerCase()} ${timeStr}`;
         }
@@ -336,10 +393,13 @@ const Clients = () => {
           factureStatus,
           factureStatusVariant,
           jobsCount: jobsData.data?.length || 0,
+          jobsInProgress,
+          jobsDone,
           jobsStatus,
           jobStatusVariant,
           nextPlanning,
           lastActivity,
+          lastActivityTimestamp,
         });
       }
       
@@ -453,21 +513,194 @@ const Clients = () => {
     setSelectedClient(null);
   };
 
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch = 
-      client.nom.toLowerCase().includes(search.toLowerCase()) ||
-      (client.email && client.email.toLowerCase().includes(search.toLowerCase())) ||
-      (client.telephone && client.telephone.includes(search));
-    
-    const matchesStatus = filterStatus === "all" || client.statut === filterStatus;
-    const matchesTag = filterTag === "all" || (client.tags && client.tags.includes(filterTag));
-    
-    return matchesSearch && matchesStatus && matchesTag;
-  });
+  // Enhanced search with highlighting
+  const highlightMatch = (text: string, search: string) => {
+    if (!search.trim()) return text;
+    const index = text.toLowerCase().indexOf(search.toLowerCase());
+    if (index === -1) return text;
+    return (
+      <>
+        {text.slice(0, index)}
+        <mark className="bg-primary/30 px-0.5 rounded">{text.slice(index, index + search.length)}</mark>
+        {text.slice(index + search.length)}
+      </>
+    );
+  };
+
+  // Multi-sort & filter logic
+  const filteredAndSortedClients = useMemo(() => {
+    let result = clients.filter((client) => {
+      // Enhanced search
+      const searchLower = debouncedSearch.toLowerCase();
+      const matchesSearch = 
+        !debouncedSearch ||
+        client.nom.toLowerCase().includes(searchLower) ||
+        (client.email && client.email.toLowerCase().includes(searchLower)) ||
+        (client.telephone && client.telephone.includes(searchLower)) ||
+        (client.ville && client.ville.toLowerCase().includes(searchLower)) ||
+        (client.adresse && client.adresse.toLowerCase().includes(searchLower)) ||
+        (client.tva && client.tva.toLowerCase().includes(searchLower)) ||
+        (client.demande && client.demande.toLowerCase().includes(searchLower)) ||
+        (client.tags && client.tags.some(t => t.toLowerCase().includes(searchLower)));
+      
+      const matchesStatus = filterStatus === "all" || client.statut === filterStatus;
+      const matchesTag = filterTag === "all" || (client.tags && client.tags.includes(filterTag));
+      
+      // Quick filters
+      const summary = clientsSummary.get(client.id);
+      let matchesQuickFilters = true;
+
+      if (activeQuickFilters.size > 0) {
+        const filters = Array.from(activeQuickFilters);
+        matchesQuickFilters = filters.every(filter => {
+          switch (filter) {
+            case "actifs":
+              return client.statut === "en_cours" || client.statut === "nouveau";
+            case "factures_encaisser":
+              return summary && summary.facturesUnpaid > 0;
+            case "en_retard":
+              return summary && summary.facturesOverdue;
+            case "devis_acceptes":
+              return summary && summary.devisAcceptes > 0;
+            case "jobs_cours":
+              return summary && summary.jobsInProgress > 0;
+            case "echeance_semaine":
+              const nextWeek = new Date();
+              nextWeek.setDate(nextWeek.getDate() + 7);
+              return summary?.nextPlanning && new Date(summary.nextPlanning.date) <= nextWeek;
+            case "sans_activite":
+              const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+              return !summary || summary.lastActivityTimestamp < thirtyDaysAgo;
+            default:
+              return true;
+          }
+        });
+      }
+      
+      return matchesSearch && matchesStatus && matchesTag && matchesQuickFilters;
+    });
+
+    // Multi-column sorting
+    if (sortConfigs.length > 0) {
+      result.sort((a, b) => {
+        for (const config of sortConfigs) {
+          const summaryA = clientsSummary.get(a.id);
+          const summaryB = clientsSummary.get(b.id);
+          let comparison = 0;
+
+          switch (config.field) {
+            case "nom":
+              comparison = a.nom.localeCompare(b.nom);
+              break;
+            case "statut":
+              const statusOrder = { en_cours: 0, nouveau: 1, attente: 2, resolues: 3, ferme: 4, rejete: 5 };
+              comparison = (statusOrder[a.statut as keyof typeof statusOrder] || 99) - (statusOrder[b.statut as keyof typeof statusOrder] || 99);
+              break;
+            case "ville":
+              comparison = (a.ville || "").localeCompare(b.ville || "");
+              break;
+            case "devis":
+              comparison = (summaryB?.devisCount || 0) - (summaryA?.devisCount || 0);
+              break;
+            case "factures":
+              // Sort by amount due first, then by unpaid count
+              const amountDiff = (summaryB?.facturesAmountDue || 0) - (summaryA?.facturesAmountDue || 0);
+              comparison = amountDiff !== 0 ? amountDiff : (summaryB?.facturesUnpaid || 0) - (summaryA?.facturesUnpaid || 0);
+              break;
+            case "jobs":
+              // Sort by in_progress first, then by done
+              const inProgressDiff = (summaryB?.jobsInProgress || 0) - (summaryA?.jobsInProgress || 0);
+              comparison = inProgressDiff !== 0 ? inProgressDiff : (summaryA?.jobsDone || 0) - (summaryB?.jobsDone || 0);
+              break;
+            case "planning":
+              const dateA = summaryA?.nextPlanning?.date ? new Date(summaryA.nextPlanning.date).getTime() : Number.MAX_SAFE_INTEGER;
+              const dateB = summaryB?.nextPlanning?.date ? new Date(summaryB.nextPlanning.date).getTime() : Number.MAX_SAFE_INTEGER;
+              comparison = dateA - dateB;
+              break;
+            case "activite":
+              comparison = (summaryB?.lastActivityTimestamp || 0) - (summaryA?.lastActivityTimestamp || 0);
+              break;
+          }
+
+          if (comparison !== 0) {
+            return config.direction === "asc" ? comparison : -comparison;
+          }
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [clients, debouncedSearch, filterStatus, filterTag, activeQuickFilters, clientsSummary, sortConfigs]);
+
+  // Pagination
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAndSortedClients.slice(start, start + pageSize);
+  }, [filteredAndSortedClients, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredAndSortedClients.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterStatus, filterTag, activeQuickFilters]);
+
+  // Sort handler
+  const handleSort = (field: SortField, shiftKey: boolean) => {
+    if (shiftKey) {
+      // Multi-sort: add or update this field
+      const existing = sortConfigs.findIndex(s => s.field === field);
+      if (existing >= 0) {
+        // Toggle direction
+        const newConfigs = [...sortConfigs];
+        newConfigs[existing].direction = newConfigs[existing].direction === "asc" ? "desc" : "asc";
+        setSortConfigs(newConfigs);
+      } else {
+        // Add new sort
+        setSortConfigs([...sortConfigs, { field, direction: "asc" }]);
+      }
+    } else {
+      // Single sort
+      const existing = sortConfigs.find(s => s.field === field);
+      if (existing && sortConfigs.length === 1) {
+        // Toggle direction
+        setSortConfigs([{ field, direction: existing.direction === "asc" ? "desc" : "asc" }]);
+      } else {
+        // Set as primary sort
+        setSortConfigs([{ field, direction: "asc" }]);
+      }
+    }
+  };
+
+  // Get sort indicator for column
+  const getSortIndicator = (field: SortField) => {
+    const index = sortConfigs.findIndex(s => s.field === field);
+    if (index === -1) return null;
+    const config = sortConfigs[index];
+    return (
+      <span className="inline-flex items-center gap-0.5 ml-1">
+        {config.direction === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {sortConfigs.length > 1 && <span className="text-[10px] opacity-60">{index + 1}</span>}
+      </span>
+    );
+  };
+
+  // Quick filter toggle
+  const toggleQuickFilter = (filter: QuickFilter) => {
+    const newFilters = new Set(activeQuickFilters);
+    if (newFilters.has(filter)) {
+      newFilters.delete(filter);
+    } else {
+      newFilters.add(filter);
+    }
+    setActiveQuickFilters(newFilters);
+  };
 
   const handleExportCSV = () => {
     const headers = ["Nom", "Email", "Téléphone", "Ville", "Adresse", "TVA", "Statut", "Tags", "Demande", "Début", "Fin", "Notes"];
-    const rows = clients.map(c => [
+    // Export filtered and sorted clients only
+    const rows = filteredAndSortedClients.map(c => [
       c.nom,
       c.email || "",
       c.telephone || "",
@@ -489,7 +722,7 @@ const Clients = () => {
     a.href = url;
     a.download = `clients_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
-    toast.success("Export CSV réussi");
+    toast.success(`Export CSV réussi (${filteredAndSortedClients.length} clients)`);
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -757,7 +990,7 @@ const Clients = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+              placeholder="Rechercher par nom, email, téléphone, ville, adresse, TVA, tags..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 glass-card h-9"
@@ -810,31 +1043,189 @@ const Clients = () => {
             </CollapsibleContent>
           </Collapsible>
         </div>
+
+        {/* Quick Filter Chips */}
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={activeQuickFilters.has("actifs") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("actifs")}
+            className="h-7 text-xs"
+          >
+            Actifs
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("factures_encaisser") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("factures_encaisser")}
+            className="h-7 text-xs"
+          >
+            Avec factures à encaisser
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("en_retard") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("en_retard")}
+            className="h-7 text-xs"
+          >
+            En retard
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("devis_acceptes") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("devis_acceptes")}
+            className="h-7 text-xs"
+          >
+            Devis acceptés
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("jobs_cours") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("jobs_cours")}
+            className="h-7 text-xs"
+          >
+            Jobs en cours
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("echeance_semaine") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("echeance_semaine")}
+            className="h-7 text-xs"
+          >
+            Échéance cette semaine
+          </Button>
+          <Button
+            variant={activeQuickFilters.has("sans_activite") ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleQuickFilter("sans_activite")}
+            className="h-7 text-xs"
+          >
+            Sans activité 30 j
+          </Button>
+        </div>
+
+        {/* Result count and pagination controls */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div>
+            {filteredAndSortedClients.length} client{filteredAndSortedClients.length !== 1 ? "s" : ""} trouvé{filteredAndSortedClients.length !== 1 ? "s" : ""}
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">Afficher</Label>
+            <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
+              <SelectTrigger className="h-7 w-16 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      {/* New Table with Synthesis Columns */}
-      <div className="glass-card overflow-hidden pb-20">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-white/10 sticky top-0 glass-card z-10">
-              <tr>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs w-8"></th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Nom</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Statut</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Tags</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Téléphone</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Ville</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Adresse</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Devis</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Factures</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Jobs</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Planning</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Activité</th>
-                <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map((client) => {
+      {/* Table with Synthesis Columns */}
+      <div className="glass-card overflow-hidden">
+        {filteredAndSortedClients.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-lg mb-2">Aucun client ne correspond aux filtres</p>
+            <Button variant="outline" size="sm" onClick={() => {
+              setSearch("");
+              setFilterStatus("all");
+              setFilterTag("all");
+              setActiveQuickFilters(new Set());
+            }}>
+              Réinitialiser les filtres
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b border-white/10 sticky top-0 glass-card z-10">
+                  <tr>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs w-8"></th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("nom", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Nom{getSortIndicator("nom")}
+                      </span>
+                    </th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("statut", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Statut{getSortIndicator("statut")}
+                      </span>
+                    </th>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Tags</th>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Téléphone</th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("ville", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Ville{getSortIndicator("ville")}
+                      </span>
+                    </th>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Adresse</th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("devis", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Devis{getSortIndicator("devis")}
+                      </span>
+                    </th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("factures", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Factures{getSortIndicator("factures")}
+                      </span>
+                    </th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("jobs", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Jobs{getSortIndicator("jobs")}
+                      </span>
+                    </th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("planning", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Planning{getSortIndicator("planning")}
+                      </span>
+                    </th>
+                    <th 
+                      className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
+                      onClick={(e) => handleSort("activite", e.shiftKey)}
+                      title="Cliquez pour trier, Shift+Clic pour multi-tri"
+                    >
+                      <span className="flex items-center">
+                        Activité{getSortIndicator("activite")}
+                      </span>
+                    </th>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedClients.map((client) => {
                 const summary = clientsSummary.get(client.id);
                 const isExpanded = expandedRows.has(client.id);
                 return (
@@ -861,9 +1252,11 @@ const Clients = () => {
                           className="font-semibold text-sm hover:underline cursor-pointer"
                           onClick={() => navigate(`/clients/${client.id}`)}
                         >
-                          {client.nom}
+                          {highlightMatch(client.nom, debouncedSearch)}
                         </div>
-                        <div className="text-xs text-muted-foreground">{client.email}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {client.email && highlightMatch(client.email, debouncedSearch)}
+                        </div>
                       </td>
                       <td className="p-2">
                         {(() => {
@@ -905,11 +1298,13 @@ const Clients = () => {
                         )}
                       </td>
                       <td className="p-2">
-                        <span className="text-xs">{client.ville || "—"}</span>
+                        <span className="text-xs">
+                          {client.ville ? highlightMatch(client.ville, debouncedSearch) : "—"}
+                        </span>
                       </td>
                       <td className="p-2">
                         <span className="text-xs truncate max-w-[150px] block" title={client.adresse || ""}>
-                          {client.adresse || "—"}
+                          {client.adresse ? highlightMatch(client.adresse, debouncedSearch) : "—"}
                         </span>
                       </td>
                       <td className="p-2">
@@ -1028,6 +1423,35 @@ const Clients = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="border-t border-white/10 p-3 flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              Page {currentPage} sur {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Précédent
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Suivant
+              </Button>
+            </div>
+          </div>
+        )}
+      </>
+        )}
       </div>
 
       {/* Edit Dialog */}
