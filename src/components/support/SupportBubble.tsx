@@ -28,23 +28,52 @@ export const SupportBubble = () => {
     { text: "Support Provia Base — De quoi avez-vous besoin ?", from: "support" },
   ]);
   const [input, setInput] = useState("");
+  const [humanAssistantActive, setHumanAssistantActive] = useState(false);
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
     setMessages([
       ...messages,
-      { text: `Je besoin d'aide avec: ${category}`, from: "user" },
-      { text: `Que puis-je faire pour vous aider avec ${category} ?`, from: "support" },
+      { text: `J'ai besoin d'aide avec: ${category}`, from: "user" },
     ]);
     setView("chat");
+    
+    // Show quick sub-options based on category
+    setTimeout(() => {
+      const subOptions = getSubOptions(category);
+      setMessages((prev) => [
+        ...prev,
+        { text: subOptions, from: "support" },
+      ]);
+    }, 300);
+  };
+
+  const getSubOptions = (category: string) => {
+    const options: Record<string, string> = {
+      "Tableau de bord": "1. Module revenus\n2. Widgets\n3. Activité récente",
+      "Clients": "1. Ajouter un client\n2. Voir l'historique\n3. Export CSV",
+      "Devis": "1. Créer un devis\n2. Envoyer par email\n3. Convertir en facture",
+      "Factures": "1. Créer une facture\n2. Marquer payée\n3. Télécharger PDF",
+      "Jobs/Interventions": "1. Créer un job\n2. Assigner un employé\n3. Voir le calendrier",
+      "Planning": "1. Vue calendrier\n2. Déplacer un job\n3. Filtres",
+      "Employés": "1. Inviter un membre\n2. Gérer les accès\n3. Compétences",
+      "Timesheets": "1. Enregistrer une feuille de temps\n2. Voir l'historique",
+      "Paiements": "1. Enregistrer un paiement\n2. Voir les transactions",
+      "Paramètres": "1. Mon entreprise\n2. Facturation\n3. Préférences",
+      "Support": "Quel est votre problème ? Décrivez-le brièvement.",
+    };
+    return options[category] || "Comment puis-je vous aider ?";
   };
 
   const handleHumanAssistant = () => {
+    if (humanAssistantActive) return;
+    
+    setHumanAssistantActive(true);
     setMessages([
       ...messages,
       { text: "Je veux parler à un assistant humain", from: "user" },
       {
-        text: "Expliquez votre problème, un assistant répondra sous 30 min.",
+        text: "Expliquez brièvement votre problème. Un assistant vous répondra sous 30 min.",
         from: "support",
       },
     ]);
@@ -55,12 +84,15 @@ export const SupportBubble = () => {
     if (!input.trim()) return;
     setMessages([...messages, { text: input, from: "user" }]);
     setInput("");
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { text: "Un agent vous répondra bientôt...", from: "support" },
-      ]);
-    }, 500);
+    
+    if (!humanAssistantActive) {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          { text: "Merci pour votre message. Un agent vous répondra bientôt...", from: "support" },
+        ]);
+      }, 500);
+    }
   };
 
   if (!open) {
@@ -76,9 +108,9 @@ export const SupportBubble = () => {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-[380px] h-[500px] glass-card shadow-2xl z-50 flex flex-col">
+    <Card className="fixed bottom-6 right-6 w-[420px] h-[550px] glass-card shadow-2xl z-50 flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="font-bold uppercase tracking-wide">Support Provia Base</h3>
+        <h3 className="font-bold uppercase tracking-wide text-sm">Support Provia Base</h3>
         <Button onClick={() => setOpen(false)} variant="ghost" size="icon">
           <X className="h-4 w-4" />
         </Button>
@@ -86,25 +118,26 @@ export const SupportBubble = () => {
 
       {view === "categories" ? (
         <ScrollArea className="flex-1 p-4">
-          <div className="space-y-2">
+          <p className="text-sm text-muted-foreground mb-4">Sélectionnez un thème:</p>
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((category) => (
               <Button
                 key={category}
                 onClick={() => handleCategoryClick(category)}
                 variant="outline"
-                className="w-full justify-between glass-card hover:bg-primary/10"
+                size="sm"
+                className="glass-card hover:bg-primary/20 text-xs"
               >
                 {category}
-                <ChevronRight className="h-4 w-4" />
               </Button>
             ))}
-            <Button
-              onClick={handleHumanAssistant}
-              className="w-full bg-primary hover:bg-primary/90 mt-4"
-            >
-              Parler à un assistant humain
-            </Button>
           </div>
+          <Button
+            onClick={handleHumanAssistant}
+            className="w-full bg-primary hover:bg-primary/90 mt-6"
+          >
+            Parler à un assistant humain
+          </Button>
         </ScrollArea>
       ) : (
         <>

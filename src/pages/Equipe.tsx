@@ -36,6 +36,18 @@ interface TeamMember {
   nom: string;
   role: "Owner" | "Admin" | "Membre";
   email: string;
+  competences: string[];
+  note: string | null;
+  access_controls: {
+    devis?: boolean;
+    planning?: boolean;
+    factures?: boolean;
+    clients?: boolean;
+    jobs?: boolean;
+    timesheets?: boolean;
+    paiements?: boolean;
+    parametres?: boolean;
+  };
 }
 
 const Equipe = () => {
@@ -48,6 +60,18 @@ const Equipe = () => {
     nom: "",
     role: "Membre" as const,
     email: "",
+    competences: [] as string[],
+    note: "",
+    access_controls: {
+      devis: true,
+      planning: true,
+      factures: true,
+      clients: true,
+      jobs: true,
+      timesheets: true,
+      paiements: true,
+      parametres: false,
+    },
   });
 
   const loadTeam = async () => {
@@ -85,11 +109,14 @@ const Equipe = () => {
       return;
     }
 
-    const { error } = await supabase.from("equipe").insert([
+    const { error} = await supabase.from("equipe").insert([
       {
         nom: newMember.nom,
         role: newMember.role,
         email: newMember.email,
+        competences: newMember.competences,
+        note: newMember.note,
+        access_controls: newMember.access_controls,
       },
     ]);
 
@@ -99,7 +126,23 @@ const Equipe = () => {
     }
 
     toast.success("Membre invité avec succès");
-    setNewMember({ nom: "", role: "Membre", email: "" });
+    setNewMember({
+      nom: "",
+      role: "Membre",
+      email: "",
+      competences: [],
+      note: "",
+      access_controls: {
+        devis: true,
+        planning: true,
+        factures: true,
+        clients: true,
+        jobs: true,
+        timesheets: true,
+        paiements: true,
+        parametres: false,
+      },
+    });
     setOpen(false);
   };
 
@@ -112,6 +155,9 @@ const Equipe = () => {
         nom: selectedMember.nom,
         role: selectedMember.role,
         email: selectedMember.email,
+        competences: selectedMember.competences,
+        note: selectedMember.note,
+        access_controls: selectedMember.access_controls,
       })
       .eq("id", selectedMember.id);
 
@@ -199,6 +245,45 @@ const Equipe = () => {
                     <SelectItem value="Owner">Owner</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Compétences</Label>
+                <Input
+                  placeholder="Séparées par des virgules"
+                  value={newMember.competences.join(", ")}
+                  onChange={(e) => setNewMember({ ...newMember, competences: e.target.value.split(",").map((s) => s.trim()) })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Note</Label>
+                <Input
+                  placeholder="Note interne..."
+                  value={newMember.note}
+                  onChange={(e) => setNewMember({ ...newMember, note: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Accès UI (restrictions UI uniquement)</Label>
+                <div className="space-y-2 glass-card p-4 rounded-lg">
+                  {Object.entries(newMember.access_controls).map(([key, value]) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={(e) =>
+                          setNewMember({
+                            ...newMember,
+                            access_controls: { ...newMember.access_controls, [key]: e.target.checked },
+                          })
+                        }
+                        className="w-4 h-4"
+                      />
+                      <span className="capitalize text-sm">{key}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <Button onClick={handleAddMember} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Inviter
@@ -297,6 +382,45 @@ const Equipe = () => {
                     <SelectItem value="Owner">Owner</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Compétences</Label>
+                <Input
+                  value={selectedMember.competences?.join(", ") || ""}
+                  onChange={(e) =>
+                    setSelectedMember({ ...selectedMember, competences: e.target.value.split(",").map((s) => s.trim()) })
+                  }
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Note</Label>
+                <Input
+                  value={selectedMember.note || ""}
+                  onChange={(e) => setSelectedMember({ ...selectedMember, note: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">Accès UI</Label>
+                <div className="space-y-2 glass-card p-4 rounded-lg">
+                  {Object.entries(selectedMember.access_controls || {}).map(([key, value]) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={value as boolean}
+                        onChange={(e) =>
+                          setSelectedMember({
+                            ...selectedMember,
+                            access_controls: { ...selectedMember.access_controls, [key]: e.target.checked },
+                          })
+                        }
+                        className="w-4 h-4"
+                      />
+                      <span className="capitalize text-sm">{key}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
               <Button onClick={handleEditMember} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Enregistrer

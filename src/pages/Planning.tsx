@@ -23,12 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { JobDetailPanel } from "@/components/planning/JobDetailPanel";
 
 const Planning = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [newJob, setNewJob] = useState({
     titre: "",
     client_id: "",
@@ -179,6 +181,7 @@ const Planning = () => {
           droppable={true}
           dateClick={handleDateClick}
           eventDrop={handleEventDrop}
+          eventClick={(info) => setSelectedJobId(info.event.id)}
           height="auto"
           locale="fr"
           slotMinTime="07:00:00"
@@ -186,6 +189,14 @@ const Planning = () => {
           allDaySlot={false}
         />
       </div>
+
+      {selectedJobId && (
+        <JobDetailPanel
+          jobId={selectedJobId}
+          onClose={() => setSelectedJobId(null)}
+          onUpdate={loadJobs}
+        />
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="glass-modal">

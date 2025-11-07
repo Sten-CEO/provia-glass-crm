@@ -93,10 +93,16 @@ export const RevenueModule = () => {
         return acc;
       }, {});
 
-      const chartData = Object.entries(grouped).map(([date, value]) => ({
-        date,
-        revenue: value,
-      }));
+      const chartData = Object.entries(grouped)
+        .map(([date, value]) => ({
+          date,
+          revenue: value,
+        }))
+        .sort((a: any, b: any) => {
+          const [dayA, monthA] = a.date.split("/").map(Number);
+          const [dayB, monthB] = b.date.split("/").map(Number);
+          return monthA === monthB ? dayA - dayB : monthA - monthB;
+        });
       setChartData(chartData);
     }
   };

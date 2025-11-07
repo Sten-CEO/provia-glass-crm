@@ -45,12 +45,19 @@ const Dashboard = () => {
 
     const { data: jobsData } = await supabase.from("jobs").select("*").eq("date", today);
     const { data: devisData } = await supabase.from("devis").select("*").eq("statut", "Envoyé");
-    const { data: facturesData } = await supabase.from("factures").select("*").eq("statut", "En attente");
+    
+    // Factures à encaisser: envoye, en_retard, brouillon with due_date >= today
+    const { data: facturesData } = await supabase
+      .from("factures")
+      .select("*")
+      .in("statut", ["Envoyé", "En retard", "Brouillon"])
+      .gte("echeance", today);
+    
     const { data: employesData } = await supabase.from("equipe").select("*");
 
     const facturesTotal = facturesData?.reduce((sum, f) => {
-      const amount = f.total_ttc || f.montant || "0";
-      return sum + parseFloat(String(amount));
+      const amount = f.total_ttc || parseFloat(String(f.montant)) || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(String(amount)));
     }, 0) || 0;
 
     setStats({

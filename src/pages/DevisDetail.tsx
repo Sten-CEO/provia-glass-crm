@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EmailDevisModal } from "@/components/devis/EmailDevisModal";
 
 interface LigneDevis {
   description: string;
@@ -23,6 +24,7 @@ const DevisDetail = () => {
   const [devis, setDevis] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [lignes, setLignes] = useState<LigneDevis[]>([]);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -268,15 +270,41 @@ const DevisDetail = () => {
                 className="w-24 glass-card text-right"
               />
             </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Reste à payer</span>
-              <span>{(totalTTC - acompte).toFixed(2)} €</span>
-            </div>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/devis")} variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+            <Button
+              onClick={async () => {
+                await handleSave();
+                const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
+                if (!error) toast.success("Devis en brouillon");
+              }}
+              variant="outline"
+            >
+              Mettre en brouillon
+            </Button>
+            <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
+              <Save className="h-4 w-4 mr-2" />
+              Enregistrer
+            </Button>
+            <Button
+              onClick={async () => {
+                await handleSave();
+                setEmailModalOpen(true);
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Envoyer
+            </Button>
           </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
 
-export default DevisDetail;
+          <EmailDevisModal
+            open={emailModalOpen}
+            onClose={() => setEmailModalOpen(false)}
+            devisNumero={devis?.numero || ""}
+            clientEmail={clients.find((c) => c.id === devis?.client_id)?.email || ""}
+            clientNom={devis?.client_nom || ""}
+          />
