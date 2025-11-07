@@ -27,10 +27,23 @@ import { JobDetailPanel } from "@/components/planning/JobDetailPanel";
 
 const Planning = () => {
   const [events, setEvents] = useState<any[]>([]);
+  const [allJobs, setAllJobs] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  
+  // Load filters from localStorage
+  const [filters, setFilters] = useState(() => {
+    const saved = localStorage.getItem("planning_filters");
+    return saved ? JSON.parse(saved) : {
+      statut: "all",
+      employe: "all",
+      type: "all",
+      zone: "all",
+    };
+  });
+  
   const [newJob, setNewJob] = useState({
     titre: "",
     client_id: "",
@@ -39,6 +52,15 @@ const Planning = () => {
     heure_debut: "09:00",
     heure_fin: "17:00",
   });
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("planning_filters", JSON.stringify(filters));
+  }, [filters]);
+
+  // Get unique values for filters
+  const uniqueTypes = Array.from(new Set(allJobs.map(j => j.type).filter(Boolean)));
+  const uniqueZones = Array.from(new Set(allJobs.map(j => j.zone).filter(Boolean)));
 
   useEffect(() => {
     loadJobs();
@@ -60,17 +82,39 @@ const Planning = () => {
   const loadJobs = async () => {
     const { data } = await supabase.from("jobs").select("*");
     if (data) {
-      const formattedEvents = data.map((job) => ({
-        id: job.id,
-        title: `${job.titre} - ${job.client_nom}`,
-        start: `${job.date}T${job.heure_debut || "09:00"}`,
-        end: `${job.date}T${job.heure_fin || "17:00"}`,
-        resourceId: job.employe_id,
-        backgroundColor: job.statut === "Terminé" ? "#10b981" : job.statut === "En cours" ? "#3b82f6" : "#6b7280",
-      }));
-      setEvents(formattedEvents);
+      setAllJobs(data);
+      applyFilters(data);
     }
   };
+
+  const applyFilters = (jobs: any[]) => {
+    const filtered = jobs.filter(job => {
+      const matchesStatut = filters.statut === "all" || job.statut === filters.statut;
+      const matchesEmploye = filters.employe === "all" || job.employe_id === filters.employe;
+      const matchesType = filters.type === "all" || job.type === filters.type;
+      const matchesZone = filters.zone === "all" || job.zone === filters.zone;
+      
+      return matchesStatut && matchesEmploye && matchesType && matchesZone;
+    });
+
+    const formattedEvents = filtered.map((job) => ({
+      id: job.id,
+      title: `${job.titre} - ${job.client_nom}`,
+      start: `${job.date}T${job.heure_debut || "09:00"}`,
+      end: `${job.date}T${job.heure_fin || "17:00"}`,
+      resourceId: job.employe_id,
+      backgroundColor: job.statut === "Terminé" ? "#10b981" : job.statut === "En cours" ? "#3b82f6" : "#6b7280",
+    }));
+    
+    setEvents(formattedEvents);
+  };
+
+  // Re-apply filters when filter values change
+  useEffect(() => {
+    if (allJobs.length > 0) {
+      applyFilters(allJobs);
+    }
+  }, [filters]);
 
   const loadEmployes = async () => {
     const { data } = await supabase.from("equipe").select("*");
@@ -165,6 +209,68 @@ const Planning = () => {
           <Plus className="mr-2 h-4 w-4" />
           Nouveau Job
         </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="glass-card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Statut</Label>
+            <Select value={filters.statut} onValueChange={(v) => setFilters({ ...filters, statut: v })}>
+              <SelectTrigger className="glass-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="À faire">À faire</SelectItem>
+                <SelectItem value="En cours">En cours</SelectItem>
+                <SelectItem value="Terminé">Terminé</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Employé</Label>
+            <Select value={filters.employe} onValueChange={(v) => setFilters({ ...filters, employe: v })}>
+              <SelectTrigger className="glass-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {resources.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>{emp.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Type</Label>
+            <Select value={filters.type} onValueChange={(v) => setFilters({ ...filters, type: v })}>
+              <SelectTrigger className="glass-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {uniqueTypes.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Zone</Label>
+            <Select value={filters.zone} onValueChange={(v) => setFilters({ ...filters, zone: v })}>
+              <SelectTrigger className="glass-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {uniqueZones.map(zone => (
+                  <SelectItem key={zone} value={zone}>{zone}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <div className="glass-card p-6">

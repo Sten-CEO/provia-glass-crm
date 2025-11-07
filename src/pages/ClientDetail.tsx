@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip } from "lucide-react";
+import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ const ClientDetail = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [factures, setFactures] = useState<any[]>([]);
   const [formData, setFormData] = useState<any>({});
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -191,6 +192,58 @@ const ClientDetail = () => {
                 />
               </div>
               <div className="col-span-2">
+                <Label>Tags</Label>
+                <div className="flex gap-2 mb-2 flex-wrap">
+                  {(formData.tags || []).map((tag: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="gap-1">
+                      {tag}
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => 
+                          setFormData({ 
+                            ...formData, 
+                            tags: (formData.tags || []).filter((_: any, idx: number) => idx !== i) 
+                          })
+                        }
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && tagInput.trim()) {
+                        e.preventDefault();
+                        setFormData({ 
+                          ...formData, 
+                          tags: [...(formData.tags || []), tagInput.trim()] 
+                        });
+                        setTagInput("");
+                      }
+                    }}
+                    placeholder="Ajouter un tag..."
+                    className="glass-card"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (tagInput.trim()) {
+                        setFormData({ 
+                          ...formData, 
+                          tags: [...(formData.tags || []), tagInput.trim()] 
+                        });
+                        setTagInput("");
+                      }
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+              <div className="col-span-2">
                 <Label>Notes</Label>
                 <Textarea
                   value={formData.notes || ""}
@@ -211,7 +264,11 @@ const ClientDetail = () => {
             <div className="space-y-2">
               {devis.length > 0 ? (
                 devis.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors">
+                  <div 
+                    key={d.id} 
+                    className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/devis/${d.id}`)}
+                  >
                     <div>
                       <p className="font-semibold">{d.numero}</p>
                       <p className="text-sm text-muted-foreground">{d.montant} €</p>
@@ -232,7 +289,11 @@ const ClientDetail = () => {
             <div className="space-y-2">
               {jobs.length > 0 ? (
                 jobs.map((j) => (
-                  <div key={j.id} className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors">
+                  <div 
+                    key={j.id} 
+                    className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/jobs/${j.id}`)}
+                  >
                     <div>
                       <p className="font-semibold">{j.titre}</p>
                       <p className="text-sm text-muted-foreground">{j.date} · {j.employe_nom}</p>
@@ -253,7 +314,11 @@ const ClientDetail = () => {
             <div className="space-y-2">
               {factures.length > 0 ? (
                 factures.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors">
+                  <div 
+                    key={f.id} 
+                    className="flex items-center justify-between p-3 glass-card rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/factures/${f.id}`)}
+                  >
                     <div>
                       <p className="font-semibold">{f.numero}</p>
                       <p className="text-sm text-muted-foreground">{f.montant} €</p>
