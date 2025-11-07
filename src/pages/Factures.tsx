@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { recomputeInvoiceTotals, formatCurrency } from "@/lib/invoiceUtils";
+import { ExternalLink } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -40,6 +42,11 @@ interface Invoice {
   montant: string;
   statut: "Payée" | "En attente" | "En retard";
   echeance: string;
+  total_ht?: number;
+  total_ttc?: number;
+  lignes?: any[];
+  remise?: number;
+  date_paiement?: string;
 }
 
 interface Client {
@@ -136,13 +143,42 @@ const Factures = () => {
   const handleEditInvoice = async () => {
     if (!selectedInvoice) return;
 
+    // Fetch full invoice with lines to recompute
+    const { data: fullInvoice } = await supabase
+      .from("factures")
+      .select("*")
+      .eq("id", selectedInvoice.id)
+      .single();
+
+    if (!fullInvoice) {
+      toast.error("Facture introuvable");
+      return;
+    }
+
+    // Merge changes and recompute totals
+    const updatedInvoice = recomputeInvoiceTotals({
+      ...fullInvoice,
+      statut: selectedInvoice.statut,
+      echeance: selectedInvoice.echeance,
+      remise: selectedInvoice.remise,
+    });
+
+    // Set paid_at if status changed to Payée
+    const updateData: any = {
+      statut: updatedInvoice.statut,
+      echeance: updatedInvoice.echeance,
+      total_ht: updatedInvoice.total_ht,
+      total_ttc: updatedInvoice.total_ttc,
+      remise: updatedInvoice.remise || 0,
+    };
+
+    if (selectedInvoice.statut === "Payée" && !fullInvoice.date_paiement) {
+      updateData.date_paiement = new Date().toISOString();
+    }
+
     const { error } = await supabase
       .from("factures")
-      .update({
-        montant: selectedInvoice.montant,
-        statut: selectedInvoice.statut,
-        echeance: selectedInvoice.echeance,
-      })
+      .update(updateData)
       .eq("id", selectedInvoice.id);
 
     if (error) {
@@ -284,7 +320,9 @@ const Factures = () => {
                     {invoice.numero}
                   </td>
                   <td className="p-4 text-muted-foreground">{invoice.client_nom}</td>
-                  <td className="p-4 font-semibold">{invoice.montant}</td>
+                  <td className="p-4 font-semibold">
+                    {invoice.total_ttc ? formatCurrency(invoice.total_ttc) : invoice.montant}
+                  </td>
                   <td className="p-4 text-muted-foreground">{formatDate(invoice.echeance)}</td>
                   <td className="p-4">
                     <Badge className={getStatusColor(invoice.statut)}>{invoice.statut}</Badge>
@@ -328,14 +366,31 @@ const Factures = () => {
           </DialogHeader>
           {selectedInvoice && (
             <div className="space-y-4">
+              <div className="glass-card p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total HT</span>
+                  <span className="font-semibold">
+                    {selectedInvoice.total_ht ? formatCurrency(selectedInvoice.total_ht) : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total TTC</span>
+                  <span className="font-bold">
+                    {selectedInvoice.total_ttc ? formatCurrency(selectedInvoice.total_ttc) : selectedInvoice.montant}
+                  </span>
+                </div>
+              </div>
+
               <div>
-                <Label>Montant</Label>
+                <Label>Remise (HT)</Label>
                 <Input
-                  value={selectedInvoice.montant}
-                  onChange={(e) => setSelectedInvoice({ ...selectedInvoice, montant: e.target.value })}
+                  type="number"
+                  value={selectedInvoice.remise || 0}
+                  onChange={(e) => setSelectedInvoice({ ...selectedInvoice, remise: Number(e.target.value) })}
                   className="glass-card"
                 />
               </div>
+
               <div>
                 <Label>Échéance</Label>
                 <Input
@@ -361,6 +416,16 @@ const Factures = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <Button 
+                onClick={() => navigate(`/factures/${selectedInvoice.id}`)} 
+                variant="outline"
+                className="w-full"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Modifier les lignes
+              </Button>
+
               <Button onClick={handleEditInvoice} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Enregistrer
               </Button>

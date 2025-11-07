@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Plus, Trash2, Download, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { recomputeInvoiceTotals } from "@/lib/invoiceUtils";
 
 interface LigneFacture {
   description: string;
@@ -71,12 +72,15 @@ const FactureDetail = () => {
   };
 
   const handleSave = async () => {
-    const { totalHT, totalTTC } = calculateTotals();
-    const updateData: any = {
+    // Use the shared recompute function
+    const updatedInvoice = recomputeInvoiceTotals({
       ...facture,
       lignes,
-      total_ht: totalHT,
-      total_ttc: totalTTC,
+    });
+
+    const updateData: any = {
+      ...updatedInvoice,
+      lignes,
     };
 
     // Set date_paiement when marking as paid
@@ -253,9 +257,20 @@ const FactureDetail = () => {
         </Button>
         <Button
           onClick={async () => {
+            // Recompute before marking as paid
+            const updatedInvoice = recomputeInvoiceTotals({
+              ...facture,
+              lignes,
+            });
+
             const { error } = await supabase
               .from("factures")
-              .update({ statut: "Payée", date_paiement: new Date().toISOString() })
+              .update({ 
+                statut: "Payée", 
+                date_paiement: new Date().toISOString(),
+                total_ht: updatedInvoice.total_ht,
+                total_ttc: updatedInvoice.total_ttc,
+              })
               .eq("id", id);
             if (error) toast.error("Erreur");
             else { toast.success("Facture marquée payée"); loadFacture(); }
