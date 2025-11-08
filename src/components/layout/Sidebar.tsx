@@ -64,12 +64,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "glass-sidebar transition-all duration-300 h-screen sticky top-0 z-50",
+        "glass-sidebar transition-all duration-300 h-screen sticky top-0 z-50 flex flex-col",
         isOpen ? "w-64" : "w-0 lg:w-20",
         "overflow-hidden"
       )}
     >
-      <div className="p-4 space-y-1 pt-6">
+      <div className="p-4 space-y-1 pt-6 overflow-y-auto flex-1">
         {/* Create Button */}
         {isOpen && (
           <DropdownMenu>
