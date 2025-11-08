@@ -78,15 +78,14 @@ const DevisEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNewQuote = !id || id === "new";
-  const [loading, setLoading] = useState(!isNewQuote);
-  const [loadTimeout, setLoadTimeout] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const [quote, setQuote] = useState<Quote>({
-    numero: "",
-    title: "",
+    numero: "DRAFT-" + Date.now(),
+    title: "Nouveau devis",
     client_id: "",
     client_nom: "",
     property_address: "",
@@ -94,7 +93,7 @@ const DevisEditor = () => {
     contact_email: "",
     salesperson: "",
     issued_at: new Date().toISOString().split("T")[0],
-    expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    expiry_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     statut: "Brouillon",
     lignes: [],
     packages: [],
@@ -110,46 +109,61 @@ const DevisEditor = () => {
   });
 
   useEffect(() => {
+    // Load clients and employees in background (non-blocking)
     loadClients();
     loadEmployees();
-    if (!isNewQuote) {
+
+    if (!isNewQuote && id) {
+      setLoading(true);
       loadQuote();
+      
+      // Safety timeout - force render after 4s
+      const timer = setTimeout(() => {
+        setLoading(false);
+        if (quote.id === undefined) {
+          toast.error("Délai dépassé - impossible de charger le devis");
+          navigate("/devis");
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
     } else {
+      // New quote - generate number in background but don't block render
       generateNumber();
-      setLoading(false);
     }
   }, [id]);
 
-  // Safety timeout
-  useEffect(() => {
-    if (!isNewQuote) {
-      const timer = setTimeout(() => {
-        setLoadTimeout(true);
-        setLoading(false);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [isNewQuote]);
-
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("*");
-    setClients(data || []);
+    try {
+      const { data } = await supabase.from("clients").select("*");
+      setClients(data || []);
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    }
   };
 
   const loadEmployees = async () => {
-    const { data } = await supabase.from("equipe").select("*");
-    setEmployees(data || []);
+    try {
+      const { data } = await supabase.from("equipe").select("*");
+      setEmployees(data || []);
+    } catch (error) {
+      console.error("Error loading employees:", error);
+    }
   };
 
   const generateNumber = async () => {
-    const { data } = await supabase
-      .from("devis")
-      .select("numero")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const lastNum = data?.[0]?.numero || "DEV-0000";
-    const num = parseInt(lastNum.split("-")[1]) + 1;
-    setQuote((q) => ({ ...q, numero: `DEV-${String(num).padStart(4, "0")}` }));
+    try {
+      const { data } = await supabase
+        .from("devis")
+        .select("numero")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const lastNum = data?.[0]?.numero || "DEV-0000";
+      const num = parseInt(lastNum.split("-")[1]) + 1;
+      setQuote((q) => ({ ...q, numero: `DEV-${String(num).padStart(4, "0")}` }));
+    } catch (error) {
+      console.error("Error generating number:", error);
+      // Keep the DRAFT number if generation fails
+    }
   };
 
   const loadQuote = async () => {
@@ -208,8 +222,25 @@ const DevisEditor = () => {
       return;
     }
 
+    // Generate proper number if still using draft number
+    let finalNumber = quote.numero;
+    if (finalNumber.startsWith("DRAFT-")) {
+      try {
+        const { data } = await supabase
+          .from("devis")
+          .select("numero")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const lastNum = data?.[0]?.numero || "DEV-0000";
+        const num = parseInt(lastNum.split("-")[1]) + 1;
+        finalNumber = `DEV-${String(num).padStart(4, "0")}`;
+      } catch (error) {
+        finalNumber = `DEV-${String(Date.now()).slice(-4)}`;
+      }
+    }
+
     const payload = {
-      numero: quote.numero,
+      numero: finalNumber,
       title: quote.title,
       client_id: quote.client_id,
       client_nom: quote.client_nom,
@@ -232,19 +263,20 @@ const DevisEditor = () => {
       montant: String(quote.total_ttc),
     };
 
-    if (id && !isNewQuote) {
+    if (id && !isNewQuote && quote.id) {
       const { error } = await supabase.from("devis").update(payload).eq("id", id);
       if (error) {
         toast.error("Erreur de sauvegarde");
         return;
       }
+      setQuote((q) => ({ ...q, numero: finalNumber }));
     } else {
       const { data, error } = await supabase.from("devis").insert([payload]).select().single();
       if (error) {
         toast.error("Erreur de création");
         return;
       }
-      setQuote((q) => ({ ...q, id: data.id }));
+      setQuote((q) => ({ ...q, id: data.id, numero: finalNumber }));
       navigate(`/devis/${data.id}/edit`, { replace: true });
     }
 
@@ -254,12 +286,14 @@ const DevisEditor = () => {
 
   const handleSend = async () => {
     await handleSave();
-    const quoteId = id || quote.id;
+    const quoteId = quote.id;
     if (quoteId) {
       await supabase.from("devis").update({ statut: "Envoyé", date_envoi: new Date().toISOString() }).eq("id", quoteId);
       setQuote((q) => ({ ...q, statut: "Envoyé" }));
+      setEmailModalOpen(true);
+    } else {
+      toast.error("Veuillez d'abord enregistrer le devis");
     }
-    setEmailModalOpen(true);
   };
 
   const handleEmailSend = async (to: string[], subject: string, body: string) => {
@@ -396,7 +430,7 @@ const DevisEditor = () => {
 
   const isExpired = quote.expiry_date && new Date(quote.expiry_date) < new Date() && ["Brouillon", "Envoyé"].includes(quote.statut);
 
-  if (loading && !loadTimeout) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="glass-card p-8 text-center">
