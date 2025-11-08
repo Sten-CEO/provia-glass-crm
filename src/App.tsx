@@ -20,6 +20,7 @@ import Parametres from "./pages/Parametres";
 import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 import DevisDetail from "./pages/DevisDetail";
+import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
 import { SupportBubble } from "./components/support/SupportBubble";
 
@@ -41,7 +42,9 @@ const App = () => (
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/planning" element={<Planning />} />
             <Route path="/devis" element={<Devis />} />
+            <Route path="/devis/new" element={<DevisEditor />} />
             <Route path="/devis/:id" element={<DevisDetail />} />
+            <Route path="/devis/:id/edit" element={<DevisEditor />} />
             <Route path="/factures" element={<Factures />} />
             <Route path="/factures/:id" element={<FactureDetail />} />
             <Route path="/jobs" element={<Jobs />} />

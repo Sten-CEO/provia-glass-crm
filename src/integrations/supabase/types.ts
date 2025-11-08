@@ -101,66 +101,102 @@ export type Database = {
       devis: {
         Row: {
           acompte: number | null
+          approved_at: string | null
+          approved_by: string | null
           client_id: string | null
           client_nom: string
           conditions: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          converted_to_invoice_id: string | null
+          converted_to_job_id: string | null
           created_at: string
+          custom_fields: Json | null
           date_envoi: string | null
           expiry_date: string | null
           id: string
+          issued_at: string | null
           lignes: Json | null
           message_client: string | null
           montant: string
           notes_internes: string | null
           numero: string
+          packages: Json | null
+          property_address: string | null
           remise: number | null
+          salesperson: string | null
           signature_date: string | null
           signature_image: string | null
           statut: string
+          title: string | null
           total_ht: number | null
           total_ttc: number | null
           vendeur: string | null
         }
         Insert: {
           acompte?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string | null
           client_nom: string
           conditions?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          converted_to_invoice_id?: string | null
+          converted_to_job_id?: string | null
           created_at?: string
+          custom_fields?: Json | null
           date_envoi?: string | null
           expiry_date?: string | null
           id?: string
+          issued_at?: string | null
           lignes?: Json | null
           message_client?: string | null
           montant: string
           notes_internes?: string | null
           numero: string
+          packages?: Json | null
+          property_address?: string | null
           remise?: number | null
+          salesperson?: string | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
+          title?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           vendeur?: string | null
         }
         Update: {
           acompte?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string | null
           client_nom?: string
           conditions?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          converted_to_invoice_id?: string | null
+          converted_to_job_id?: string | null
           created_at?: string
+          custom_fields?: Json | null
           date_envoi?: string | null
           expiry_date?: string | null
           id?: string
+          issued_at?: string | null
           lignes?: Json | null
           message_client?: string | null
           montant?: string
           notes_internes?: string | null
           numero?: string
+          packages?: Json | null
+          property_address?: string | null
           remise?: number | null
+          salesperson?: string | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
+          title?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           vendeur?: string | null
