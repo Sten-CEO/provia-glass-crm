@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Briefcase, FileText, Receipt, Users, AlertCircle } from "lucide-react";
+import { Plus, Briefcase, FileText, Receipt, Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { RevenueModule } from "@/components/dashboard/RevenueModule";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
+import { StockAlertsCard } from "@/components/dashboard/StockAlertsCard";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -93,6 +94,7 @@ const Dashboard = () => {
     <div className="space-y-6 animate-fade-in">
       <RevenueModule />
       <AlertsStrip />
+      <StockAlertsCard />
       
       <div className="flex items-center justify-between">
         <div>

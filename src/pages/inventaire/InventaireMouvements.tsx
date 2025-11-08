@@ -1,24 +1,14 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Search, Menu } from "lucide-react";
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
-
-const subFunctions = [
-  { label: "Consommables", path: "/inventaire/consommables" },
-  { label: "Matériels", path: "/inventaire/materiels" },
-  { label: "Mouvements", path: "/inventaire/mouvements" },
-  { label: "Achats", path: "/inventaire/achats" },
-];
 
 const InventaireMouvements = () => {
   const [movements, setMovements] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
 
   const loadMovements = async () => {
     const { data, error } = await supabase
@@ -76,19 +66,7 @@ const InventaireMouvements = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold uppercase tracking-wide">Mouvements de Stock</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSubFunctionsOpen(true)}
-            title="Sous-fonctions"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
+      <h1 className="text-3xl font-bold uppercase tracking-wide">Mouvements de Stock</h1>
 
       <div className="glass-card p-4">
         <div className="relative">
@@ -198,13 +176,6 @@ const InventaireMouvements = () => {
           </div>
         </TabsContent>
       </Tabs>
-
-      <SubFunctionsDrawer
-        open={subFunctionsOpen}
-        onOpenChange={setSubFunctionsOpen}
-        title="Mouvements"
-        subFunctions={subFunctions}
-      />
     </div>
   );
 };

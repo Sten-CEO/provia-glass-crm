@@ -219,7 +219,7 @@ const InventaireAchats = () => {
       .map((item) => ({
         item_id: item.item_id,
         type: "in",
-        source: "purchase",
+        source: "achat",
         qty: item.qty_received,
         date: new Date().toISOString(),
         ref_id: orderId,

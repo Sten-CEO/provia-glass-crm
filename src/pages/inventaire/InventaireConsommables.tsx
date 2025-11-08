@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus, Eye, Search, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Eye, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -25,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 interface Item {
   id: string;
@@ -168,22 +167,17 @@ const InventaireConsommables = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Persistent tab bar */}
-      <Tabs value={activeTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
-          <TabsTrigger 
-            value="consommables" 
-            onClick={() => navigate("/inventaire/consommables")}
-          >
-            Consommables
-          </TabsTrigger>
-          <TabsTrigger 
-            value="materiels" 
-            onClick={() => navigate("/inventaire/materiels")}
-          >
-            Matériels
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="glass-card p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold uppercase tracking-wide">
