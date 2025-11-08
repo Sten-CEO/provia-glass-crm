@@ -77,7 +77,9 @@ interface Quote {
 const DevisEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(!!id);
+  const isNewQuote = !id || id === "new";
+  const [loading, setLoading] = useState(!isNewQuote);
+  const [loadTimeout, setLoadTimeout] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -110,12 +112,24 @@ const DevisEditor = () => {
   useEffect(() => {
     loadClients();
     loadEmployees();
-    if (id) {
+    if (!isNewQuote) {
       loadQuote();
     } else {
       generateNumber();
+      setLoading(false);
     }
   }, [id]);
+
+  // Safety timeout
+  useEffect(() => {
+    if (!isNewQuote) {
+      const timer = setTimeout(() => {
+        setLoadTimeout(true);
+        setLoading(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNewQuote]);
 
   const loadClients = async () => {
     const { data } = await supabase.from("clients").select("*");
@@ -218,7 +232,7 @@ const DevisEditor = () => {
       montant: String(quote.total_ttc),
     };
 
-    if (id) {
+    if (id && !isNewQuote) {
       const { error } = await supabase.from("devis").update(payload).eq("id", id);
       if (error) {
         toast.error("Erreur de sauvegarde");
@@ -230,7 +244,8 @@ const DevisEditor = () => {
         toast.error("Erreur de création");
         return;
       }
-      navigate(`/devis/${data.id}/edit`);
+      setQuote((q) => ({ ...q, id: data.id }));
+      navigate(`/devis/${data.id}/edit`, { replace: true });
     }
 
     toast.success("Devis enregistré");
@@ -239,7 +254,11 @@ const DevisEditor = () => {
 
   const handleSend = async () => {
     await handleSave();
-    await supabase.from("devis").update({ statut: "Envoyé", date_envoi: new Date().toISOString() }).eq("id", id || quote.id);
+    const quoteId = id || quote.id;
+    if (quoteId) {
+      await supabase.from("devis").update({ statut: "Envoyé", date_envoi: new Date().toISOString() }).eq("id", quoteId);
+      setQuote((q) => ({ ...q, statut: "Envoyé" }));
+    }
     setEmailModalOpen(true);
   };
 
@@ -377,7 +396,15 @@ const DevisEditor = () => {
 
   const isExpired = quote.expiry_date && new Date(quote.expiry_date) < new Date() && ["Brouillon", "Envoyé"].includes(quote.statut);
 
-  if (loading) return <div className="p-6">Chargement...</div>;
+  if (loading && !loadTimeout) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="glass-card p-8 text-center">
+          <div className="animate-pulse">Chargement du devis...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">
