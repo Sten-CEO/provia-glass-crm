@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Menu } from "lucide-react";
+import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -54,6 +55,13 @@ interface Client {
   nom: string;
 }
 
+const subFunctions = [
+  { label: "En attente", path: "/factures?filter=En attente" },
+  { label: "Payées", path: "/factures?filter=Payées" },
+  { label: "En retard", path: "/factures?filter=En retard" },
+  { label: "Échéances du mois", path: "/factures?filter=month" },
+];
+
 const Factures = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -62,6 +70,7 @@ const Factures = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   const [newInvoice, setNewInvoice] = useState({
     numero: `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
     client_id: "",
@@ -225,7 +234,17 @@ const Factures = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase tracking-wide">Factures</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold uppercase tracking-wide">Factures</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSubFunctionsOpen(true)}
+            title="Sous-fonctions"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -451,6 +470,13 @@ const Factures = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SubFunctionsDrawer
+        open={subFunctionsOpen}
+        onOpenChange={setSubFunctionsOpen}
+        title="Factures"
+        subFunctions={subFunctions}
+      />
     </div>
   );
 };

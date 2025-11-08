@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Eye, Search, Edit } from "lucide-react";
+import { Plus, Trash2, Eye, Search, Edit, Menu } from "lucide-react";
+import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,6 +34,14 @@ interface Quote {
   created_at: string;
 }
 
+const subFunctions = [
+  { label: "Brouillons", path: "/devis?filter=Brouillons" },
+  { label: "Envoyés", path: "/devis?filter=Envoyés" },
+  { label: "Acceptés", path: "/devis?filter=Acceptés" },
+  { label: "Refusés", path: "/devis?filter=Refusés" },
+  { label: "Expirés", path: "/devis?filter=Expirés" },
+];
+
 const Devis = () => {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -40,6 +49,7 @@ const Devis = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
 
   const loadQuotes = async () => {
     const { data, error } = await supabase
@@ -134,7 +144,17 @@ const Devis = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase tracking-wide">Devis</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold uppercase tracking-wide">Devis</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSubFunctionsOpen(true)}
+            title="Sous-fonctions"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
         <Button
           onClick={() => navigate("/devis/new")}
           className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide"
@@ -288,6 +308,13 @@ const Devis = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SubFunctionsDrawer
+        open={subFunctionsOpen}
+        onOpenChange={setSubFunctionsOpen}
+        title="Devis"
+        subFunctions={subFunctions}
+      />
     </div>
   );
 };

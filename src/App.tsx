@@ -25,6 +25,9 @@ import FactureDetail from "./pages/FactureDetail";
 import Inventaire from "./pages/inventaire/Inventaire";
 import InventaireConsommables from "./pages/inventaire/InventaireConsommables";
 import InventaireMateriels from "./pages/inventaire/InventaireMateriels";
+import InventaireItemDetail from "./pages/inventaire/InventaireItemDetail";
+import InventaireMouvements from "./pages/inventaire/InventaireMouvements";
+import InventaireAchats from "./pages/inventaire/InventaireAchats";
 import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
@@ -63,8 +66,9 @@ const App = () => (
             <Route path="/inventaire" element={<Inventaire />} />
             <Route path="/inventaire/consommables" element={<InventaireConsommables />} />
             <Route path="/inventaire/materiels" element={<InventaireMateriels />} />
-            <Route path="/inventaire/mouvements" element={<Inventaire />} />
-            <Route path="/inventaire/achats" element={<Inventaire />} />
+            <Route path="/inventaire/items/:id" element={<InventaireItemDetail />} />
+            <Route path="/inventaire/mouvements" element={<InventaireMouvements />} />
+            <Route path="/inventaire/achats" element={<InventaireAchats />} />
             
             <Route path="/equipe" element={<Equipe />} />
             <Route path="/timesheets" element={<Timesheets />} />
