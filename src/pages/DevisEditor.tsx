@@ -303,6 +303,96 @@ const DevisEditor = () => {
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
   };
 
+  const handleConvertToJob = async () => {
+    if (!quote.id) {
+      toast.error("Veuillez d'abord enregistrer le devis");
+      return;
+    }
+
+    const jobPayload = {
+      titre: quote.title || `Intervention ${quote.numero}`,
+      client_id: quote.client_id,
+      client_nom: quote.client_nom,
+      employe_nom: "",
+      adresse: quote.property_address || "",
+      statut: "À faire",
+      date: new Date().toISOString().split("T")[0],
+      checklist: quote.lignes.map((l) => ({
+        id: crypto.randomUUID(),
+        label: l.name,
+        done: false,
+      })) as unknown as any,
+      notes: `Créé depuis devis ${quote.numero}`,
+      converted_from_quote_id: quote.id,
+    };
+
+    const { data: newJob, error: jobError } = await supabase.from("jobs").insert([jobPayload]).select().single();
+
+    if (jobError || !newJob) {
+      toast.error("Erreur", { description: "Échec de création du job" });
+      return;
+    }
+
+    await supabase.from("devis").update({ converted_to_job_id: newJob.id }).eq("id", quote.id);
+
+    toast.success("Job créé avec succès");
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
+    
+    // Navigate to the new job
+    navigate(`/jobs/${newJob.id}`);
+  };
+
+  const handleConvertToInvoice = async () => {
+    if (!quote.id) {
+      toast.error("Veuillez d'abord enregistrer le devis");
+      return;
+    }
+
+    const includedLines = quote.lignes.filter((l) => !l.optional || l.included === true);
+
+    const invoicePayload = {
+      client_id: quote.client_id,
+      client_nom: quote.client_nom,
+      numero: `FAC-${String(Date.now()).slice(-4)}`,
+      montant: String(quote.total_ttc),
+      echeance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      statut: "En attente",
+      lignes: includedLines.map((l) => ({
+        name: l.name,
+        description: l.description || "",
+        qty: l.qty,
+        unit: l.unit,
+        unit_price_ht: l.unit_price_ht,
+        tva_rate: l.tva_rate,
+      })) as unknown as any,
+      total_ht: quote.total_ht,
+      total_ttc: quote.total_ttc,
+      remise: quote.discount_ht,
+      converted_from_quote_id: quote.id,
+    };
+
+    const { data: newInvoice, error: invoiceError } = await supabase
+      .from("factures")
+      .insert([invoicePayload])
+      .select()
+      .single();
+
+    if (invoiceError || !newInvoice) {
+      toast.error("Erreur", { description: "Échec de création de la facture" });
+      return;
+    }
+
+    await supabase.from("devis").update({ converted_to_invoice_id: newInvoice.id }).eq("id", quote.id);
+
+    toast.success("Facture créée avec succès");
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "invoices" });
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
+    
+    // Navigate to the new invoice
+    navigate(`/factures/${newInvoice.id}`);
+  };
+
   const addLine = (optional: boolean = false) => {
     const newLine: QuoteLine = {
       id: crypto.randomUUID(),
@@ -498,30 +588,12 @@ const DevisEditor = () => {
                 >
                   Marquer Refusé
                 </DropdownMenuItem>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <DropdownMenuItem disabled className="opacity-50">
-                          Convertir en facture
-                        </DropdownMenuItem>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Disponible en Phase 4</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <DropdownMenuItem disabled className="opacity-50">
-                          Convertir en job
-                        </DropdownMenuItem>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Disponible en Phase 4</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <DropdownMenuItem onClick={handleConvertToInvoice} disabled={!quote.id}>
+                  Convertir en facture
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleConvertToJob} disabled={!quote.id}>
+                  Convertir en job
+                </DropdownMenuItem>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
