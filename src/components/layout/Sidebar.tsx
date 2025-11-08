@@ -130,7 +130,6 @@ const navSections = [
           { label: "Matériels", path: "/inventaire/materiels" },
           { label: "Mouvements", path: "/inventaire/mouvements" },
           { label: "Achats", path: "/inventaire/achats" },
-          { label: "Alertes stock", path: "/inventaire?filter=alerts" },
         ]
       },
     ],
