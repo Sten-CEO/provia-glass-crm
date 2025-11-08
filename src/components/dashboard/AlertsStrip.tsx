@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle, FileText, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { eventBus, EVENTS } from "@/lib/eventBus";
 
 interface AlertsData {
   unpaidInvoices: { count: number; total: number };
@@ -74,8 +75,18 @@ export const AlertsStrip = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, loadAlerts)
       .subscribe();
 
+    // Listen to event bus
+    const handleDataChanged = (data: any) => {
+      if (data?.scope === 'invoices' || data?.scope === 'quotes' || data?.scope === 'jobs' || data?.scope === 'planning') {
+        loadAlerts();
+      }
+    };
+
+    eventBus.on(EVENTS.DATA_CHANGED, handleDataChanged);
+
     return () => {
       supabase.removeChannel(channel);
+      eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
     };
   }, []);
 

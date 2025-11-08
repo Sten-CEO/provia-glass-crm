@@ -284,9 +284,12 @@ export type Database = {
           heure_fin: string | null
           id: string
           lieu: string | null
+          linked_invoice_id: string | null
+          linked_quote_id: string | null
           location_gps: Json | null
           notes: string | null
           notes_timeline: Json | null
+          planning_event_id: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           statut: string
@@ -311,9 +314,12 @@ export type Database = {
           heure_fin?: string | null
           id?: string
           lieu?: string | null
+          linked_invoice_id?: string | null
+          linked_quote_id?: string | null
           location_gps?: Json | null
           notes?: string | null
           notes_timeline?: Json | null
+          planning_event_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           statut?: string
@@ -338,9 +344,12 @@ export type Database = {
           heure_fin?: string | null
           id?: string
           lieu?: string | null
+          linked_invoice_id?: string | null
+          linked_quote_id?: string | null
           location_gps?: Json | null
           notes?: string | null
           notes_timeline?: Json | null
+          planning_event_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           statut?: string
@@ -362,6 +371,13 @@ export type Database = {
             columns: ["employe_id"]
             isOneToOne: false
             referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_planning_event_id_fkey"
+            columns: ["planning_event_id"]
+            isOneToOne: false
+            referencedRelation: "planning_events"
             referencedColumns: ["id"]
           },
         ]
@@ -403,6 +419,47 @@ export type Database = {
             columns: ["facture_id"]
             isOneToOne: false
             referencedRelation: "factures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_events: {
+        Row: {
+          created_at: string | null
+          employee_ids: string[] | null
+          end_at: string
+          id: string
+          job_id: string | null
+          start_at: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_ids?: string[] | null
+          end_at: string
+          id?: string
+          job_id?: string | null
+          start_at: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_ids?: string[] | null
+          end_at?: string
+          id?: string
+          job_id?: string | null
+          start_at?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
