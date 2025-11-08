@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,14 +41,6 @@ interface Job {
   titre: string;
 }
 
-const subFunctions = [
-  { label: "À approuver", path: "/timesheets?filter=submitted" },
-  { label: "Brouillons", path: "/timesheets?filter=draft" },
-  { label: "Approuvées", path: "/timesheets?filter=approved" },
-  { label: "Export CSV", path: "/timesheets?action=export" },
-  { label: "Rapport mensuel", path: "/timesheets?view=monthly" },
-];
-
 const Timesheets = () => {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -57,7 +48,6 @@ const Timesheets = () => {
   const [selectedWeek, setSelectedWeek] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   const [newEntry, setNewEntry] = useState({
     employee_id: "",
     job_id: "",
@@ -286,14 +276,6 @@ const Timesheets = () => {
               <h1 className="text-3xl font-bold uppercase tracking-wide">Timesheets</h1>
               <p className="text-muted-foreground">Pointage et validation hebdomadaire</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSubFunctionsOpen(true)}
-              title="Sous-fonctions"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={exportCSV} variant="outline" className="gap-2">
@@ -592,13 +574,6 @@ const Timesheets = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <SubFunctionsDrawer
-        open={subFunctionsOpen}
-        onOpenChange={setSubFunctionsOpen}
-        title="Timesheets"
-        subFunctions={subFunctions}
-      />
     </div>
   );
 };

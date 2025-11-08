@@ -34,8 +34,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { eventBus, EVENTS } from "@/lib/eventBus";
-import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
-
 interface Intervention {
   id: string;
   titre: string;
@@ -52,13 +50,6 @@ interface Intervention {
   checklist?: Array<{ id: string; label: string; done: boolean }>;
 }
 
-const subFunctions = [
-  { label: "À planifier", path: "/interventions?filter=À faire" },
-  { label: "En cours", path: "/interventions?filter=En cours" },
-  { label: "Terminées", path: "/interventions?filter=Terminé" },
-  { label: "Temps & coûts", path: "/timesheets" },
-];
-
 const Interventions = () => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -68,7 +59,6 @@ const Interventions = () => {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
   const [newIntervention, setNewIntervention] = useState({
     titre: "",
@@ -237,17 +227,7 @@ const Interventions = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold uppercase tracking-wide">Interventions</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSubFunctionsOpen(true)}
-            title="Sous-fonctions"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold uppercase tracking-wide">Interventions</h1>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -536,13 +516,6 @@ const Interventions = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <SubFunctionsDrawer
-        open={subFunctionsOpen}
-        onOpenChange={setSubFunctionsOpen}
-        title="Interventions"
-        subFunctions={subFunctions}
-      />
     </div>
   );
 };

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Eye, Search, AlertTriangle } from "lucide-react";
+import { Plus, Eye, Search, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Item {
   id: string;
@@ -28,9 +29,16 @@ interface Item {
 }
 
 const InventaireConsommables = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  
+  // Determine type from current route
+  const type = location.pathname.includes('/materiels') ? 'materiel' : 'consommable';
+  const activeTab = type === 'materiel' ? 'materiels' : 'consommables';
+  
   const [newItem, setNewItem] = useState({
     name: "",
     sku: "",
@@ -43,13 +51,12 @@ const InventaireConsommables = () => {
     category: "",
     notes: "",
   });
-  const navigate = useNavigate();
 
   const loadItems = async () => {
     const { data, error } = await supabase
       .from("inventory_items")
       .select("*")
-      .eq("type", "consommable")
+      .eq("type", type)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -64,7 +71,7 @@ const InventaireConsommables = () => {
     loadItems();
 
     const channel = supabase
-      .channel("inventory_items_consommables")
+      .channel(`inventory_items_${type}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "inventory_items" }, () => {
         loadItems();
       })
@@ -73,7 +80,7 @@ const InventaireConsommables = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [type]);
 
   const handleAddItem = async () => {
     if (!newItem.name) {
@@ -83,7 +90,7 @@ const InventaireConsommables = () => {
 
     const { error } = await supabase.from("inventory_items").insert([
       {
-        type: "consommable",
+        type: type,
         name: newItem.name,
         sku: newItem.sku || null,
         supplier_name: newItem.supplier_name || null,
@@ -102,7 +109,7 @@ const InventaireConsommables = () => {
       return;
     }
 
-    toast.success("Consommable créé avec succès");
+    toast.success(`${type === 'materiel' ? 'Matériel' : 'Consommable'} créé avec succès`);
     setNewItem({
       name: "",
       sku: "",
@@ -125,26 +132,56 @@ const InventaireConsommables = () => {
     (item.supplier_name && item.supplier_name.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const emptyMessage = type === 'materiel' 
+    ? "Aucun matériel pour le moment…" 
+    : "Aucun consommable pour le moment…";
+  
+  const ctaLabel = type === 'materiel' 
+    ? "Nouveau matériel" 
+    : "Nouveau consommable";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Persistent tab bar */}
+      <Tabs value={activeTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10">
+          <TabsTrigger 
+            value="consommables" 
+            onClick={() => navigate("/inventaire/consommables")}
+          >
+            Consommables
+          </TabsTrigger>
+          <TabsTrigger 
+            value="materiels" 
+            onClick={() => navigate("/inventaire/materiels")}
+          >
+            Matériels
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold uppercase tracking-wide">
+          {type === 'materiel' ? 'Matériels' : 'Consommables'}
+        </h1>
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
               <Plus className="mr-2 h-4 w-4" />
-              Nouveau Consommable
+              {ctaLabel}
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-modal max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="uppercase tracking-wide">Nouveau Consommable</DialogTitle>
+              <DialogTitle className="uppercase tracking-wide">{ctaLabel}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Nom *</Label>
                   <Input
-                    placeholder="Vis M6"
+                    placeholder={type === 'materiel' ? "Ordinateur portable" : "Vis M6"}
                     value={newItem.name}
                     onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                     className="glass-card"
@@ -162,7 +199,7 @@ const InventaireConsommables = () => {
                 <div>
                   <Label>Catégorie</Label>
                   <Input
-                    placeholder="Quincaillerie"
+                    placeholder={type === 'materiel' ? "Informatique" : "Quincaillerie"}
                     value={newItem.category}
                     onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                     className="glass-card"
@@ -309,6 +346,12 @@ const InventaireConsommables = () => {
               })}
             </tbody>
           </table>
+          
+          {filteredItems.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              {emptyMessage}
+            </div>
+          )}
         </div>
       </div>
     </div>

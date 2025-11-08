@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Menu } from "lucide-react";
-import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -26,14 +25,6 @@ import {
 } from "@/components/ui/select";
 import { JobDetailPanel } from "@/components/planning/JobDetailPanel";
 
-const subFunctions = [
-  { label: "À faire", path: "/planning?filter=À faire" },
-  { label: "En cours", path: "/planning?filter=En cours" },
-  { label: "Terminé", path: "/planning?filter=Terminé" },
-  { label: "Vue par employé", path: "/planning?view=employee" },
-  { label: "Vue calendrier", path: "/planning?view=calendar" },
-];
-
 const Planning = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [allJobs, setAllJobs] = useState<any[]>([]);
@@ -41,7 +32,6 @@ const Planning = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   
   // Load filters from localStorage
   const [filters, setFilters] = useState(() => {
@@ -214,17 +204,7 @@ const Planning = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold uppercase tracking-wide">Planning</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSubFunctionsOpen(true)}
-            title="Sous-fonctions"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold uppercase tracking-wide">Planning</h1>
         <Button onClick={() => setOpen(true)} className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
           <Plus className="mr-2 h-4 w-4" />
           Nouvelle Intervention
@@ -404,13 +384,6 @@ const Planning = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      <SubFunctionsDrawer
-        open={subFunctionsOpen}
-        onOpenChange={setSubFunctionsOpen}
-        title="Planning"
-        subFunctions={subFunctions}
-      />
     </div>
   );
 };
