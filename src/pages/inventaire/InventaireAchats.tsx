@@ -26,7 +26,6 @@ const InventaireAchats = () => {
   const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   const [newOrder, setNewOrder] = useState({
     kind: "consommable",
-    number: "",
     supplier: "",
     expected_date: "",
     note: "",
@@ -63,18 +62,21 @@ const InventaireAchats = () => {
   }, []);
 
   const handleAddOrder = async () => {
-    if (!newOrder.number || !newOrder.supplier) {
-      toast.error("Numéro et fournisseur requis");
+    if (!newOrder.supplier) {
+      toast.error("Le fournisseur est requis");
       return;
     }
 
-    // Generate next PO number
-    const poNumber = `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, "0")}`;
+    // Generate ACH number: ACH-YYYY-seq
+    const year = new Date().getFullYear();
+    const seq = String(orders.length + 1).padStart(3, "0");
+    const achNumber = `ACH-${year}-${seq}`;
 
     const { error } = await supabase.from("purchase_orders").insert([
       {
         ...newOrder,
-        number: poNumber,
+        number: achNumber,
+        status: "en_attente",
       },
     ]);
 
@@ -86,7 +88,6 @@ const InventaireAchats = () => {
     toast.success("Commande créée avec succès");
     setNewOrder({
       kind: "consommable",
-      number: "",
       supplier: "",
       expected_date: "",
       note: "",

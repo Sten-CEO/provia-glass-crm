@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Search, AlertTriangle } from "lucide-react";
+import { Plus, Eye, Search, AlertTriangle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -11,6 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,6 +44,7 @@ const InventaireConsommables = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   
   // Determine type from current route
   const type = location.pathname.includes('/materiels') ? 'materiel' : 'consommable';
@@ -125,7 +136,21 @@ const InventaireConsommables = () => {
     setOpen(false);
   };
 
-  const filteredItems = items.filter(item => 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    const { error } = await supabase.from("inventory_items").delete().eq("id", deleteId);
+
+    if (error) {
+      toast.error("Échec de suppression");
+      return;
+    }
+
+    toast.success(`${type === 'materiel' ? 'Matériel' : 'Consommable'} supprimé avec succès`);
+    setDeleteId(null);
+  };
+
+  const filteredItems = items.filter(item =>
     search === "" || 
     item.name.toLowerCase().includes(search.toLowerCase()) ||
     (item.sku && item.sku.toLowerCase().includes(search.toLowerCase())) ||
@@ -339,6 +364,15 @@ const InventaireConsommables = () => {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteId(item.id)}
+                          title="Supprimer"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -354,6 +388,24 @@ const InventaireConsommables = () => {
           )}
         </div>
       </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -109,28 +109,18 @@ const DevisEditor = () => {
   });
 
   useEffect(() => {
-    // Load clients and employees in background (non-blocking)
-    loadClients();
-    loadEmployees();
-
     if (!isNewQuote && id) {
-      setLoading(true);
       loadQuote();
-      
-      // Safety timeout - force render after 4s
-      const timer = setTimeout(() => {
-        setLoading(false);
-        if (quote.id === undefined) {
-          toast.error("Délai dépassé - impossible de charger le devis");
-          navigate("/devis");
-        }
-      }, 4000);
-      return () => clearTimeout(timer);
     } else {
-      // New quote - generate number in background but don't block render
       generateNumber();
     }
   }, [id]);
+
+  useEffect(() => {
+    // Load reference data in background (non-blocking)
+    loadClients();
+    loadEmployees();
+  }, []);
 
   const loadClients = async () => {
     try {
@@ -168,39 +158,54 @@ const DevisEditor = () => {
 
   const loadQuote = async () => {
     if (!id) return;
-    const { data, error } = await supabase.from("devis").select("*").eq("id", id).maybeSingle();
-    if (error || !data) {
+    
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from("devis")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+        
+      if (error || !data) {
+        toast.error("Erreur de chargement");
+        navigate("/devis");
+        return;
+      }
+
+      setQuote({
+        id: data.id,
+        numero: data.numero,
+        title: data.title || "",
+        client_id: data.client_id || "",
+        client_nom: data.client_nom,
+        property_address: data.property_address || "",
+        contact_phone: data.contact_phone || "",
+        contact_email: data.contact_email || "",
+        salesperson: data.salesperson || "",
+        issued_at: data.issued_at || new Date().toISOString().split("T")[0],
+        expiry_date: data.expiry_date || "",
+        statut: data.statut,
+        lignes: (data.lignes as any) || [],
+        packages: (data.packages as any) || [],
+        custom_fields: (data.custom_fields as any) || [],
+        discount_ht: data.remise || 0,
+        required_deposit_ht: data.acompte || 0,
+        total_ht: data.total_ht || 0,
+        total_ttc: data.total_ttc || 0,
+        client_message: data.message_client || "",
+        disclaimer: data.conditions || "",
+        conditions: data.conditions || "",
+        attachments: [],
+      });
+    } catch (err) {
+      console.error("Error loading quote:", err);
       toast.error("Erreur de chargement");
       navigate("/devis");
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setQuote({
-      id: data.id,
-      numero: data.numero,
-      title: data.title || "",
-      client_id: data.client_id || "",
-      client_nom: data.client_nom,
-      property_address: data.property_address || "",
-      contact_phone: data.contact_phone || "",
-      contact_email: data.contact_email || "",
-      salesperson: data.salesperson || "",
-      issued_at: data.issued_at || new Date().toISOString().split("T")[0],
-      expiry_date: data.expiry_date || "",
-      statut: data.statut,
-      lignes: (data.lignes as any) || [],
-      packages: (data.packages as any) || [],
-      custom_fields: (data.custom_fields as any) || [],
-      discount_ht: data.remise || 0,
-      required_deposit_ht: data.acompte || 0,
-      total_ht: data.total_ht || 0,
-      total_ttc: data.total_ttc || 0,
-      client_message: data.message_client || "",
-      disclaimer: data.conditions || "",
-      conditions: data.conditions || "",
-      attachments: [],
-    });
-    setLoading(false);
   };
 
   const recomputeTotals = () => {

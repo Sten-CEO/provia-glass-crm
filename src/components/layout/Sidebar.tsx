@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -18,7 +18,7 @@ import {
   ReceiptIcon,
   Package,
   Menu,
-  MoreVertical,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -29,8 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
-import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -149,16 +147,19 @@ const navSections = [
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
-  const { isCollapsed, toggleCollapsed } = useSidebarCollapsed();
-  const effectiveCollapsed = !isOpen ? true : isCollapsed;
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTitle, setDrawerTitle] = useState("");
-  const [drawerFunctions, setDrawerFunctions] = useState<Array<{ label: string; path: string }>>([]);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem("pv_sidebar_expanded");
+    return saved ? JSON.parse(saved) : {};
+  });
 
-  const openDrawer = (title: string, functions: Array<{ label: string; path: string }>) => {
-    setDrawerTitle(title);
-    setDrawerFunctions(functions);
-    setDrawerOpen(true);
+  const effectiveCollapsed = !isOpen;
+
+  useEffect(() => {
+    localStorage.setItem("pv_sidebar_expanded", JSON.stringify(expandedSections));
+  }, [expandedSections]);
+
+  const toggleSection = (path: string) => {
+    setExpandedSections(prev => ({ ...prev, [path]: !prev[path] }));
   };
 
   return (
@@ -169,18 +170,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         "overflow-hidden"
       )}
     >
-      {/* Toggle button */}
-      <div className="p-4 flex items-center justify-between border-b border-border/50">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleCollapsed}
-          className="shrink-0"
-          title={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
+      {/* Toggle button - hidden when sidebar closed */}
+      {isOpen && (
+        <div className="p-4 flex items-center justify-between border-b border-border/50">
+          <span className="text-sm font-semibold tracking-wide">MENU</span>
+        </div>
+      )}
 
       <div className="p-4 space-y-1 overflow-y-auto flex-1">
         {/* Create Button */}
@@ -224,17 +219,40 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             <div className="space-y-1">
               {section.items.map((item) => {
                 const hasSubFunctions = item.subFunctions && item.subFunctions.length > 0;
+                const isExpanded = expandedSections[item.path];
                 
                 return (
-                  <div key={item.path} className={cn("flex items-center gap-1", effectiveCollapsed ? "" : "pr-2")}>
-                    {effectiveCollapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                  <div key={item.path}>
+                    <div className="flex items-center gap-1">
+                      {effectiveCollapsed ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <NavLink
+                              to={item.path}
+                              className={({ isActive }) =>
+                                cn(
+                                  "flex items-center justify-center p-3 rounded-xl transition-all flex-1",
+                                  "hover:bg-primary/10",
+                                  isActive
+                                    ? "bg-primary/20 text-foreground font-semibold shadow-sm"
+                                    : "text-muted-foreground"
+                                )
+                              }
+                            >
+                              <item.icon className="h-5 w-5" />
+                            </NavLink>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{item.title}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <>
                           <NavLink
                             to={item.path}
                             className={({ isActive }) =>
                               cn(
-                                "flex items-center justify-center p-3 rounded-xl transition-all flex-1",
+                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all flex-1",
                                 "hover:bg-primary/10",
                                 isActive
                                   ? "bg-primary/20 text-foreground font-semibold shadow-sm"
@@ -242,50 +260,49 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                               )
                             }
                           >
-                            <item.icon className="h-5 w-5" />
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            <span className="text-sm whitespace-nowrap flex-1">{item.title}</span>
                           </NavLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <p>{item.title}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <NavLink
-                        to={item.path}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all flex-1",
-                            "hover:bg-primary/10 hover:translate-x-1",
-                            isActive
-                              ? "bg-primary/20 text-foreground font-semibold shadow-sm"
-                              : "text-muted-foreground"
-                          )
-                        }
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="text-sm whitespace-nowrap">{item.title}</span>
-                      </NavLink>
-                    )}
+                          {hasSubFunctions && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 shrink-0"
+                              onClick={() => toggleSection(item.path)}
+                            >
+                              <ChevronDown 
+                                className={cn(
+                                  "h-4 w-4 transition-transform duration-200",
+                                  isExpanded && "rotate-180"
+                                )}
+                              />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-                    {hasSubFunctions && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size={effectiveCollapsed ? "icon" : "sm"}
-                            className={cn(effectiveCollapsed ? "h-8 w-8" : "h-8 px-2", "shrink-0")}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openDrawer(item.title, item.subFunctions || []);
-                            }}
+                    {/* Sub-functions accordion */}
+                    {hasSubFunctions && isExpanded && !effectiveCollapsed && (
+                      <div className="ml-8 mt-1 space-y-1 border-l border-border/30 pl-3">
+                        {item.subFunctions?.map((subItem) => (
+                          <NavLink
+                            key={subItem.path}
+                            to={subItem.path}
+                            className={({ isActive }) =>
+                              cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm",
+                                "hover:bg-primary/5",
+                                isActive
+                                  ? "bg-primary/10 text-foreground font-medium"
+                                  : "text-muted-foreground"
+                              )
+                            }
                           >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <p>Sous-fonctions</p>
-                        </TooltipContent>
-                      </Tooltip>
+                            {subItem.label}
+                          </NavLink>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );
@@ -299,12 +316,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         ))}
       </div>
 
-      <SubFunctionsDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        title={drawerTitle}
-        subFunctions={drawerFunctions}
-      />
     </aside>
   );
 };

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X, Menu, Settings } from "lucide-react";
+import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X, Menu, Settings, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,15 +35,37 @@ const ClientDetail = () => {
   const [tagInput, setTagInput] = useState("");
   const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
   const [displayOptionsOpen, setDisplayOptionsOpen] = useState(false);
-  const [visibleFields, setVisibleFields] = useState({
-    telephone_mobile: true,
-    entreprise: true,
-    taux_horaire: true,
-    indice_confiance: true,
-    provenance: true,
-    secteur: true,
-    commentaires: true,
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem("pv_client_display_prefs");
+    return saved ? JSON.parse(saved) : {
+      telephone_mobile: true,
+      entreprise: true,
+      siret: true,
+      tva_intra: true,
+      taux_horaire: true,
+      indice_confiance: true,
+      provenance: true,
+      secteur: true,
+      commentaires: true,
+    };
   });
+  const [customFields, setCustomFields] = useState<Array<{ key: string; type: string; value?: any }>>([]);
+
+  useEffect(() => {
+    localStorage.setItem("pv_client_display_prefs", JSON.stringify(visibleFields));
+  }, [visibleFields]);
+
+  const toggleField = (field: string) => {
+    setVisibleFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const addCustomField = () => {
+    const key = prompt("Nom du champ personnalisé:");
+    const type = prompt("Type (texte/nombre/case):", "texte");
+    if (key && type) {
+      setCustomFields(prev => [...prev, { key, type }]);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -724,6 +746,149 @@ const ClientDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Display Options Dialog */}
+      <Dialog open={displayOptionsOpen} onOpenChange={setDisplayOptionsOpen}>
+        <DialogContent className="glass-modal max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="uppercase tracking-wide">Options d'affichage</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <p className="text-sm text-muted-foreground">
+              Personnalisez les champs affichés dans la fiche client
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_telephone_mobile" 
+                  checked={visibleFields.telephone_mobile} 
+                  onCheckedChange={() => toggleField("telephone_mobile")}
+                />
+                <Label htmlFor="field_telephone_mobile" className="cursor-pointer">
+                  Téléphone mobile
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_entreprise" 
+                  checked={visibleFields.entreprise} 
+                  onCheckedChange={() => toggleField("entreprise")}
+                />
+                <Label htmlFor="field_entreprise" className="cursor-pointer">
+                  Bloc Entreprise (Société, TVA, SIRET)
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_siret" 
+                  checked={visibleFields.siret} 
+                  onCheckedChange={() => toggleField("siret")}
+                />
+                <Label htmlFor="field_siret" className="cursor-pointer">
+                  SIRET
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_tva_intra" 
+                  checked={visibleFields.tva_intra} 
+                  onCheckedChange={() => toggleField("tva_intra")}
+                />
+                <Label htmlFor="field_tva_intra" className="cursor-pointer">
+                  TVA Intracommunautaire
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_taux_horaire" 
+                  checked={visibleFields.taux_horaire} 
+                  onCheckedChange={() => toggleField("taux_horaire")}
+                />
+                <Label htmlFor="field_taux_horaire" className="cursor-pointer">
+                  Taux horaire par défaut
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_indice_confiance" 
+                  checked={visibleFields.indice_confiance} 
+                  onCheckedChange={() => toggleField("indice_confiance")}
+                />
+                <Label htmlFor="field_indice_confiance" className="cursor-pointer">
+                  Indice de confiance
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_provenance" 
+                  checked={visibleFields.provenance} 
+                  onCheckedChange={() => toggleField("provenance")}
+                />
+                <Label htmlFor="field_provenance" className="cursor-pointer">
+                  Provenance (Comment nous a-t-il trouvé)
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_secteur" 
+                  checked={visibleFields.secteur} 
+                  onCheckedChange={() => toggleField("secteur")}
+                />
+                <Label htmlFor="field_secteur" className="cursor-pointer">
+                  Secteur d'activité
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox 
+                  id="field_commentaires" 
+                  checked={visibleFields.commentaires} 
+                  onCheckedChange={() => toggleField("commentaires")}
+                />
+                <Label htmlFor="field_commentaires" className="cursor-pointer">
+                  Commentaires / Notes internes
+                </Label>
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <h4 className="font-semibold mb-3">Champs personnalisés</h4>
+              {customFields.map((field, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <Checkbox id={`custom_${idx}`} defaultChecked />
+                  <Label htmlFor={`custom_${idx}`} className="flex-1">{field.key} ({field.type})</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCustomFields(prev => prev.filter((_, i) => i !== idx))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addCustomField} className="mt-2">
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un champ personnalisé
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <SubFunctionsDrawer
+        open={subFunctionsOpen}
+        onOpenChange={setSubFunctionsOpen}
+        title="Clients"
+        subFunctions={subFunctions}
+      />
     </div>
   );
 };
