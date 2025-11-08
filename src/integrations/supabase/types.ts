@@ -217,6 +217,7 @@ export type Database = {
           competences: string[] | null
           created_at: string
           email: string
+          hourly_rate: number | null
           id: string
           nom: string
           note: string | null
@@ -227,6 +228,7 @@ export type Database = {
           competences?: string[] | null
           created_at?: string
           email: string
+          hourly_rate?: number | null
           id?: string
           nom: string
           note?: string | null
@@ -237,6 +239,7 @@ export type Database = {
           competences?: string[] | null
           created_at?: string
           email?: string
+          hourly_rate?: number | null
           id?: string
           nom?: string
           note?: string | null
@@ -248,6 +251,7 @@ export type Database = {
         Row: {
           client_id: string | null
           client_nom: string
+          converted_from_quote_id: string | null
           created_at: string
           date_paiement: string | null
           echeance: string
@@ -264,6 +268,7 @@ export type Database = {
         Insert: {
           client_id?: string | null
           client_nom: string
+          converted_from_quote_id?: string | null
           created_at?: string
           date_paiement?: string | null
           echeance: string
@@ -280,6 +285,7 @@ export type Database = {
         Update: {
           client_id?: string | null
           client_nom?: string
+          converted_from_quote_id?: string | null
           created_at?: string
           date_paiement?: string | null
           echeance?: string
@@ -301,6 +307,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "factures_converted_from_quote_id_fkey"
+            columns: ["converted_from_quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
         ]
       }
       jobs: {
@@ -310,6 +323,7 @@ export type Database = {
           checklist: Json | null
           client_id: string | null
           client_nom: string
+          converted_from_quote_id: string | null
           costs: Json | null
           created_at: string
           date: string
@@ -340,6 +354,7 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom: string
+          converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
           date: string
@@ -370,6 +385,7 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom?: string
+          converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
           date?: string
@@ -400,6 +416,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_converted_from_quote_id_fkey"
+            columns: ["converted_from_quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
             referencedColumns: ["id"]
           },
           {
@@ -578,6 +601,72 @@ export type Database = {
           },
         ]
       }
+      timesheets_entries: {
+        Row: {
+          break_min: number | null
+          cost: number
+          created_at: string
+          date: string
+          employee_id: string
+          end_at: string | null
+          hourly_rate: number | null
+          hours: number
+          id: string
+          job_id: string | null
+          note: string | null
+          start_at: string | null
+          status: Database["public"]["Enums"]["timesheet_status"]
+          updated_at: string
+        }
+        Insert: {
+          break_min?: number | null
+          cost?: number
+          created_at?: string
+          date: string
+          employee_id: string
+          end_at?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          job_id?: string | null
+          note?: string | null
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          updated_at?: string
+        }
+        Update: {
+          break_min?: number | null
+          cost?: number
+          created_at?: string
+          date?: string
+          employee_id?: string
+          end_at?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          job_id?: string | null
+          note?: string | null
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_entries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_entries_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -586,7 +675,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      timesheet_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -713,6 +802,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      timesheet_status: ["draft", "submitted", "approved", "rejected"],
+    },
   },
 } as const
