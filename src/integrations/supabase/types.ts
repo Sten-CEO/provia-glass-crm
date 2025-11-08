@@ -106,6 +106,7 @@ export type Database = {
           conditions: string | null
           created_at: string
           date_envoi: string | null
+          expiry_date: string | null
           id: string
           lignes: Json | null
           message_client: string | null
@@ -127,6 +128,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string
           date_envoi?: string | null
+          expiry_date?: string | null
           id?: string
           lignes?: Json | null
           message_client?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           conditions?: string | null
           created_at?: string
           date_envoi?: string | null
+          expiry_date?: string | null
           id?: string
           lignes?: Json | null
           message_client?: string | null
@@ -267,9 +270,11 @@ export type Database = {
       jobs: {
         Row: {
           adresse: string | null
+          assigned_employee_ids: string[] | null
           checklist: Json | null
           client_id: string | null
           client_nom: string
+          costs: Json | null
           created_at: string
           date: string
           description: string | null
@@ -279,18 +284,24 @@ export type Database = {
           heure_fin: string | null
           id: string
           lieu: string | null
+          location_gps: Json | null
           notes: string | null
           notes_timeline: Json | null
+          scheduled_end: string | null
+          scheduled_start: string | null
           statut: string
+          time_entries: Json | null
           titre: string
           type: string | null
           zone: string | null
         }
         Insert: {
           adresse?: string | null
+          assigned_employee_ids?: string[] | null
           checklist?: Json | null
           client_id?: string | null
           client_nom: string
+          costs?: Json | null
           created_at?: string
           date: string
           description?: string | null
@@ -300,18 +311,24 @@ export type Database = {
           heure_fin?: string | null
           id?: string
           lieu?: string | null
+          location_gps?: Json | null
           notes?: string | null
           notes_timeline?: Json | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           statut?: string
+          time_entries?: Json | null
           titre: string
           type?: string | null
           zone?: string | null
         }
         Update: {
           adresse?: string | null
+          assigned_employee_ids?: string[] | null
           checklist?: Json | null
           client_id?: string | null
           client_nom?: string
+          costs?: Json | null
           created_at?: string
           date?: string
           description?: string | null
@@ -321,9 +338,13 @@ export type Database = {
           heure_fin?: string | null
           id?: string
           lieu?: string | null
+          location_gps?: Json | null
           notes?: string | null
           notes_timeline?: Json | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           statut?: string
+          time_entries?: Json | null
           titre?: string
           type?: string | null
           zone?: string | null

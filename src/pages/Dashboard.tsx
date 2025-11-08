@@ -10,6 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { RevenueModule } from "@/components/dashboard/RevenueModule";
+import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -91,6 +92,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <RevenueModule />
+      <AlertsStrip />
       
       <div className="flex items-center justify-between">
         <div>

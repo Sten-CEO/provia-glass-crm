@@ -289,11 +289,13 @@ const Jobs = () => {
             <tbody>
               {jobs.map((job) => (
                 <tr key={job.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
-                  <td
-                    className="p-4 font-medium cursor-pointer"
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                  >
-                    {job.titre}
+                  <td className="p-4">
+                    <button
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      className="font-medium hover:underline text-left"
+                    >
+                      {job.titre}
+                    </button>
                   </td>
                   <td className="p-4 text-muted-foreground">{job.client_nom}</td>
                   <td className="p-4 text-muted-foreground">{job.employe_nom}</td>

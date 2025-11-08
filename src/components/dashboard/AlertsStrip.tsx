@@ -1,0 +1,142 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle, FileText, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+interface AlertsData {
+  unpaidInvoices: { count: number; total: number };
+  overdueQuotes: number;
+  upcomingDeadlines: number;
+}
+
+export const AlertsStrip = () => {
+  const navigate = useNavigate();
+  const [alerts, setAlerts] = useState<AlertsData>({
+    unpaidInvoices: { count: 0, total: 0 },
+    overdueQuotes: 0,
+    upcomingDeadlines: 0,
+  });
+
+  const loadAlerts = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    // 1. Unpaid invoices
+    const { data: unpaidInvoicesData } = await supabase
+      .from("factures")
+      .select("*")
+      .neq("statut", "Payée")
+      .or(`echeance.is.null,echeance.gte.${today}`);
+
+    const unpaidTotal = unpaidInvoicesData?.reduce((sum, inv) => {
+      return sum + (inv.total_ttc || parseFloat(String(inv.montant)) || 0);
+    }, 0) || 0;
+
+    // 2. Overdue quotes
+    const { data: overdueQuotesData } = await supabase
+      .from("devis")
+      .select("*")
+      .in("statut", ["Envoyé", "Brouillon"])
+      .lt("expiry_date", today);
+
+    // 3. Upcoming deadlines (invoices + planning)
+    const { data: upcomingInvoicesData } = await supabase
+      .from("factures")
+      .select("*")
+      .neq("statut", "Payée")
+      .gte("echeance", today)
+      .lte("echeance", in7Days);
+
+    const { data: upcomingJobsData } = await supabase
+      .from("jobs")
+      .select("*")
+      .gte("scheduled_start", today)
+      .lte("scheduled_start", in7Days);
+
+    const upcomingTotal = (upcomingInvoicesData?.length || 0) + (upcomingJobsData?.length || 0);
+
+    setAlerts({
+      unpaidInvoices: { count: unpaidInvoicesData?.length || 0, total: unpaidTotal },
+      overdueQuotes: overdueQuotesData?.length || 0,
+      upcomingDeadlines: upcomingTotal,
+    });
+  };
+
+  useEffect(() => {
+    loadAlerts();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel("alerts-updates")
+      .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, loadAlerts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "devis" }, loadAlerts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, loadAlerts)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const alertChips = [
+    {
+      label: "Factures impayées",
+      count: alerts.unpaidInvoices.count,
+      detail: `€${alerts.unpaidInvoices.total.toFixed(2)}`,
+      icon: AlertCircle,
+      color: alerts.unpaidInvoices.count > 0 ? "amber" : "gray",
+      onClick: () => navigate("/factures?filter=unpaid"),
+    },
+    {
+      label: "Devis en retard",
+      count: alerts.overdueQuotes,
+      detail: null,
+      icon: FileText,
+      color: alerts.overdueQuotes > 0 ? "red" : "gray",
+      onClick: () => navigate("/devis?filter=overdue"),
+    },
+    {
+      label: "Échéances proches (7j)",
+      count: alerts.upcomingDeadlines,
+      detail: null,
+      icon: Calendar,
+      color: alerts.upcomingDeadlines > 0 ? "blue" : "gray",
+      onClick: () => {
+        // Could open modal, for now navigate to planning
+        navigate("/planning");
+      },
+    },
+  ];
+
+  return (
+    <div className="glass-card p-4 mb-6">
+      <div className="flex items-center gap-4 flex-wrap">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Alertes</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          {alertChips.map((chip) => (
+            <button
+              key={chip.label}
+              onClick={chip.onClick}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium",
+                "border backdrop-blur-[8px] transition-all shadow-[0_2px_8px_rgba(0,0,0,.06)]",
+                "hover:translate-y-[0.5px] hover:border-current/45 cursor-pointer",
+                chip.color === "amber" && "text-[#F59E0B] border-[#F59E0B]/30 bg-[rgba(245,158,11,0.08)]",
+                chip.color === "red" && "text-[#EF4444] border-[#EF4444]/30 bg-[rgba(239,68,68,0.08)]",
+                chip.color === "blue" && "text-[#3B82F6] border-[#3B82F6]/30 bg-[rgba(59,130,246,0.08)]",
+                chip.color === "gray" && "text-[#6B7280] border-[#6B7280]/30 bg-[rgba(107,114,128,0.08)]"
+              )}
+            >
+              <chip.icon className="h-4 w-4" />
+              <span>
+                {chip.count} {chip.label}
+              </span>
+              {chip.detail && <span className="font-bold">· {chip.detail}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
