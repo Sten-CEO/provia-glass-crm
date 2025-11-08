@@ -51,6 +51,7 @@ export type Database = {
         Row: {
           adresse: string | null
           created_at: string
+          custom_fields: Json | null
           debut: string | null
           demande: string | null
           email: string
@@ -67,6 +68,7 @@ export type Database = {
         Insert: {
           adresse?: string | null
           created_at?: string
+          custom_fields?: Json | null
           debut?: string | null
           demande?: string | null
           email: string
@@ -83,6 +85,7 @@ export type Database = {
         Update: {
           adresse?: string | null
           created_at?: string
+          custom_fields?: Json | null
           debut?: string | null
           demande?: string | null
           email?: string
@@ -316,6 +319,119 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          files: Json | null
+          id: string
+          location: string | null
+          min_qty_alert: number | null
+          name: string
+          notes: string | null
+          qty_on_hand: number
+          qty_reserved: number
+          sku: string | null
+          supplier: string | null
+          supplier_name: string | null
+          tva_rate: number | null
+          type: string
+          unit_cost_ht: number | null
+          unit_price_ht: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          files?: Json | null
+          id?: string
+          location?: string | null
+          min_qty_alert?: number | null
+          name: string
+          notes?: string | null
+          qty_on_hand?: number
+          qty_reserved?: number
+          sku?: string | null
+          supplier?: string | null
+          supplier_name?: string | null
+          tva_rate?: number | null
+          type: string
+          unit_cost_ht?: number | null
+          unit_price_ht?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          files?: Json | null
+          id?: string
+          location?: string | null
+          min_qty_alert?: number | null
+          name?: string
+          notes?: string | null
+          qty_on_hand?: number
+          qty_reserved?: number
+          sku?: string | null
+          supplier?: string | null
+          supplier_name?: string | null
+          tva_rate?: number | null
+          type?: string
+          unit_cost_ht?: number | null
+          unit_price_ht?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          item_id: string | null
+          note: string | null
+          qty: number
+          ref_id: string | null
+          ref_number: string | null
+          source: string
+          status: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          item_id?: string | null
+          note?: string | null
+          qty: number
+          ref_id?: string | null
+          ref_number?: string | null
+          source: string
+          status?: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          item_id?: string | null
+          note?: string | null
+          qty?: number
+          ref_id?: string | null
+          ref_number?: string | null
+          source?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           adresse: string | null
@@ -522,6 +638,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          expected_date: string | null
+          files: Json | null
+          id: string
+          items: Json | null
+          kind: string
+          note: string | null
+          number: string
+          received_date: string | null
+          status: string
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expected_date?: string | null
+          files?: Json | null
+          id?: string
+          items?: Json | null
+          kind: string
+          note?: string | null
+          number: string
+          received_date?: string | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expected_date?: string | null
+          files?: Json | null
+          id?: string
+          items?: Json | null
+          kind?: string
+          note?: string | null
+          number?: string
+          received_date?: string | null
+          status?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       support_messages: {
         Row: {

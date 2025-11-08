@@ -7,9 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X, Menu, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const subFunctions = [
+  { label: "Contrats", path: "/clients?filter=contrats" },
+  { label: "Adresses", path: "/clients?filter=adresses" },
+  { label: "Contacts", path: "/clients?filter=contacts" },
+  { label: "Interventions", path: "/interventions" },
+  { label: "Devis", path: "/devis" },
+  { label: "Factures", path: "/factures" },
+];
 
 const ClientDetail = () => {
   const { id } = useParams();
@@ -20,6 +33,17 @@ const ClientDetail = () => {
   const [factures, setFactures] = useState<any[]>([]);
   const [formData, setFormData] = useState<any>({});
   const [tagInput, setTagInput] = useState("");
+  const [subFunctionsOpen, setSubFunctionsOpen] = useState(false);
+  const [displayOptionsOpen, setDisplayOptionsOpen] = useState(false);
+  const [visibleFields, setVisibleFields] = useState({
+    telephone_mobile: true,
+    entreprise: true,
+    taux_horaire: true,
+    indice_confiance: true,
+    provenance: true,
+    secteur: true,
+    commentaires: true,
+  });
 
   useEffect(() => {
     if (id) {
@@ -93,6 +117,14 @@ const ClientDetail = () => {
             <h1 className="text-3xl font-bold uppercase tracking-wide">{client.nom}</h1>
             <p className="text-muted-foreground">{client.email}</p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSubFunctionsOpen(true)}
+            title="Sous-fonctions"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
         </div>
         <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
           <Save className="mr-2 h-4 w-4" />
@@ -153,12 +185,12 @@ const ClientDetail = () => {
           </div>
         </Card>
 
-        {/* Jobs */}
+        {/* Interventions */}
         <Card 
           className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
-          onClick={() => navigate(`/jobs?client_id=${id}`)}
+          onClick={() => navigate(`/interventions?client_id=${id}`)}
         >
-          <div className="text-xs text-muted-foreground mb-1">Jobs</div>
+          <div className="text-xs text-muted-foreground mb-1">Interventions</div>
           <div className="text-sm">
             {jobs.filter(j => j.statut === "En cours").length} en cours
           </div>
@@ -189,15 +221,258 @@ const ClientDetail = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="infos">
+      <Tabs defaultValue="donnees">
         <TabsList className="glass-card">
-          <TabsTrigger value="infos">Infos générales</TabsTrigger>
-          <TabsTrigger value="historique">Historique</TabsTrigger>
-          <TabsTrigger value="pieces">Pièces jointes</TabsTrigger>
+          <TabsTrigger value="donnees">Données</TabsTrigger>
+          <TabsTrigger value="devis">Devis</TabsTrigger>
+          <TabsTrigger value="interventions">Interventions</TabsTrigger>
+          <TabsTrigger value="facturation">Facturation</TabsTrigger>
+          <TabsTrigger value="contrat">Contrat</TabsTrigger>
+          <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="planning">Planning</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="infos">
+        <TabsContent value="donnees">
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" onClick={() => setDisplayOptionsOpen(true)}>
+              <Settings className="mr-2 h-4 w-4" />
+              Options d'affichage
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Contact */}
+            <Card className="glass-card p-6">
+              <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Contact</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Prénom / Nom</Label>
+                  <Input
+                    value={formData.nom || ""}
+                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    value={formData.email || ""}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Téléphone fixe</Label>
+                  <Input
+                    value={formData.telephone || ""}
+                    onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                {visibleFields.telephone_mobile && (
+                  <div>
+                    <Label>Téléphone mobile</Label>
+                    <Input
+                      value={formData.telephone || ""}
+                      onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Entreprise */}
+            {visibleFields.entreprise && (
+              <Card className="glass-card p-6">
+                <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Entreprise</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="is_company" />
+                    <Label htmlFor="is_company">Il s'agit d'une entreprise</Label>
+                  </div>
+                  <div>
+                    <Label>Nom de la société</Label>
+                    <Input
+                      value={formData.nom || ""}
+                      className="glass-card"
+                    />
+                  </div>
+                  <div>
+                    <Label>N° TVA</Label>
+                    <Input
+                      value={formData.tva || ""}
+                      onChange={(e) => setFormData({ ...formData, tva: e.target.value })}
+                      className="glass-card"
+                    />
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Contrat global */}
+            {visibleFields.taux_horaire && (
+              <Card className="glass-card p-6">
+                <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Contrat global</h3>
+                <div>
+                  <Label>Taux horaire par défaut (€)</Label>
+                  <Input
+                    type="number"
+                    placeholder="50"
+                    className="glass-card"
+                  />
+                </div>
+              </Card>
+            )}
+
+            {/* Chiffres clés */}
+            <Card className="glass-card p-6">
+              <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Chiffres clés</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {visibleFields.indice_confiance && (
+                  <div>
+                    <Label>Indice de confiance</Label>
+                    <Select>
+                      <SelectTrigger className="glass-card">
+                        <SelectValue placeholder="Sélectionner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="faible">Faible</SelectItem>
+                        <SelectItem value="moyen">Moyen</SelectItem>
+                        <SelectItem value="eleve">Élevé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div>
+                  <Label>Reste à payer total</Label>
+                  <Input
+                    value={`${factures.filter(f => f.statut !== "Payée").reduce((sum, f) => sum + (Number(f.total_ttc) || 0), 0).toLocaleString()} €`}
+                    disabled
+                    className="glass-card"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button variant="outline" size="sm">Ajouter une adresse</Button>
+                <Button variant="outline" size="sm">Ajouter une intervention</Button>
+                <Button variant="outline" size="sm">Demande d'intervention</Button>
+              </div>
+            </Card>
+
+            {/* Divers */}
+            <Card className="glass-card p-6">
+              <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Divers</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {visibleFields.provenance && (
+                  <div>
+                    <Label>Provenance</Label>
+                    <Input
+                      placeholder="Référencement, Bouche-à-oreille..."
+                      className="glass-card"
+                    />
+                  </div>
+                )}
+                {visibleFields.secteur && (
+                  <div>
+                    <Label>Secteur</Label>
+                    <Input
+                      placeholder="Résidentiel, Tertiaire..."
+                      className="glass-card"
+                    />
+                  </div>
+                )}
+              </div>
+              {visibleFields.commentaires && (
+                <div className="mt-4">
+                  <Label>Commentaires internes</Label>
+                  <Textarea
+                    value={formData.notes || ""}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="glass-card"
+                    rows={4}
+                  />
+                </div>
+              )}
+            </Card>
+
+            {/* Adresse principale */}
+            <Card className="glass-card p-6">
+              <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Adresse principale</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Rue</Label>
+                  <Input
+                    value={formData.adresse || ""}
+                    onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Ville</Label>
+                  <Input
+                    value={formData.ville || ""}
+                    onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Code postal</Label>
+                  <Input
+                    placeholder="75000"
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Étage / Appartement / Codes</Label>
+                  <Input
+                    placeholder="Étage 3, Appt 12, Code A1234"
+                    className="glass-card"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Button variant="outline" size="sm">📍 Itinéraire</Button>
+              </div>
+            </Card>
+
+            {/* Custom fields */}
+            {formData.custom_fields && formData.custom_fields.length > 0 && (
+              <Card className="glass-card p-6">
+                <h3 className="font-semibold mb-4 uppercase tracking-wide text-sm">Champs personnalisés</h3>
+                <div className="space-y-2">
+                  {formData.custom_fields.map((field: any, idx: number) => (
+                    <div key={idx} className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>{field.label || field.key}</Label>
+                        <Input value={field.value} className="glass-card" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="devis">
           <Card className="glass-card p-6">
+            {devis.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">Aucun devis pour ce client</p>
+                <Button onClick={() => navigate("/devis/new")}>Créer un devis</Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {devis.map(d => (
+                  <div key={d.id} className="flex justify-between items-center p-3 glass-card rounded hover:bg-muted/30 cursor-pointer"
+                    onClick={() => navigate(`/devis/${d.id}`)}>
+                    <span>{d.numero}</span>
+                    <Badge>{d.statut}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Nom</Label>

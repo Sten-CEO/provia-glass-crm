@@ -11,8 +11,8 @@ import ClientDetail from "./pages/ClientDetail";
 import Planning from "./pages/Planning";
 import Devis from "./pages/Devis";
 import Factures from "./pages/Factures";
-import Jobs from "./pages/Jobs";
-import JobDetail from "./pages/JobDetail";
+import Interventions from "./pages/Interventions";
+import InterventionDetail from "./pages/InterventionDetail";
 import Equipe from "./pages/Equipe";
 import Timesheets from "./pages/Timesheets";
 import Paiements from "./pages/Paiements";
@@ -22,6 +22,9 @@ import NotFound from "./pages/NotFound";
 import DevisDetail from "./pages/DevisDetail";
 import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
+import Inventaire from "./pages/inventaire/Inventaire";
+import InventaireConsommables from "./pages/inventaire/InventaireConsommables";
+import InventaireMateriels from "./pages/inventaire/InventaireMateriels";
 import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
@@ -47,8 +50,22 @@ const App = () => (
             <Route path="/devis/:id/edit" element={<DevisEditor />} />
             <Route path="/factures" element={<Factures />} />
             <Route path="/factures/:id" element={<FactureDetail />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/jobs/:id" element={<JobDetail />} />
+            
+            {/* Interventions routes (renamed from jobs) */}
+            <Route path="/interventions" element={<Interventions />} />
+            <Route path="/interventions/:id" element={<InterventionDetail />} />
+            
+            {/* Legacy routes redirect to new interventions routes */}
+            <Route path="/jobs" element={<Navigate to="/interventions" replace />} />
+            <Route path="/jobs/:id" element={<Navigate to="/interventions/:id" replace />} />
+            
+            {/* Inventaire routes */}
+            <Route path="/inventaire" element={<Inventaire />} />
+            <Route path="/inventaire/consommables" element={<InventaireConsommables />} />
+            <Route path="/inventaire/materiels" element={<InventaireMateriels />} />
+            <Route path="/inventaire/mouvements" element={<Inventaire />} />
+            <Route path="/inventaire/achats" element={<Inventaire />} />
+            
             <Route path="/equipe" element={<Equipe />} />
             <Route path="/timesheets" element={<Timesheets />} />
             <Route path="/paiements" element={<Paiements />} />
