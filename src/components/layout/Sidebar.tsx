@@ -19,6 +19,8 @@ import {
   Package,
   Menu,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
+import logo from "@/assets/logo.jpg";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -81,12 +85,13 @@ const navSections = [
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
+  const { isCollapsed, toggleCollapsed } = useSidebarCollapsed();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem("pv_sidebar_expanded");
     return saved ? JSON.parse(saved) : {};
   });
 
-  const effectiveCollapsed = !isOpen;
+  // Don't use effectiveCollapsed, use isCollapsed directly
 
   useEffect(() => {
     localStorage.setItem("pv_sidebar_expanded", JSON.stringify(expandedSections));
@@ -100,24 +105,31 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     <aside
       className={cn(
         "glass-sidebar transition-all duration-300 h-screen sticky top-0 z-50 flex flex-col border-r border-border/50",
-        effectiveCollapsed ? "w-20" : "w-64",
+        !isOpen && "hidden",
+        isCollapsed ? "w-16" : "w-64",
         "overflow-hidden"
       )}
     >
-      {/* Toggle button - hidden when sidebar closed */}
-      {isOpen && (
-        <div className="p-4 flex items-center justify-between border-b border-border/50">
-          <span className="text-sm font-semibold tracking-wide">MENU</span>
-        </div>
-      )}
+      {/* Header with toggle button */}
+      <div className="p-4 flex items-center justify-between border-b border-border/50">
+        {!isCollapsed && <img src={logo} alt="Logo" className="w-20 h-auto" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleCollapsed}
+          className={cn("ml-auto shrink-0", isCollapsed && "mx-auto")}
+        >
+          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </Button>
+      </div>
 
       <div className="p-4 space-y-1 overflow-y-auto flex-1">
         {/* Create Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className={cn("w-full mb-4", effectiveCollapsed ? "px-0" : "gap-2")}>
+            <Button className={cn("w-full mb-4", isCollapsed ? "px-0" : "gap-2")}>
               <Plus className="h-4 w-4" />
-              {!effectiveCollapsed && "Créer"}
+              {!isCollapsed && "Créer"}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -143,12 +155,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         {/* Navigation Sections */}
         {navSections.map((section, idx) => (
           <div key={section.label}>
-            {!effectiveCollapsed && (
+            {!isCollapsed && (
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground/60 px-3 mt-4 mb-2 font-medium">
                 {section.label}
               </div>
             )}
-            {effectiveCollapsed && idx > 0 && <div className="my-3 border-t border-border/50" />}
+            {isCollapsed && idx > 0 && <div className="my-3 border-t border-border/50" />}
             
             <div className="space-y-1">
               {section.items.map((item) => {
@@ -158,7 +170,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 return (
                   <div key={item.path}>
                     <div className="flex items-center gap-1">
-                      {effectiveCollapsed ? (
+                      {isCollapsed ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <NavLink
@@ -217,7 +229,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                     </div>
 
                     {/* Sub-functions accordion */}
-                    {hasSubFunctions && isExpanded && !effectiveCollapsed && (
+                    {hasSubFunctions && isExpanded && !isCollapsed && (
                       <div className="ml-8 mt-1 space-y-1 border-l border-border/30 pl-3">
                         {item.subFunctions?.map((subItem) => (
                           <NavLink
@@ -243,7 +255,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               })}
             </div>
 
-            {!effectiveCollapsed && idx < navSections.length - 1 && (
+            {!isCollapsed && idx < navSections.length - 1 && (
               <div className="my-3 border-t border-border/50" />
             )}
           </div>

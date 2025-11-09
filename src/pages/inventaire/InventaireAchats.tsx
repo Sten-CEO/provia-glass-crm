@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Eye, Edit, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,7 @@ interface InventoryItem {
 }
 
 const InventaireAchats = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -124,35 +126,12 @@ const InventaireAchats = () => {
     return `CMD-${year}-${seq}`;
   };
 
-  const handleOpenDialog = (order?: PurchaseOrder) => {
-    if (order) {
-      setEditingOrder(order);
-      setFormData({
-        number: order.number,
-        supplier: order.supplier,
-        created_at: order.created_at.split("T")[0],
-        expected_date: order.expected_date || "",
-        delivery_location: (order as any).delivery_location || "Dépôt principal",
-        status: order.status as any,
-        kind: order.kind,
-        note: order.note || "",
-        items: order.items || [],
-      });
+  const handleOpenDialog = (order?: any) => {
+    if (order?.id) {
+      navigate(`/inventaire/achats/${order.id}`);
     } else {
-      setEditingOrder(null);
-      setFormData({
-        number: generateOrderNumber(),
-        supplier: "",
-        created_at: new Date().toISOString().split("T")[0],
-        expected_date: "",
-        delivery_location: "Dépôt principal",
-        status: "en_attente",
-        kind: "consommable",
-        note: "",
-        items: [],
-      });
+      navigate(`/inventaire/achats/nouveau`);
     }
-    setOpen(true);
   };
 
   const addItem = () => {
