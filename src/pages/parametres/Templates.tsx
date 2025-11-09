@@ -19,10 +19,13 @@ interface Template {
   is_default: boolean;
   theme: string;
   header_logo: string | null;
+  logo_position: string | null;
+  logo_size: string | null;
   main_color: string | null;
   font_family: string | null;
   show_vat: boolean;
   show_discounts: boolean;
+  show_remaining_balance: boolean;
   signature_enabled: boolean;
   email_subject: string | null;
   email_body: string | null;
@@ -63,10 +66,13 @@ const Templates = () => {
       name: selectedTemplate.name,
       theme: selectedTemplate.theme,
       header_logo: selectedTemplate.header_logo,
+      logo_position: selectedTemplate.logo_position || 'left',
+      logo_size: selectedTemplate.logo_size || 'medium',
       main_color: selectedTemplate.main_color,
       font_family: selectedTemplate.font_family,
       show_vat: selectedTemplate.show_vat,
       show_discounts: selectedTemplate.show_discounts,
+      show_remaining_balance: selectedTemplate.show_remaining_balance,
       signature_enabled: selectedTemplate.signature_enabled,
       email_subject: selectedTemplate.email_subject,
       email_body: selectedTemplate.email_body,
@@ -135,10 +141,13 @@ const Templates = () => {
                 is_default: false,
                 theme: "classique",
                 header_logo: null,
+                logo_position: "left",
+                logo_size: "medium",
                 main_color: "#3b82f6",
                 font_family: "Arial",
                 show_vat: true,
                 show_discounts: true,
+                show_remaining_balance: false,
                 signature_enabled: false,
                 email_subject: null,
                 email_body: null,
@@ -260,24 +269,118 @@ const Templates = () => {
                         />
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Position du logo</Label>
+                        <Select
+                          value={selectedTemplate.logo_position || "left"}
+                          onValueChange={(v) => setSelectedTemplate({ ...selectedTemplate, logo_position: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="left">Gauche</SelectItem>
+                            <SelectItem value="center">Centré</SelectItem>
+                            <SelectItem value="right">Droite</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Taille du logo</Label>
+                        <Select
+                          value={selectedTemplate.logo_size || "medium"}
+                          onValueChange={(v) => setSelectedTemplate({ ...selectedTemplate, logo_size: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="small">Petit</SelectItem>
+                            <SelectItem value="medium">Moyen</SelectItem>
+                            <SelectItem value="large">Grand</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {selectedTemplate.header_logo && (
+                      <div className="p-4 border rounded-lg">
+                        <Label className="mb-2 block">Aperçu du logo</Label>
+                        <div className={`flex ${selectedTemplate.logo_position === 'center' ? 'justify-center' : selectedTemplate.logo_position === 'right' ? 'justify-end' : 'justify-start'}`}>
+                          <img 
+                            src={selectedTemplate.header_logo} 
+                            alt="Logo preview"
+                            className={`${selectedTemplate.logo_size === 'small' ? 'h-12' : selectedTemplate.logo_size === 'large' ? 'h-24' : 'h-16'} object-contain`}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="contenu" className="space-y-4 pt-4">
                     {selectedTemplate.type === "EMAIL" ? (
                       <>
                         <div>
-                          <Label>Sujet de l'email</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Sujet de l'email</Label>
+                            <Select onValueChange={(v) => {
+                              const cursorPos = document.querySelector<HTMLInputElement>('input[placeholder*="devis"]')?.selectionStart || 0;
+                              const currentValue = selectedTemplate.email_subject || "";
+                              const newValue = currentValue.slice(0, cursorPos) + v + currentValue.slice(cursorPos);
+                              setSelectedTemplate({ ...selectedTemplate, email_subject: newValue });
+                            }}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="+ Insérer variable" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="{client_name}">{"{client_name}"}</SelectItem>
+                                <SelectItem value="{company_name}">{"{company_name}"}</SelectItem>
+                                <SelectItem value="{document_number}">{"{document_number}"}</SelectItem>
+                                <SelectItem value="{total_ht}">{"{total_ht}"}</SelectItem>
+                                <SelectItem value="{total_ttc}">{"{total_ttc}"}</SelectItem>
+                                <SelectItem value="{date}">{"{date}"}</SelectItem>
+                                <SelectItem value="{document_type}">{"{document_type}"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Input
                             value={selectedTemplate.email_subject || ""}
                             onChange={(e) => setSelectedTemplate({ ...selectedTemplate, email_subject: e.target.value })}
                             placeholder="Ex: Votre devis #{document_number}"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
-                            Variables: {"{client_name}"}, {"{document_number}"}, {"{total_amount}"}, {"{company_name}"}
+                            Variables disponibles: {"{client_name}"}, {"{document_number}"}, {"{total_ttc}"}, {"{company_name}"}
                           </p>
                         </div>
                         <div>
-                          <Label>Corps de l'email</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Corps de l'email</Label>
+                            <Select onValueChange={(v) => {
+                              const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Bonjour"]');
+                              const cursorPos = textarea?.selectionStart || 0;
+                              const currentValue = selectedTemplate.email_body || "";
+                              const newValue = currentValue.slice(0, cursorPos) + v + currentValue.slice(cursorPos);
+                              setSelectedTemplate({ ...selectedTemplate, email_body: newValue });
+                            }}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="+ Insérer variable" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="{client_name}">{"{client_name}"}</SelectItem>
+                                <SelectItem value="{company_name}">{"{company_name}"}</SelectItem>
+                                <SelectItem value="{document_number}">{"{document_number}"}</SelectItem>
+                                <SelectItem value="{total_ht}">{"{total_ht}"}</SelectItem>
+                                <SelectItem value="{total_ttc}">{"{total_ttc}"}</SelectItem>
+                                <SelectItem value="{date}">{"{date}"}</SelectItem>
+                                <SelectItem value="{document_type}">{"{document_type}"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Textarea
                             value={selectedTemplate.email_body || ""}
                             onChange={(e) => setSelectedTemplate({ ...selectedTemplate, email_body: e.target.value })}
@@ -289,7 +392,27 @@ const Templates = () => {
                     ) : (
                       <>
                         <div>
-                          <Label>En-tête HTML</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>En-tête HTML</Label>
+                            <Select onValueChange={(v) => {
+                              const textarea = document.querySelectorAll<HTMLTextAreaElement>('textarea')[0];
+                              const cursorPos = textarea?.selectionStart || 0;
+                              const currentValue = selectedTemplate.header_html || "";
+                              const newValue = currentValue.slice(0, cursorPos) + v + currentValue.slice(cursorPos);
+                              setSelectedTemplate({ ...selectedTemplate, header_html: newValue });
+                            }}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="+ Insérer variable" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="{company_name}">{"{company_name}"}</SelectItem>
+                                <SelectItem value="{client_name}">{"{client_name}"}</SelectItem>
+                                <SelectItem value="{document_number}">{"{document_number}"}</SelectItem>
+                                <SelectItem value="{date}">{"{date}"}</SelectItem>
+                                <SelectItem value="{due_date}">{"{due_date}"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Textarea
                             value={selectedTemplate.header_html || ""}
                             onChange={(e) => setSelectedTemplate({ ...selectedTemplate, header_html: e.target.value })}
@@ -299,7 +422,26 @@ const Templates = () => {
                           />
                         </div>
                         <div>
-                          <Label>Corps HTML</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Corps HTML</Label>
+                            <Select onValueChange={(v) => {
+                              const textarea = document.querySelectorAll<HTMLTextAreaElement>('textarea')[1];
+                              const cursorPos = textarea?.selectionStart || 0;
+                              const currentValue = selectedTemplate.content_html || "";
+                              const newValue = currentValue.slice(0, cursorPos) + v + currentValue.slice(cursorPos);
+                              setSelectedTemplate({ ...selectedTemplate, content_html: newValue });
+                            }}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="+ Insérer variable" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="{total_ht}">{"{total_ht}"}</SelectItem>
+                                <SelectItem value="{total_ttc}">{"{total_ttc}"}</SelectItem>
+                                <SelectItem value="{client_name}">{"{client_name}"}</SelectItem>
+                                <SelectItem value="{document_number}">{"{document_number}"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Textarea
                             value={selectedTemplate.content_html}
                             onChange={(e) => setSelectedTemplate({ ...selectedTemplate, content_html: e.target.value })}
@@ -309,7 +451,24 @@ const Templates = () => {
                           />
                         </div>
                         <div>
-                          <Label>Pied de page HTML</Label>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label>Pied de page HTML</Label>
+                            <Select onValueChange={(v) => {
+                              const textarea = document.querySelectorAll<HTMLTextAreaElement>('textarea')[2];
+                              const cursorPos = textarea?.selectionStart || 0;
+                              const currentValue = selectedTemplate.footer_html || "";
+                              const newValue = currentValue.slice(0, cursorPos) + v + currentValue.slice(cursorPos);
+                              setSelectedTemplate({ ...selectedTemplate, footer_html: newValue });
+                            }}>
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="+ Insérer variable" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="{company_name}">{"{company_name}"}</SelectItem>
+                                <SelectItem value="{date}">{"{date}"}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <Textarea
                             value={selectedTemplate.footer_html || ""}
                             onChange={(e) => setSelectedTemplate({ ...selectedTemplate, footer_html: e.target.value })}
@@ -345,6 +504,18 @@ const Templates = () => {
                             onCheckedChange={(v) => setSelectedTemplate({ ...selectedTemplate, show_discounts: v })}
                           />
                         </div>
+                        {selectedTemplate.type === "INVOICE" && (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Afficher le total restant dû</Label>
+                              <p className="text-xs text-muted-foreground">Utile pour les factures partiellement payées</p>
+                            </div>
+                            <Switch
+                              checked={selectedTemplate.show_remaining_balance}
+                              onCheckedChange={(v) => setSelectedTemplate({ ...selectedTemplate, show_remaining_balance: v })}
+                            />
+                          </div>
+                        )}
                         {selectedTemplate.type === "QUOTE" && (
                           <div className="flex items-center justify-between">
                             <div>
@@ -362,8 +533,17 @@ const Templates = () => {
                   </TabsContent>
 
                   <TabsContent value="avance" className="space-y-4 pt-4">
-                    <div>
-                      <Label>CSS personnalisé</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>CSS personnalisé</Label>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedTemplate({ ...selectedTemplate, css: "" })}
+                        >
+                          Réinitialiser le CSS
+                        </Button>
+                      </div>
                       <Textarea
                         value={selectedTemplate.css || ""}
                         onChange={(e) => setSelectedTemplate({ ...selectedTemplate, css: e.target.value })}
@@ -371,6 +551,17 @@ const Templates = () => {
                         className="font-mono text-sm"
                         placeholder=".header { background-color: #f0f0f0; }&#10;.total { font-weight: bold; }"
                       />
+                      {selectedTemplate.css && (
+                        <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+                          <Label className="mb-2 block text-sm">Aperçu du style</Label>
+                          <div className="p-4 bg-background rounded border">
+                            <style dangerouslySetInnerHTML={{ __html: selectedTemplate.css }} />
+                            <div className="header p-2">En-tête exemple</div>
+                            <div className="content p-2">Contenu exemple avec du texte</div>
+                            <div className="total p-2">Total: 1 234,56 €</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -449,6 +640,22 @@ const Templates = () => {
                 }}
               >
                 Éditer
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const duplicated = {
+                    ...template,
+                    id: "new",
+                    name: `${template.name} (copie)`,
+                    is_default: false,
+                  };
+                  setSelectedTemplate(duplicated);
+                  setIsEditing(true);
+                }}
+              >
+                Dupliquer
               </Button>
               {!template.is_default && (
                 <Button

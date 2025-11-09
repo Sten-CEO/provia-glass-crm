@@ -340,6 +340,8 @@ export type Database = {
           id: string
           is_default: boolean | null
           locale: string | null
+          logo_position: string | null
+          logo_size: string | null
           main_color: string | null
           margin_bottom: number | null
           margin_left: number | null
@@ -349,6 +351,7 @@ export type Database = {
           paper_format: string | null
           paper_orientation: string | null
           show_discounts: boolean | null
+          show_remaining_balance: boolean | null
           show_vat: boolean | null
           signature_enabled: boolean | null
           theme: string | null
@@ -369,6 +372,8 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           locale?: string | null
+          logo_position?: string | null
+          logo_size?: string | null
           main_color?: string | null
           margin_bottom?: number | null
           margin_left?: number | null
@@ -378,6 +383,7 @@ export type Database = {
           paper_format?: string | null
           paper_orientation?: string | null
           show_discounts?: boolean | null
+          show_remaining_balance?: boolean | null
           show_vat?: boolean | null
           signature_enabled?: boolean | null
           theme?: string | null
@@ -398,6 +404,8 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           locale?: string | null
+          logo_position?: string | null
+          logo_size?: string | null
           main_color?: string | null
           margin_bottom?: number | null
           margin_left?: number | null
@@ -407,6 +415,7 @@ export type Database = {
           paper_format?: string | null
           paper_orientation?: string | null
           show_discounts?: boolean | null
+          show_remaining_balance?: boolean | null
           show_vat?: boolean | null
           signature_enabled?: boolean | null
           theme?: string | null
