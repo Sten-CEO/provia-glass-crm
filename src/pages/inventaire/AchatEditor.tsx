@@ -650,7 +650,7 @@ const AchatEditor = () => {
                   <div className="col-span-2">
                     <Label>Article *</Label>
                     <Select
-                      value={item.item_id || ""}
+                      value={item.item_id || undefined}
                       onValueChange={(value) => selectInventoryItem(index, value)}
                     >
                       <SelectTrigger className={!item.item_id ? "border-destructive" : ""}>

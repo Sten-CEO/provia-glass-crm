@@ -637,7 +637,7 @@ const InventaireAchats = () => {
                           </TableCell>
                           <TableCell>
                             <Select
-                              value={item.item_id || ""}
+                              value={item.item_id || undefined}
                               onValueChange={(v) => selectInventoryItem(index, v)}
                             >
                               <SelectTrigger className="w-48">
