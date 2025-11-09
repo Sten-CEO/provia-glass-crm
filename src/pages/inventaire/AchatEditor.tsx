@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Save, Trash2, Plus, X, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { createInventoryMovement } from "@/lib/inventoryMovements";
+import { createInventoryMovement, cancelMovement } from "@/lib/inventoryMovements";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface PurchaseItem {
@@ -189,6 +189,95 @@ const AchatEditor = () => {
     return { subtotalHT, totalVAT, totalTTC };
   };
 
+  // Synchronize inventory movements after saving the purchase
+  const syncMovementsForPurchase = async (refId: string) => {
+    try {
+      // Cancel existing planned movements for this purchase (if any)
+      const { data: existing } = await supabase
+        .from("inventory_movements")
+        .select("id, status")
+        .eq("source", "achat")
+        .eq("ref_id", refId);
+
+      if (existing && existing.length > 0) {
+        for (const m of existing) {
+          if (m.status === "planned") {
+            await cancelMovement(m.id);
+          }
+        }
+      }
+
+      for (const item of formData.items) {
+        if (!item.item_id) continue;
+        const qtyOrdered = Number(item.qty_ordered) || 0;
+        const qtyReceived = Number(item.qty_received) || 0;
+
+        if (formData.status === "en_attente") {
+          // Create planned inbound movement for expected date
+          if (qtyOrdered > 0) {
+            await createInventoryMovement({
+              item_id: item.item_id,
+              type: "in",
+              qty: qtyOrdered,
+              source: "achat",
+              ref_id: refId,
+              ref_number: formData.number,
+              note: `Entrée prévue ${formData.delivery_site}`,
+              status: "planned",
+            });
+          }
+        } else if (formData.status === "reçue") {
+          // Convert to real inbound movement (prefer received, fallback to ordered)
+          const qty = qtyReceived > 0 ? qtyReceived : qtyOrdered;
+          if (qty > 0) {
+            await createInventoryMovement({
+              item_id: item.item_id,
+              type: "in",
+              qty,
+              source: "achat",
+              ref_id: refId,
+              ref_number: formData.number,
+              note: `Réception ${formData.delivery_site}`,
+              status: "done",
+            });
+          }
+        } else if (formData.status === "partielle") {
+          // Create done for received and planned for remaining
+          if (qtyReceived > 0) {
+            await createInventoryMovement({
+              item_id: item.item_id,
+              type: "in",
+              qty: qtyReceived,
+              source: "achat",
+              ref_id: refId,
+              ref_number: formData.number,
+              note: `Réception partielle ${formData.delivery_site}`,
+              status: "done",
+            });
+          }
+          const remaining = Math.max(0, qtyOrdered - qtyReceived);
+          if (remaining > 0) {
+            await createInventoryMovement({
+              item_id: item.item_id,
+              type: "in",
+              qty: remaining,
+              source: "achat",
+              ref_id: refId,
+              ref_number: formData.number,
+              note: `Reste à recevoir ${formData.delivery_site}`,
+              status: "planned",
+            });
+          }
+        } else if (formData.status === "annulée") {
+          // Nothing more to do, planned were canceled above
+        }
+      }
+    } catch (err) {
+      console.error("syncMovementsForPurchase error", err);
+      throw err;
+    }
+  };
+
   const handleSave = async () => {
     // Validation
     if (!formData.number.trim()) {
@@ -252,7 +341,12 @@ const AchatEditor = () => {
       } else {
         toast.error("Échec de l'enregistrement. Réessayez.");
       }
-    } else {
+      const refId = (savedData?.id || id) as string;
+      try {
+        await syncMovementsForPurchase(refId);
+      } catch (e) {
+        console.error("Sync mouvements achat:", e);
+      }
       toast.success("Commande enregistrée");
       if (!isEditing && savedData) {
         navigate(`/inventaire/achats/${savedData.id}`, { replace: true });
