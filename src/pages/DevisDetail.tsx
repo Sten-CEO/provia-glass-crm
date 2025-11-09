@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2, Send } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Send, Mail, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { EmailDevisModal } from "@/components/devis/EmailDevisModal";
+import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
+import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
 
 interface LigneDevis {
   description: string;
@@ -24,7 +25,8 @@ const DevisDetail = () => {
   const [devis, setDevis] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [lignes, setLignes] = useState<LigneDevis[]>([]);
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -300,21 +302,37 @@ const DevisDetail = () => {
         <Button
           onClick={async () => {
             await handleSave();
-            setEmailModalOpen(true);
+            setSendModalOpen(true);
           }}
           className="bg-primary hover:bg-primary/90"
         >
-          <Send className="h-4 w-4 mr-2" />
+          <Mail className="h-4 w-4 mr-2" />
           Envoyer
+        </Button>
+        <Button
+          onClick={() => setConvertDialogOpen(true)}
+          variant="outline"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Convertir
         </Button>
       </div>
 
-      <EmailDevisModal
-        open={emailModalOpen}
-        onClose={() => setEmailModalOpen(false)}
-        devisNumero={devis?.numero || ""}
-        clientEmail={clients.find((c) => c.id === devis?.client_id)?.email || ""}
-        clientNom={devis?.client_nom || ""}
+      {/* Modals */}
+      <QuoteSendModal
+        open={sendModalOpen}
+        onOpenChange={setSendModalOpen}
+        quoteId={devis.id}
+        quoteNumber={devis.numero}
+        clientEmail={clients.find((c) => c.id === devis.client_id)?.email || ""}
+        clientName={devis.client_nom}
+      />
+
+      <QuoteConversionDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        quoteId={devis.id}
+        quoteData={devis}
       />
     </div>
   );

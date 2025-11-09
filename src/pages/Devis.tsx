@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Eye, Search, Edit, Menu } from "lucide-react";
+import { Plus, Trash2, Eye, Search, Edit, Menu, Mail, FileText } from "lucide-react";
+import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
+import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,6 +42,9 @@ const Devis = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [quoteForAction, setQuoteForAction] = useState<Quote | null>(null);
 
   const loadQuotes = async () => {
     const { data, error } = await supabase
@@ -244,11 +249,24 @@ const Devis = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/devis/${quote.id}/edit`);
+                          setQuoteForAction(quote);
+                          setSendModalOpen(true);
                         }}
-                        title="Modifier"
+                        title="Envoyer"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setQuoteForAction(quote);
+                          setConvertDialogOpen(true);
+                        }}
+                        title="Convertir"
+                      >
+                        <FileText className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -288,6 +306,28 @@ const Devis = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Send Quote Modal */}
+      {quoteForAction && (
+        <QuoteSendModal
+          open={sendModalOpen}
+          onOpenChange={setSendModalOpen}
+          quoteId={quoteForAction.id}
+          quoteNumber={quoteForAction.numero}
+          clientEmail=""
+          clientName={quoteForAction.client_nom}
+        />
+      )}
+
+      {/* Convert Quote Dialog */}
+      {quoteForAction && (
+        <QuoteConversionDialog
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          quoteId={quoteForAction.id}
+          quoteData={quoteForAction}
+        />
+      )}
     </div>
   );
 };

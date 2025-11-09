@@ -18,6 +18,7 @@ import Timesheets from "./pages/Timesheets";
 import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
 import Support from "./pages/Support";
+import PublicQuoteView from "./pages/PublicQuoteView";
 import NotFound from "./pages/NotFound";
 import DevisDetail from "./pages/DevisDetail";
 import DevisEditor from "./pages/DevisEditor";
@@ -42,6 +43,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/auth/login" replace />} />
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/quote/:token" element={<PublicQuoteView />} />
           
           <Route element={<AppShell />}>
             <Route path="/tableau-de-bord" element={<Dashboard />} />
