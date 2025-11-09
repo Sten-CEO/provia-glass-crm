@@ -163,10 +163,19 @@ const AchatEditor = () => {
   const selectInventoryItem = (index: number, itemId: string) => {
     const item = inventoryItems.find((i) => i.id === itemId);
     if (item) {
-      updateItem(index, "item_id", item.id);
-      updateItem(index, "item_name", item.name);
-      updateItem(index, "sku", item.sku || "");
-      updateItem(index, "unit_price_ht", item.unit_cost_ht || 0);
+      setFormData((prev) => {
+        const newItems = [...prev.items];
+        newItems[index] = {
+          ...newItems[index],
+          item_id: item.id,
+          item_name: item.name,
+          sku: item.sku || "",
+          unit_price_ht: item.unit_cost_ht || 0,
+          type: item.type as "consommable" | "materiel",
+          total_ht: (item.unit_cost_ht || 0) * newItems[index].qty_ordered
+        };
+        return { ...prev, items: newItems };
+      });
     }
   };
 
@@ -192,6 +201,13 @@ const AchatEditor = () => {
     }
     if (formData.items.length === 0) {
       toast.error("Ajoutez au moins un article");
+      return;
+    }
+    
+    // Vérifier que tous les articles sont liés à un item d'inventaire
+    const itemsWithoutId = formData.items.filter(item => !item.item_id);
+    if (itemsWithoutId.length > 0) {
+      toast.error("Tous les articles doivent être sélectionnés depuis l'inventaire");
       return;
     }
 
@@ -504,32 +520,36 @@ const AchatEditor = () => {
                   </div>
 
                   <div className="col-span-2">
-                    <Label>Article</Label>
+                    <Label>Article *</Label>
                     <Select
                       value={item.item_id || ""}
                       onValueChange={(value) => selectInventoryItem(index, value)}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner..." />
+                      <SelectTrigger className={!item.item_id ? "border-destructive" : ""}>
+                        <SelectValue placeholder="Sélectionner depuis l'inventaire..." />
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems
                           .filter((i) => i.type === item.type)
                           .map((i) => (
                             <SelectItem key={i.id} value={i.id}>
-                              {i.name} {i.sku ? `(${i.sku})` : ""}
+                              {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
+                    {!item.item_id && (
+                      <p className="text-xs text-destructive mt-1">Article requis</p>
+                    )}
                   </div>
 
                   <div>
                     <Label>SKU</Label>
                     <Input
                       value={item.sku}
-                      onChange={(e) => updateItem(index, "sku", e.target.value)}
-                      placeholder="SKU"
+                      disabled
+                      placeholder="Auto"
+                      className="bg-muted"
                     />
                   </div>
 
