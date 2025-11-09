@@ -21,6 +21,8 @@ import { ConsumablesGrid } from "./ConsumablesGrid";
 import { TotalsPanel } from "./TotalsPanel";
 import { QuoteInvoiceDocument, DocumentLine, DocumentStatus } from "@/types/documents";
 import { calculateDocumentTotals } from "@/lib/documentCalculations";
+import { useTemplates } from "@/hooks/useTemplates";
+import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
 
 interface QuoteInvoiceEditorV2Props {
   type: "quote" | "invoice";
@@ -38,6 +40,11 @@ export function QuoteInvoiceEditorV2({
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+
+  // Hooks pour templates et numérotation
+  const { templates, defaultTemplate, loading: templatesLoading } = useTemplates(type);
+  const generateNumberMutation = useGenerateDocumentNumber(type);
 
   const [document, setDocument] = useState<QuoteInvoiceDocument>({
     number: "",
@@ -51,6 +58,24 @@ export function QuoteInvoiceEditorV2({
       totalTTC: 0,
     },
   });
+
+  // Auto-générer le numéro et sélectionner le template par défaut
+  useEffect(() => {
+    if (!documentId && !document.number) {
+      generateNumberMutation.mutate(undefined, {
+        onSuccess: (num) => {
+          setDocument((prev) => ({ ...prev, number: num }));
+        },
+      });
+    }
+    if (defaultTemplate && !selectedTemplateId) {
+      setSelectedTemplateId(defaultTemplate.id);
+      setDocument((prev) => ({ ...prev, theme: defaultTemplate.theme }));
+    }
+  }, [defaultTemplate, documentId]);
+
+  // Récupérer le template sélectionné
+  const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) || defaultTemplate;
 
   // Auto-save avec debounce de 1s
   useEffect(() => {
@@ -182,6 +207,22 @@ export function QuoteInvoiceEditorV2({
         <div className="lg:col-span-2 space-y-6">
           {/* Client & Dates */}
           <div className="glass-card p-6 space-y-4">
+            <div>
+              <Label>Modèle de document</Label>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId} disabled={templatesLoading}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un modèle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {tpl.name} {tpl.is_default && "⭐"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Client *</Label>
               <ClientPicker
@@ -329,6 +370,9 @@ export function QuoteInvoiceEditorV2({
               }
               disabled={loading}
               showDeposit={type === "quote"}
+              showVat={selectedTemplate?.show_vat ?? true}
+              showDiscounts={selectedTemplate?.show_discounts ?? true}
+              showRemainingBalance={selectedTemplate?.show_remaining_balance ?? (type === "invoice")}
             />
           </div>
 

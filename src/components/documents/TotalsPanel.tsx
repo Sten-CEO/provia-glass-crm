@@ -9,6 +9,9 @@ interface TotalsPanelProps {
   onDepositChange?: (value: number) => void;
   disabled?: boolean;
   showDeposit?: boolean;
+  showVat?: boolean;
+  showDiscounts?: boolean;
+  showRemainingBalance?: boolean;
 }
 
 export function TotalsPanel({
@@ -17,13 +20,16 @@ export function TotalsPanel({
   onDepositChange,
   disabled,
   showDeposit = false,
+  showVat = true,
+  showDiscounts = true,
+  showRemainingBalance = false,
 }: TotalsPanelProps) {
   const remainingToPay = totals.totalTTC - (totals.depositAmount || 0);
 
   return (
     <div className="space-y-4 bg-muted/50 p-4 rounded-lg">
       <div className="space-y-3">
-        {onGlobalDiscountChange && (
+        {showDiscounts && onGlobalDiscountChange && (
           <div className="flex items-center justify-between">
             <Label htmlFor="globalDiscount" className="text-sm">
               Remise globale (%)
@@ -47,7 +53,7 @@ export function TotalsPanel({
           <span className="font-medium">{formatCurrency(totals.totalHT)}</span>
         </div>
 
-        {totals.vatBreakdown && totals.vatBreakdown.length > 0 && (
+        {showVat && totals.vatBreakdown && totals.vatBreakdown.length > 0 && (
           <div className="space-y-1 border-t pt-2">
             <div className="text-xs font-medium text-muted-foreground mb-1">
               Détail TVA
@@ -73,7 +79,7 @@ export function TotalsPanel({
           <span>{formatCurrency(totals.totalTTC)}</span>
         </div>
 
-        {showDeposit && onDepositChange && (
+        {showRemainingBalance && onDepositChange && (
           <>
             <div className="flex items-center justify-between border-t pt-2">
               <Label htmlFor="deposit" className="text-sm">
