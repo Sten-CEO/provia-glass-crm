@@ -27,6 +27,18 @@ export function calculateDocumentTotals(
   globalDiscountPct: number = 0,
   depositAmount: number = 0
 ): DocumentTotals {
+  // Group lines by VAT rate for breakdown
+  const vatGroups = new Map<number, { baseHT: number; vatAmount: number }>();
+  
+  lines.forEach((line) => {
+    const rate = line.vatRate;
+    const existing = vatGroups.get(rate) || { baseHT: 0, vatAmount: 0 };
+    vatGroups.set(rate, {
+      baseHT: existing.baseHT + line.totalHT,
+      vatAmount: existing.vatAmount + line.totalVAT,
+    });
+  });
+
   // Sum all line totals
   const subtotalHT = lines.reduce((sum, line) => sum + line.totalHT, 0);
   const subtotalVAT = lines.reduce((sum, line) => sum + line.totalVAT, 0);
@@ -35,9 +47,18 @@ export function calculateDocumentTotals(
   const discountAmount = subtotalHT * (globalDiscountPct / 100);
   const totalHT = subtotalHT - discountAmount;
 
-  // Recalculate VAT proportionally
+  // Recalculate VAT proportionally for each rate
   const vatRatio = subtotalHT > 0 ? totalHT / subtotalHT : 1;
   const totalVAT = subtotalVAT * vatRatio;
+
+  // Build VAT breakdown with adjusted amounts
+  const vatBreakdown = Array.from(vatGroups.entries())
+    .map(([rate, amounts]) => ({
+      rate,
+      baseHT: Number((amounts.baseHT * vatRatio).toFixed(2)),
+      vatAmount: Number((amounts.vatAmount * vatRatio).toFixed(2)),
+    }))
+    .sort((a, b) => b.rate - a.rate);
 
   const totalTTC = totalHT + totalVAT;
 
@@ -47,6 +68,7 @@ export function calculateDocumentTotals(
     totalTTC: Number(totalTTC.toFixed(2)),
     globalDiscountPct,
     depositAmount,
+    vatBreakdown,
   };
 }
 

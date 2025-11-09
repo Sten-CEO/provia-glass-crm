@@ -47,9 +47,25 @@ export function TotalsPanel({
           <span className="font-medium">{formatCurrency(totals.totalHT)}</span>
         </div>
 
-        <div className="flex items-center justify-between text-sm">
+        {totals.vatBreakdown && totals.vatBreakdown.length > 0 && (
+          <div className="space-y-1 border-t pt-2">
+            <div className="text-xs font-medium text-muted-foreground mb-1">
+              Détail TVA
+            </div>
+            {totals.vatBreakdown.map((vat) => (
+              <div key={vat.rate} className="flex items-center justify-between text-xs">
+                <span>
+                  TVA {vat.rate}% sur {formatCurrency(vat.baseHT)}
+                </span>
+                <span className="font-medium">{formatCurrency(vat.vatAmount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-sm font-medium border-t pt-2">
           <span>Total TVA</span>
-          <span className="font-medium">{formatCurrency(totals.totalVAT)}</span>
+          <span>{formatCurrency(totals.totalVAT)}</span>
         </div>
 
         <div className="flex items-center justify-between text-lg font-bold border-t pt-2">

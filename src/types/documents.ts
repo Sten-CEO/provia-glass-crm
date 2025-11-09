@@ -24,12 +24,19 @@ export interface DocumentLine {
   costPriceHT?: number; // Prix de revient
 }
 
+export interface VATBreakdown {
+  rate: number;
+  baseHT: number;
+  vatAmount: number;
+}
+
 export interface DocumentTotals {
   totalHT: number;
   totalVAT: number;
   totalTTC: number;
   globalDiscountPct?: number;
   depositAmount?: number;
+  vatBreakdown?: VATBreakdown[];
 }
 
 export interface DocumentAddress {

@@ -10,8 +10,9 @@ import {
 } from "@/components/ui/select";
 import { DocumentLine } from "@/types/documents";
 import { calculateLineTotal } from "@/lib/documentCalculations";
-import { DOCUMENT_UNITS, VAT_RATES } from "@/types/documents";
+import { DOCUMENT_UNITS } from "@/types/documents";
 import { formatCurrency } from "@/lib/documentCalculations";
+import { useTaxes, useDefaultTax } from "@/hooks/useTaxes";
 
 interface LineItemsGridProps {
   lines: DocumentLine[];
@@ -20,6 +21,9 @@ interface LineItemsGridProps {
 }
 
 export function LineItemsGrid({ lines, onChange, disabled }: LineItemsGridProps) {
+  const { data: taxes = [] } = useTaxes();
+  const { data: defaultTax } = useDefaultTax();
+
   function addLine() {
     const newLine: DocumentLine = {
       id: crypto.randomUUID(),
@@ -28,7 +32,7 @@ export function LineItemsGrid({ lines, onChange, disabled }: LineItemsGridProps)
       qty: 1,
       unit: "unité",
       unitPriceHT: 0,
-      vatRate: 20,
+      vatRate: defaultTax?.rate || 20,
       totalHT: 0,
       totalVAT: 0,
       totalTTC: 0,
@@ -146,11 +150,15 @@ export function LineItemsGrid({ lines, onChange, disabled }: LineItemsGridProps)
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {VAT_RATES.map((rate) => (
-                        <SelectItem key={rate} value={String(rate)}>
-                          {rate}%
-                        </SelectItem>
-                      ))}
+                      {taxes.length > 0 ? (
+                        taxes.map((tax) => (
+                          <SelectItem key={tax.id} value={String(tax.rate)}>
+                            {tax.name} ({tax.rate}%)
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="20">TVA 20%</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </td>

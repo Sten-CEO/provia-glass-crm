@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
-import { DocumentLine, DOCUMENT_UNITS, VAT_RATES } from "@/types/documents";
+import { DocumentLine, DOCUMENT_UNITS } from "@/types/documents";
+import { useTaxes, useDefaultTax } from "@/hooks/useTaxes";
 
 interface ServicesGridProps {
   lines: DocumentLine[];
@@ -12,6 +13,8 @@ interface ServicesGridProps {
 
 export function ServicesGrid({ lines, onChange, disabled }: ServicesGridProps) {
   const serviceLines = lines.filter(l => l.type === "service");
+  const { data: taxes = [] } = useTaxes();
+  const { data: defaultTax } = useDefaultTax();
 
   const updateLine = (index: number, updates: Partial<DocumentLine>) => {
     const actualIndex = lines.findIndex(l => l.id === serviceLines[index].id);
@@ -43,7 +46,7 @@ export function ServicesGrid({ lines, onChange, disabled }: ServicesGridProps) {
       qty: 1,
       unit: "unité",
       unitPriceHT: 0,
-      vatRate: 20,
+      vatRate: defaultTax?.rate || 20,
       totalHT: 0,
       totalVAT: 0,
       totalTTC: 0,
@@ -154,11 +157,15 @@ export function ServicesGrid({ lines, onChange, disabled }: ServicesGridProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {VAT_RATES.map((rate) => (
-                        <SelectItem key={rate} value={String(rate)}>
-                          {rate}%
-                        </SelectItem>
-                      ))}
+                      {taxes.length > 0 ? (
+                        taxes.map((tax) => (
+                          <SelectItem key={tax.id} value={String(tax.rate)}>
+                            {tax.name} ({tax.rate}%)
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="20">TVA 20%</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </td>
