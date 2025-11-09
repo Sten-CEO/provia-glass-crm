@@ -119,7 +119,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           onClick={toggleCollapsed}
           className={cn("ml-auto shrink-0", isCollapsed && "mx-auto")}
         >
-          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          ↔︎
         </Button>
       </div>
 

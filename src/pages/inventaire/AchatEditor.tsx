@@ -266,39 +266,47 @@ const AchatEditor = () => {
     setLoading(true);
 
     try {
-      // Create movements for each item
-      for (const item of formData.items) {
-        if (item.item_id && item.qty_ordered > 0) {
-          const qtyToReceive = formData.status === "reçue" 
-            ? item.qty_ordered - item.qty_received 
-            : item.qty_received;
+      // Lieu obligatoire pour réception
+      if (!formData.delivery_site) {
+        toast.error("Lieu de livraison requis");
+        setLoading(false);
+        return;
+      }
 
-          if (qtyToReceive > 0) {
-            await createInventoryMovement({
-              item_id: item.item_id,
-              type: "in",
-              qty: qtyToReceive,
-              source: "achat",
-              ref_id: id,
-              ref_number: formData.number,
-              note: `Réception ${formData.status === "partielle" ? "partielle" : "complète"} - ${item.item_name}`,
-              status: "done",
-            });
-          }
+      // Créer un mouvement d'entrée par ligne reçue (>0)
+      for (const item of formData.items) {
+        const qty = Number(item.qty_received) || 0;
+        if (item.item_id && qty > 0) {
+          // Stock avant/après pour trace (stock réel mis à jour par createInventoryMovement -> updateItemStock)
+          const { data: currentItem } = await supabase
+            .from("inventory_items")
+            .select("qty_on_hand, qty_reserved")
+            .eq("id", item.item_id)
+            .single();
+
+          const before = currentItem?.qty_on_hand ?? 0;
+          const after = before + qty;
+
+          await createInventoryMovement({
+            item_id: item.item_id,
+            type: "in",
+            qty,
+            source: "achat",
+            ref_id: id,
+            ref_number: formData.number,
+            note: `Réception ${formData.delivery_site} • avant=${before} après=${after} • ${item.item_name || ""}`.trim(),
+            status: "done",
+          });
         }
       }
 
-      // Update status
-      const newStatus = formData.items.every(i => i.qty_received >= i.qty_ordered) 
-        ? "reçue" 
-        : "partielle";
-
+      // Mettre à jour le statut et persister les lignes (qty_received)
       await supabase
         .from("purchase_orders")
-        .update({ status: newStatus })
+        .update({ status: "reçue", items: formData.items as any })
         .eq("id", id);
 
-      toast.success("Stock mis à jour");
+      toast.success("Commande enregistrée et stock mis à jour.");
       navigate("/inventaire/achats");
     } catch (error) {
       console.error(error);
