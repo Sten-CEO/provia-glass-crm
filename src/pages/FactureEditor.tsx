@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save, FileText, Mail, Plus, Trash2 } from "lucide-react";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
+import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 
 interface LigneFacture {
   description: string;
@@ -43,6 +44,7 @@ export default function FactureEditor() {
   const { templates, defaultTemplate } = useTemplates("invoice");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const generateNumberMutation = useGenerateDocumentNumber("invoice");
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 
   const [facture, setFacture] = useState<InvoiceState>({
     numero: "",
@@ -187,7 +189,16 @@ export default function FactureEditor() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              if (!selectedTemplateId) {
+                toast.error("Veuillez sélectionner un modèle PDF");
+                return;
+              }
+              setPdfPreviewOpen(true);
+            }}
+          >
             <FileText className="h-4 w-4 mr-2" /> PDF
           </Button>
           <Button variant="outline">
@@ -348,6 +359,16 @@ export default function FactureEditor() {
           </Card>
         </div>
       </div>
+
+      {pdfPreviewOpen && (
+        <PdfPreviewModal
+          open={pdfPreviewOpen}
+          onOpenChange={setPdfPreviewOpen}
+          documentType="INVOICE"
+          documentData={facture}
+          templateId={selectedTemplateId}
+        />
+      )}
     </div>
   );
 }

@@ -50,6 +50,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { InventoryItemSelector } from "@/components/devis/InventoryItemSelector";
 import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
+import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 
 interface Quote {
   id?: string;
@@ -88,6 +89,7 @@ const DevisEditor = () => {
   // Templates devis
   const [quoteTemplates, setQuoteTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 
   const [quote, setQuote] = useState<Quote>({
     numero: "DRAFT-" + Date.now(),
@@ -620,7 +622,16 @@ const DevisEditor = () => {
               <Send className="h-4 w-4 mr-2" />
               Envoyer
             </Button>
-            <Button variant="outline" onClick={() => window.print()}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (!selectedTemplateId) {
+                  toast.error("Veuillez sélectionner un modèle PDF");
+                  return;
+                }
+                setPdfPreviewOpen(true);
+              }}
+            >
               <Printer className="h-4 w-4 mr-2" />
               PDF
             </Button>
@@ -1335,6 +1346,17 @@ const DevisEditor = () => {
         totalTTC={quote.total_ttc}
         onSend={handleEmailSend}
       />
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewOpen && (
+        <PdfPreviewModal
+          open={pdfPreviewOpen}
+          onOpenChange={setPdfPreviewOpen}
+          documentType="QUOTE"
+          documentData={quote}
+          templateId={selectedTemplateId}
+        />
+      )}
     </div>
   );
 };
