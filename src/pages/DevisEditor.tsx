@@ -164,15 +164,20 @@ const DevisEditor = () => {
       const { data, error } = await supabase
         .from("doc_templates")
         .select("*")
-        .eq("type", "quote")
+        .eq("type", "QUOTE")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading quote templates:", error);
+        throw error;
+      }
+      console.log("Loaded quote templates:", data);
       setQuoteTemplates(data || []);
       const def = (data || []).find((t: any) => t.is_default);
       if (def && !selectedTemplateId) setSelectedTemplateId(def.id);
     } catch (error) {
       console.error("Error loading quote templates:", error);
+      toast.error("Erreur de chargement des modèles");
     }
   };
 
@@ -709,12 +714,18 @@ const DevisEditor = () => {
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Sélectionner un modèle" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {quoteTemplates.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name} {t.is_default ? "(par défaut)" : ""}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="z-50 bg-popover">
+                      {quoteTemplates.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          Aucun modèle disponible. Créez-en un dans Paramètres → Templates.
+                        </div>
+                      ) : (
+                        quoteTemplates.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} {t.is_default ? "(par défaut)" : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

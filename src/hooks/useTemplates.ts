@@ -29,6 +29,9 @@ export function useTemplates(type: "quote" | "invoice" | "email") {
   const [defaultTemplate, setDefaultTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Convert to uppercase for database query
+  const dbType = type.toUpperCase() as "QUOTE" | "INVOICE" | "EMAIL";
+
   useEffect(() => {
     loadTemplates();
   }, [type]);
@@ -38,7 +41,7 @@ export function useTemplates(type: "quote" | "invoice" | "email") {
     const { data, error } = await supabase
       .from("doc_templates")
       .select("*")
-      .eq("type", type)
+      .eq("type", dbType)
       .order("created_at", { ascending: false });
 
     if (error) {

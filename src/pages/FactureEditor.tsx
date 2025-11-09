@@ -213,12 +213,18 @@ export default function FactureEditor() {
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Sélectionner un modèle" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name} {t.is_default ? "(par défaut)" : ""}
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="z-50 bg-popover">
+                      {templates.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          Aucun modèle disponible. Créez-en un dans Paramètres → Templates.
+                        </div>
+                      ) : (
+                        templates.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} {t.is_default ? "(par défaut)" : ""}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
