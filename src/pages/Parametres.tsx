@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Templates from "./parametres/Templates";
 import ServiceCatalog from "./parametres/ServiceCatalog";
+import Taxes from "./parametres/Taxes";
 
 const Parametres = () => {
   return (
@@ -47,8 +48,8 @@ const Parametres = () => {
           <ServiceCatalog />
         </TabsContent>
 
-        <TabsContent value="taxes" className="glass-card p-6">
-          <p className="text-muted-foreground">Configuration des taxes et de la numérotation</p>
+        <TabsContent value="taxes">
+          <Taxes />
         </TabsContent>
 
         <TabsContent value="rgpd" className="glass-card p-6 space-y-4">

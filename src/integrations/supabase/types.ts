@@ -425,6 +425,39 @@ export type Database = {
         }
         Relationships: []
       }
+      document_numbering: {
+        Row: {
+          created_at: string
+          id: string
+          next_number: number
+          pattern: string
+          prefix: string
+          reset_each_year: boolean
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          next_number?: number
+          pattern?: string
+          prefix?: string
+          reset_each_year?: boolean
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          next_number?: number
+          pattern?: string
+          prefix?: string
+          reset_each_year?: boolean
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       equipe: {
         Row: {
           access_controls: Json | null
@@ -1173,6 +1206,39 @@ export type Database = {
           is_from_support?: boolean | null
           message?: string
           user_name?: string
+        }
+        Relationships: []
+      }
+      taxes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          rate?: number
+          updated_at?: string
         }
         Relationships: []
       }
