@@ -23,6 +23,7 @@ export function LineItemsGrid({ lines, onChange, disabled }: LineItemsGridProps)
   function addLine() {
     const newLine: DocumentLine = {
       id: crypto.randomUUID(),
+      type: "service",
       label: "",
       qty: 1,
       unit: "unité",

@@ -13,9 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ClientPicker } from "./ClientPicker";
-import { LineItemsGrid } from "./LineItemsGrid";
+import { ServicesGrid } from "./ServicesGrid";
+import { ConsumablesGrid } from "./ConsumablesGrid";
 import { TotalsPanel } from "./TotalsPanel";
 import { QuoteInvoiceDocument, DocumentLine, DocumentStatus } from "@/types/documents";
 import { calculateDocumentTotals } from "@/lib/documentCalculations";
@@ -42,19 +44,7 @@ export function QuoteInvoiceEditorV2({
     status: "draft",
     issueDate: new Date().toISOString().split("T")[0],
     clientName: "",
-    lines: [
-      {
-        id: crypto.randomUUID(),
-        label: "",
-        qty: 1,
-        unit: "unité",
-        unitPriceHT: 0,
-        vatRate: 20,
-        totalHT: 0,
-        totalVAT: 0,
-        totalTTC: 0,
-      },
-    ],
+    lines: [],
     totals: {
       totalHT: 0,
       totalVAT: 0,
@@ -257,14 +247,30 @@ export function QuoteInvoiceEditorV2({
             </div>
           </div>
 
-          {/* Lines */}
+          {/* Lines - Tabs pour Services et Consommables */}
           <div className="glass-card p-6">
-            <h2 className="text-lg font-semibold mb-4">Lignes du document</h2>
-            <LineItemsGrid
-              lines={document.lines}
-              onChange={updateLines}
-              disabled={loading}
-            />
+            <Tabs defaultValue="services" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="services">Services / Prestations</TabsTrigger>
+                <TabsTrigger value="consumables">Consommables & Matériel</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="services" className="mt-4">
+                <ServicesGrid
+                  lines={document.lines}
+                  onChange={updateLines}
+                  disabled={loading}
+                />
+              </TabsContent>
+              
+              <TabsContent value="consumables" className="mt-4">
+                <ConsumablesGrid
+                  lines={document.lines}
+                  onChange={updateLines}
+                  disabled={loading}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Notes */}

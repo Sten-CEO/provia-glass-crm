@@ -1,6 +1,9 @@
 // Extended types for quotes and invoices (V2)
+export type DocumentLineType = "service" | "consumable" | "material";
+
 export interface DocumentLine {
   id: string;
+  type: DocumentLineType; // Service, Consommable, ou Matériel
   productId?: string;
   ref?: string;
   label: string;
@@ -14,6 +17,11 @@ export interface DocumentLine {
   totalVAT: number;
   totalTTC: number;
   inventory_item_id?: string; // Link to inventory
+  // Champs spécifiques aux consommables/matériels
+  serialNumber?: string;
+  location?: string; // Emplacement/dépôt
+  supplierLot?: string; // Lot/commande fournisseur
+  costPriceHT?: number; // Prix de revient
 }
 
 export interface DocumentTotals {
