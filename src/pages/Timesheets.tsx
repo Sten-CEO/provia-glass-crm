@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Download, Check, X, Menu } from "lucide-react";
+import { Plus, Download, Check, X, Clock, Send } from "lucide-react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -22,10 +23,15 @@ interface TimesheetEntry {
   end_at?: string;
   break_min?: number;
   hours: number;
+  overtime_hours?: number;
   hourly_rate?: number;
   cost: number;
   note?: string;
   status: "draft" | "submitted" | "approved" | "rejected";
+  rejection_reason?: string;
+  submitted_at?: string;
+  approved_at?: string;
+  rejected_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +40,7 @@ interface Employee {
   id: string;
   nom: string;
   hourly_rate?: number;
+  is_manager?: boolean;
 }
 
 interface Job {
@@ -45,9 +52,13 @@ const Timesheets = () => {
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [selectedWeek, setSelectedWeek] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [newEntry, setNewEntry] = useState({
     employee_id: "",
     job_id: "",
@@ -55,12 +66,12 @@ const Timesheets = () => {
     start_at: "09:00",
     end_at: "17:00",
     break_min: 60,
+    hours: 0,
     note: "",
   });
 
   const weekStart = startOfWeek(selectedWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selectedWeek, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   useEffect(() => {
     loadData();
@@ -73,17 +84,28 @@ const Timesheets = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedWeek]);
 
   const loadData = async () => {
     const [entriesRes, employeesRes, jobsRes] = await Promise.all([
-      supabase.from("timesheets_entries").select("*").order("date", { ascending: false }),
-      supabase.from("equipe").select("id, nom, hourly_rate"),
+      supabase
+        .from("timesheets_entries")
+        .select("*")
+        .gte("date", format(weekStart, "yyyy-MM-dd"))
+        .lte("date", format(weekEnd, "yyyy-MM-dd"))
+        .order("date", { ascending: true }),
+      supabase.from("equipe").select("id, nom, hourly_rate, is_manager"),
       supabase.from("jobs").select("id, titre"),
     ]);
 
     if (entriesRes.data) setEntries(entriesRes.data as unknown as TimesheetEntry[]);
-    if (employeesRes.data) setEmployees(employeesRes.data as unknown as Employee[]);
+    if (employeesRes.data) {
+      setEmployees(employeesRes.data as unknown as Employee[]);
+      // Simuler l'utilisateur courant (premier employé pour démo)
+      if (employeesRes.data.length > 0) {
+        setCurrentUser(employeesRes.data[0] as unknown as Employee);
+      }
+    }
     if (jobsRes.data) setJobs(jobsRes.data as unknown as Job[]);
   };
 
@@ -103,11 +125,8 @@ const Timesheets = () => {
       return;
     }
 
-    const hours = calculateHours();
-    const employee = employees.find((e) => e.id === newEntry.employee_id);
-    const hourly_rate = employee?.hourly_rate || 0;
-    const cost = Math.round(hours * hourly_rate * 100) / 100;
-
+    const hours = newEntry.hours > 0 ? newEntry.hours : calculateHours();
+    
     const { error } = await supabase.from("timesheets_entries").insert({
       employee_id: newEntry.employee_id,
       job_id: newEntry.job_id || null,
@@ -116,8 +135,6 @@ const Timesheets = () => {
       end_at: newEntry.end_at || null,
       break_min: newEntry.break_min || 0,
       hours,
-      hourly_rate,
-      cost,
       note: newEntry.note || null,
       status: "draft",
     });
@@ -127,7 +144,7 @@ const Timesheets = () => {
       return;
     }
 
-    toast.success("Entrée créée");
+    toast.success("Entrée créée avec succès");
     setModalOpen(false);
     setNewEntry({
       employee_id: "",
@@ -136,78 +153,94 @@ const Timesheets = () => {
       start_at: "09:00",
       end_at: "17:00",
       break_min: 60,
+      hours: 0,
       note: "",
     });
     loadData();
   };
 
-  const handleSubmitWeek = async (employeeId: string) => {
-    const weekEntries = entries.filter(
-      (e) =>
-        e.employee_id === employeeId &&
-        e.status === "draft" &&
-        parseISO(e.date) >= weekStart &&
-        parseISO(e.date) <= weekEnd
-    );
-
-    if (weekEntries.length === 0) {
-      toast.error("Aucune entrée en brouillon pour cette semaine");
+  const handleBulkSubmit = async () => {
+    if (selectedEntries.size === 0) {
+      toast.error("Aucune entrée sélectionnée");
       return;
     }
 
-    const updates = weekEntries.map((e) =>
-      supabase.from("timesheets_entries").update({ status: "submitted" }).eq("id", e.id)
-    );
+    const { error } = await supabase
+      .from("timesheets_entries")
+      .update({ status: "submitted", submitted_at: new Date().toISOString() })
+      .in("id", Array.from(selectedEntries))
+      .eq("status", "draft");
 
-    await Promise.all(updates);
-    toast.success("Semaine soumise");
+    if (error) {
+      toast.error("Erreur lors de la soumission");
+      return;
+    }
+
+    toast.success(`${selectedEntries.size} entrée(s) soumise(s)`);
+    setSelectedEntries(new Set());
     loadData();
   };
 
-  const handleApproveWeek = async (employeeId: string) => {
-    const weekEntries = entries.filter(
-      (e) =>
-        e.employee_id === employeeId &&
-        e.status === "submitted" &&
-        parseISO(e.date) >= weekStart &&
-        parseISO(e.date) <= weekEnd
-    );
-
-    if (weekEntries.length === 0) {
-      toast.error("Aucune entrée soumise pour cette semaine");
+  const handleBulkApprove = async () => {
+    if (!currentUser?.is_manager) {
+      toast.error("Vous n'êtes pas autorisé à approuver");
       return;
     }
 
-    const updates = weekEntries.map((e) =>
-      supabase.from("timesheets_entries").update({ status: "approved" }).eq("id", e.id)
-    );
+    if (selectedEntries.size === 0) {
+      toast.error("Aucune entrée sélectionnée");
+      return;
+    }
 
-    await Promise.all(updates);
-    toast.success("Semaine approuvée");
-    loadData();
+    try {
+      const { error } = await supabase.rpc("bulk_approve_timesheets", {
+        entry_ids: Array.from(selectedEntries),
+        manager_id: currentUser.id,
+      });
+
+      if (error) throw error;
+
+      toast.success(`${selectedEntries.size} entrée(s) approuvée(s)`);
+      setSelectedEntries(new Set());
+      loadData();
+    } catch (error: any) {
+      toast.error("Erreur", { description: error.message });
+    }
   };
 
-  const handleRejectWeek = async (employeeId: string) => {
-    const weekEntries = entries.filter(
-      (e) =>
-        e.employee_id === employeeId &&
-        e.status === "submitted" &&
-        parseISO(e.date) >= weekStart &&
-        parseISO(e.date) <= weekEnd
-    );
-
-    if (weekEntries.length === 0) {
-      toast.error("Aucune entrée soumise pour cette semaine");
+  const handleBulkReject = async () => {
+    if (!currentUser?.is_manager) {
+      toast.error("Vous n'êtes pas autorisé à rejeter");
       return;
     }
 
-    const updates = weekEntries.map((e) =>
-      supabase.from("timesheets_entries").update({ status: "rejected" }).eq("id", e.id)
-    );
+    if (selectedEntries.size === 0) {
+      toast.error("Aucune entrée sélectionnée");
+      return;
+    }
 
-    await Promise.all(updates);
-    toast.error("Semaine rejetée");
-    loadData();
+    if (!rejectionReason.trim()) {
+      toast.error("Veuillez indiquer une raison");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.rpc("bulk_reject_timesheets", {
+        entry_ids: Array.from(selectedEntries),
+        manager_id: currentUser.id,
+        reason: rejectionReason,
+      });
+
+      if (error) throw error;
+
+      toast.success(`${selectedEntries.size} entrée(s) rejetée(s)`);
+      setSelectedEntries(new Set());
+      setRejectModalOpen(false);
+      setRejectionReason("");
+      loadData();
+    } catch (error: any) {
+      toast.error("Erreur", { description: error.message });
+    }
   };
 
   const exportCSV = () => {
@@ -215,7 +248,7 @@ const Timesheets = () => {
       selectedEmployee === "all" ? entries : entries.filter((e) => e.employee_id === selectedEmployee);
 
     const csv = [
-      ["Date", "Employé", "Job", "Heures", "Taux", "Coût", "Statut", "Note"].join(","),
+      ["Date", "Employé", "Job", "Heures", "H. Supp.", "Taux", "Coût", "Statut", "Note"].join(","),
       ...filtered.map((e) => {
         const emp = employees.find((emp) => emp.id === e.employee_id);
         const job = jobs.find((j) => j.id === e.job_id);
@@ -223,40 +256,37 @@ const Timesheets = () => {
           e.date,
           emp?.nom || "",
           job?.titre || "",
-          e.hours,
+          e.hours.toFixed(2),
+          (e.overtime_hours || 0).toFixed(2),
           e.hourly_rate || 0,
-          e.cost,
+          e.cost.toFixed(2),
           e.status,
           (e.note || "").replace(/,/g, ";"),
         ].join(",");
       }),
     ].join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `timesheets-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `timesheets-${format(weekStart, "yyyy-MM-dd")}.csv`;
     a.click();
     toast.success("Export CSV réussi");
   };
 
-  const filteredEntries =
-    selectedEmployee === "all"
-      ? entries.filter((e) => parseISO(e.date) >= weekStart && parseISO(e.date) <= weekEnd)
-      : entries.filter(
-          (e) => e.employee_id === selectedEmployee && parseISO(e.date) >= weekStart && parseISO(e.date) <= weekEnd
-        );
-
   const getEmployeeWeekStats = (employeeId: string) => {
-    const empEntries = entries.filter(
-      (e) => e.employee_id === employeeId && parseISO(e.date) >= weekStart && parseISO(e.date) <= weekEnd
-    );
-    const totalHours = empEntries.reduce((sum, e) => sum + e.hours, 0);
+    const empEntries = entries.filter((e) => e.employee_id === employeeId);
+    const regularHours = empEntries.reduce((sum, e) => sum + e.hours - (e.overtime_hours || 0), 0);
+    const overtimeHours = empEntries.reduce((sum, e) => sum + (e.overtime_hours || 0), 0);
     const totalCost = empEntries.reduce((sum, e) => sum + e.cost, 0);
-    const hasSubmitted = empEntries.some((e) => e.status === "submitted");
-    const allApproved = empEntries.length > 0 && empEntries.every((e) => e.status === "approved");
-    return { totalHours, totalCost, hasSubmitted, allApproved, count: empEntries.length };
+    const statusCounts = {
+      draft: empEntries.filter((e) => e.status === "draft").length,
+      submitted: empEntries.filter((e) => e.status === "submitted").length,
+      approved: empEntries.filter((e) => e.status === "approved").length,
+      rejected: empEntries.filter((e) => e.status === "rejected").length,
+    };
+    return { regularHours, overtimeHours, totalCost, statusCounts, count: empEntries.length };
   };
 
   const getStatusBadge = (status: string) => {
@@ -264,6 +294,29 @@ const Timesheets = () => {
     if (status === "submitted") return <Badge className="bg-blue-500">Soumise</Badge>;
     if (status === "rejected") return <Badge className="bg-red-500">Rejetée</Badge>;
     return <Badge variant="outline">Brouillon</Badge>;
+  };
+
+  const toggleEntrySelection = (entryId: string) => {
+    const newSelection = new Set(selectedEntries);
+    if (newSelection.has(entryId)) {
+      newSelection.delete(entryId);
+    } else {
+      newSelection.add(entryId);
+    }
+    setSelectedEntries(newSelection);
+  };
+
+  const toggleAllEmployeeEntries = (employeeId: string) => {
+    const empEntries = entries.filter((e) => e.employee_id === employeeId);
+    const allSelected = empEntries.every((e) => selectedEntries.has(e.id));
+    
+    const newSelection = new Set(selectedEntries);
+    if (allSelected) {
+      empEntries.forEach((e) => newSelection.delete(e.id));
+    } else {
+      empEntries.forEach((e) => newSelection.add(e.id));
+    }
+    setSelectedEntries(newSelection);
   };
 
   return (
@@ -275,6 +328,11 @@ const Timesheets = () => {
             <div>
               <h1 className="text-3xl font-bold uppercase tracking-wide">Timesheets</h1>
               <p className="text-muted-foreground">Pointage et validation hebdomadaire</p>
+              {currentUser?.is_manager && (
+                <Badge className="mt-2" variant="outline">
+                  Manager
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -289,20 +347,36 @@ const Timesheets = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-4">
+        {/* Filters & Actions */}
+        <div className="flex items-end gap-4">
           <div>
             <Label>Semaine</Label>
-            <Input
-              type="week"
-              value={format(weekStart, "yyyy-'W'II")}
-              onChange={(e) => {
-                const [year, week] = e.target.value.split("-W");
-                const date = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
-                setSelectedWeek(date);
-              }}
-              className="mt-1"
-            />
+            <div className="flex items-center gap-2 mt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedWeek(addDays(selectedWeek, -7))}
+              >
+                ←
+              </Button>
+              <Input
+                type="week"
+                value={format(weekStart, "yyyy-'W'II")}
+                onChange={(e) => {
+                  const [year, week] = e.target.value.split("-W");
+                  const date = new Date(parseInt(year), 0, 1 + (parseInt(week) - 1) * 7);
+                  setSelectedWeek(date);
+                }}
+                className="w-40"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedWeek(addDays(selectedWeek, 7))}
+              >
+                →
+              </Button>
+            </div>
           </div>
           <div className="flex-1">
             <Label>Employé</Label>
@@ -311,7 +385,7 @@ const Timesheets = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="all">Tous les employés</SelectItem>
                 {employees.map((e) => (
                   <SelectItem key={e.id} value={e.id}>
                     {e.nom}
@@ -322,88 +396,157 @@ const Timesheets = () => {
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-4">
           {format(weekStart, "d MMM", { locale: fr })} → {format(weekEnd, "d MMM yyyy", { locale: fr })}
         </p>
+
+        {/* Bulk Actions */}
+        {selectedEntries.size > 0 && (
+          <div className="flex items-center gap-2 mt-4 p-3 bg-muted rounded-lg">
+            <span className="text-sm font-medium">{selectedEntries.size} sélectionnée(s)</span>
+            <Button size="sm" variant="outline" onClick={handleBulkSubmit} className="gap-2">
+              <Send className="h-4 w-4" />
+              Soumettre
+            </Button>
+            {currentUser?.is_manager && (
+              <>
+                <Button size="sm" onClick={handleBulkApprove} className="gap-2">
+                  <Check className="h-4 w-4" />
+                  Approuver
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setRejectModalOpen(true)}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Rejeter
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setSelectedEntries(new Set())}>
+              Annuler
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Per Employee */}
-      {selectedEmployee === "all" ? (
-        <div className="space-y-4">
-          {employees.map((emp) => {
+      {/* Per Employee View */}
+      <div className="space-y-4">
+        {employees
+          .filter((emp) => selectedEmployee === "all" || emp.id === selectedEmployee)
+          .map((emp) => {
             const stats = getEmployeeWeekStats(emp.id);
             if (stats.count === 0) return null;
+
+            const empEntries = entries.filter((e) => e.employee_id === emp.id);
+            const allSelected = empEntries.every((e) => selectedEntries.has(e.id));
 
             return (
               <Card key={emp.id} className="glass-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>{emp.nom}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      {stats.allApproved && <Badge className="bg-green-500">Approuvée</Badge>}
-                      {stats.hasSubmitted && !stats.allApproved && <Badge className="bg-blue-500">Soumise</Badge>}
-                      {!stats.hasSubmitted && !stats.allApproved && <Badge variant="outline">Brouillon</Badge>}
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={() => toggleAllEmployeeEntries(emp.id)}
+                      />
+                      <div>
+                        <CardTitle>{emp.nom}</CardTitle>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                          <span>
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {stats.regularHours.toFixed(2)}h
+                          </span>
+                          {stats.overtimeHours > 0 && (
+                            <span className="text-orange-500">
+                              +{stats.overtimeHours.toFixed(2)}h supp.
+                            </span>
+                          )}
+                          <span className="font-medium">{stats.totalCost.toFixed(2)}€</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>
-                      {stats.totalHours.toFixed(2)}h | {stats.totalCost.toFixed(2)}€
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {stats.statusCounts.draft > 0 && (
+                        <Badge variant="outline">{stats.statusCounts.draft} brouillon</Badge>
+                      )}
+                      {stats.statusCounts.submitted > 0 && (
+                        <Badge className="bg-blue-500">{stats.statusCounts.submitted} soumise</Badge>
+                      )}
+                      {stats.statusCounts.approved > 0 && (
+                        <Badge className="bg-green-500">{stats.statusCounts.approved} approuvée</Badge>
+                      )}
+                      {stats.statusCounts.rejected > 0 && (
+                        <Badge className="bg-red-500">{stats.statusCounts.rejected} rejetée</Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 mb-4">
-                    {!stats.allApproved && (
-                      <Button size="sm" onClick={() => handleSubmitWeek(emp.id)} variant="outline">
-                        Soumettre semaine
-                      </Button>
-                    )}
-                    <Button size="sm" onClick={() => handleApproveWeek(emp.id)} className="gap-2">
-                      <Check className="h-4 w-4" />
-                      Approuver
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleRejectWeek(emp.id)}
-                      variant="destructive"
-                      className="gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Rejeter
-                    </Button>
-                  </div>
-
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b">
+                          <th className="text-left py-2 w-8"></th>
                           <th className="text-left py-2">Date</th>
                           <th className="text-left py-2">Job</th>
+                          <th className="text-left py-2">Horaires</th>
+                          <th className="text-right py-2">Pause</th>
                           <th className="text-right py-2">Heures</th>
+                          <th className="text-right py-2">H. Supp.</th>
+                          <th className="text-right py-2">Taux</th>
                           <th className="text-right py-2">Coût</th>
                           <th className="text-center py-2">Statut</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {entries
-                          .filter(
-                            (e) =>
-                              e.employee_id === emp.id &&
-                              parseISO(e.date) >= weekStart &&
-                              parseISO(e.date) <= weekEnd
-                          )
-                          .map((entry) => {
-                            const job = jobs.find((j) => j.id === entry.job_id);
-                            return (
-                              <tr key={entry.id} className="border-b">
-                                <td className="py-2">{format(parseISO(entry.date), "EEE d MMM", { locale: fr })}</td>
-                                <td className="py-2">{job?.titre || "-"}</td>
-                                <td className="text-right py-2">{entry.hours.toFixed(2)}h</td>
-                                <td className="text-right py-2">{entry.cost.toFixed(2)}€</td>
-                                <td className="text-center py-2">{getStatusBadge(entry.status)}</td>
-                              </tr>
-                            );
-                          })}
+                        {empEntries.map((entry) => {
+                          const job = jobs.find((j) => j.id === entry.job_id);
+                          const isSelected = selectedEntries.has(entry.id);
+                          return (
+                            <tr
+                              key={entry.id}
+                              className={`border-b hover:bg-muted/50 ${isSelected ? "bg-muted" : ""}`}
+                            >
+                              <td className="py-2">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleEntrySelection(entry.id)}
+                                />
+                              </td>
+                              <td className="py-2">
+                                {format(parseISO(entry.date), "EEE d MMM", { locale: fr })}
+                              </td>
+                              <td className="py-2">{job?.titre || "-"}</td>
+                              <td className="py-2">
+                                {entry.start_at && entry.end_at
+                                  ? `${entry.start_at} - ${entry.end_at}`
+                                  : "-"}
+                              </td>
+                              <td className="text-right py-2">{entry.break_min || 0}min</td>
+                              <td className="text-right py-2 font-medium">
+                                {(entry.hours - (entry.overtime_hours || 0)).toFixed(2)}h
+                              </td>
+                              <td className="text-right py-2 text-orange-500 font-medium">
+                                {entry.overtime_hours ? `+${entry.overtime_hours.toFixed(2)}h` : "-"}
+                              </td>
+                              <td className="text-right py-2">{entry.hourly_rate?.toFixed(2) || 0}€</td>
+                              <td className="text-right py-2 font-medium">{entry.cost.toFixed(2)}€</td>
+                              <td className="text-center py-2">
+                                <div className="flex flex-col items-center gap-1">
+                                  {getStatusBadge(entry.status)}
+                                  {entry.rejection_reason && (
+                                    <span className="text-xs text-red-500" title={entry.rejection_reason}>
+                                      Raison
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -411,57 +554,16 @@ const Timesheets = () => {
               </Card>
             );
           })}
-        </div>
-      ) : (
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>{employees.find((e) => e.id === selectedEmployee)?.nom || "Employé"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2">Date</th>
-                    <th className="text-left py-2">Job</th>
-                    <th className="text-left py-2">Début</th>
-                    <th className="text-left py-2">Fin</th>
-                    <th className="text-right py-2">Pause</th>
-                    <th className="text-right py-2">Heures</th>
-                    <th className="text-right py-2">Taux</th>
-                    <th className="text-right py-2">Coût</th>
-                    <th className="text-center py-2">Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEntries.map((entry) => {
-                    const job = jobs.find((j) => j.id === entry.job_id);
-                    return (
-                      <tr key={entry.id} className="border-b">
-                        <td className="py-2">{format(parseISO(entry.date), "EEE d MMM", { locale: fr })}</td>
-                        <td className="py-2">{job?.titre || "-"}</td>
-                        <td className="py-2">{entry.start_at || "-"}</td>
-                        <td className="py-2">{entry.end_at || "-"}</td>
-                        <td className="text-right py-2">{entry.break_min || 0}min</td>
-                        <td className="text-right py-2">{entry.hours.toFixed(2)}h</td>
-                        <td className="text-right py-2">{entry.hourly_rate?.toFixed(2) || 0}€</td>
-                        <td className="text-right py-2">{entry.cost.toFixed(2)}€</td>
-                        <td className="text-center py-2">{getStatusBadge(entry.status)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      </div>
 
       {/* Add Entry Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nouvelle entrée</DialogTitle>
+            <DialogTitle>Nouvelle entrée de temps</DialogTitle>
+            <DialogDescription>
+              Saisir les heures travaillées. Les calculs se font automatiquement.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -542,17 +644,15 @@ const Timesheets = () => {
             </div>
 
             <div>
-              <Label>Heures calculées</Label>
-              <p className="text-2xl font-bold mt-1">{calculateHours().toFixed(2)}h</p>
-              {newEntry.employee_id && (
-                <p className="text-sm text-muted-foreground">
-                  Coût:{" "}
-                  {(
-                    calculateHours() * (employees.find((e) => e.id === newEntry.employee_id)?.hourly_rate || 0)
-                  ).toFixed(2)}
-                  €
-                </p>
-              )}
+              <Label>Ou saisir directement les heures</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={newEntry.hours}
+                onChange={(e) => setNewEntry({ ...newEntry, hours: parseFloat(e.target.value) || 0 })}
+                className="mt-1"
+                placeholder="Laissez vide pour calcul auto"
+              />
             </div>
 
             <div>
@@ -560,16 +660,60 @@ const Timesheets = () => {
               <Textarea
                 value={newEntry.note}
                 onChange={(e) => setNewEntry({ ...newEntry, note: e.target.value })}
-                placeholder="Notes optionnelles"
                 className="mt-1"
+                rows={2}
+                placeholder="Informations complémentaires..."
               />
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-muted rounded">
+              <span className="text-sm">
+                Heures calculées : <strong>{calculateHours().toFixed(2)}h</strong>
+              </span>
+              {calculateHours() > 8 && (
+                <span className="text-sm text-orange-500">
+                  (dont {(calculateHours() - 8).toFixed(2)}h supp.)
+                </span>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setModalOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={handleAddEntry}>Enregistrer</Button>
+              <Button onClick={handleAddEntry}>Créer</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Modal */}
+      <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeter les entrées</DialogTitle>
+            <DialogDescription>
+              Veuillez indiquer la raison du rejet pour informer l'employé.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Raison du rejet *</Label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="mt-1"
+                rows={3}
+                placeholder="Ex: Horaires incorrects, projet non valide..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRejectModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button variant="destructive" onClick={handleBulkReject}>
+                Rejeter
+              </Button>
             </div>
           </div>
         </DialogContent>

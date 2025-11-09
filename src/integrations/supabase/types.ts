@@ -222,6 +222,7 @@ export type Database = {
           email: string
           hourly_rate: number | null
           id: string
+          is_manager: boolean | null
           nom: string
           note: string | null
           role: string
@@ -233,6 +234,7 @@ export type Database = {
           email: string
           hourly_rate?: number | null
           id?: string
+          is_manager?: boolean | null
           nom: string
           note?: string | null
           role?: string
@@ -244,6 +246,7 @@ export type Database = {
           email?: string
           hourly_rate?: number | null
           id?: string
+          is_manager?: boolean | null
           nom?: string
           note?: string | null
           role?: string
@@ -764,6 +767,8 @@ export type Database = {
       }
       timesheets_entries: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           break_min: number | null
           cost: number
           created_at: string
@@ -775,11 +780,18 @@ export type Database = {
           id: string
           job_id: string | null
           note: string | null
+          overtime_hours: number | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           start_at: string | null
           status: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at: string | null
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           break_min?: number | null
           cost?: number
           created_at?: string
@@ -791,11 +803,18 @@ export type Database = {
           id?: string
           job_id?: string | null
           note?: string | null
+          overtime_hours?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at?: string | null
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           break_min?: number | null
           cost?: number
           created_at?: string
@@ -807,11 +826,23 @@ export type Database = {
           id?: string
           job_id?: string | null
           note?: string | null
+          overtime_hours?: number | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "timesheets_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "timesheets_entries_employee_id_fkey"
             columns: ["employee_id"]
@@ -826,6 +857,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "timesheets_entries_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -833,7 +871,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      bulk_approve_timesheets: {
+        Args: { entry_ids: string[]; manager_id: string }
+        Returns: undefined
+      }
+      bulk_reject_timesheets: {
+        Args: { entry_ids: string[]; manager_id: string; reason: string }
+        Returns: undefined
+      }
+      is_manager: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
       timesheet_status: "draft" | "submitted" | "approved" | "rejected"
