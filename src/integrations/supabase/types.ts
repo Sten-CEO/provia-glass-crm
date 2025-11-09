@@ -101,8 +101,72 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string
+          country: string | null
+          created_at: string
+          discount_conditions: string | null
+          email: string | null
+          id: string
+          late_payment_penalty: string | null
+          legal_mentions: string | null
+          logo_url: string | null
+          payment_conditions: string | null
+          phone: string | null
+          postal_code: string | null
+          siren: string | null
+          siret: string | null
+          tva_intracom: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name: string
+          country?: string | null
+          created_at?: string
+          discount_conditions?: string | null
+          email?: string | null
+          id?: string
+          late_payment_penalty?: string | null
+          legal_mentions?: string | null
+          logo_url?: string | null
+          payment_conditions?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          siren?: string | null
+          siret?: string | null
+          tva_intracom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string
+          country?: string | null
+          created_at?: string
+          discount_conditions?: string | null
+          email?: string | null
+          id?: string
+          late_payment_penalty?: string | null
+          legal_mentions?: string | null
+          logo_url?: string | null
+          payment_conditions?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          siren?: string | null
+          siret?: string | null
+          tva_intracom?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       devis: {
         Row: {
+          accepted_at: string | null
           acompte: number | null
           approved_at: string | null
           approved_by: string | null
@@ -116,6 +180,8 @@ export type Database = {
           created_at: string
           custom_fields: Json | null
           date_envoi: string | null
+          declined_at: string | null
+          expires_at: string | null
           expiry_date: string | null
           id: string
           issued_at: string | null
@@ -125,18 +191,23 @@ export type Database = {
           notes_internes: string | null
           numero: string
           packages: Json | null
+          pdf_signed_url: string | null
+          pdf_url: string | null
           property_address: string | null
           remise: number | null
           salesperson: string | null
+          sent_at: string | null
           signature_date: string | null
           signature_image: string | null
           statut: string
           title: string | null
+          token: string | null
           total_ht: number | null
           total_ttc: number | null
           vendeur: string | null
         }
         Insert: {
+          accepted_at?: string | null
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
@@ -150,6 +221,8 @@ export type Database = {
           created_at?: string
           custom_fields?: Json | null
           date_envoi?: string | null
+          declined_at?: string | null
+          expires_at?: string | null
           expiry_date?: string | null
           id?: string
           issued_at?: string | null
@@ -159,18 +232,23 @@ export type Database = {
           notes_internes?: string | null
           numero: string
           packages?: Json | null
+          pdf_signed_url?: string | null
+          pdf_url?: string | null
           property_address?: string | null
           remise?: number | null
           salesperson?: string | null
+          sent_at?: string | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
           title?: string | null
+          token?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           vendeur?: string | null
         }
         Update: {
+          accepted_at?: string | null
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
@@ -184,6 +262,8 @@ export type Database = {
           created_at?: string
           custom_fields?: Json | null
           date_envoi?: string | null
+          declined_at?: string | null
+          expires_at?: string | null
           expiry_date?: string | null
           id?: string
           issued_at?: string | null
@@ -193,13 +273,17 @@ export type Database = {
           notes_internes?: string | null
           numero?: string
           packages?: Json | null
+          pdf_signed_url?: string | null
+          pdf_url?: string | null
           property_address?: string | null
           remise?: number | null
           salesperson?: string | null
+          sent_at?: string | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
           title?: string | null
+          token?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           vendeur?: string | null
@@ -260,16 +344,23 @@ export type Database = {
           converted_from_quote_id: string | null
           created_at: string
           date_paiement: string | null
+          due_date: string | null
           echeance: string
+          facturx_profile: string | null
+          facturx_xml_url: string | null
           id: string
+          issue_date: string | null
           lignes: Json | null
           montant: string
+          notes_legal: string | null
           numero: string
+          payment_terms: string | null
           pdf_url: string | null
           remise: number | null
           statut: string
           total_ht: number | null
           total_ttc: number | null
+          tva_breakdown: Json | null
         }
         Insert: {
           client_id?: string | null
@@ -277,16 +368,23 @@ export type Database = {
           converted_from_quote_id?: string | null
           created_at?: string
           date_paiement?: string | null
+          due_date?: string | null
           echeance: string
+          facturx_profile?: string | null
+          facturx_xml_url?: string | null
           id?: string
+          issue_date?: string | null
           lignes?: Json | null
           montant: string
+          notes_legal?: string | null
           numero: string
+          payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
           statut?: string
           total_ht?: number | null
           total_ttc?: number | null
+          tva_breakdown?: Json | null
         }
         Update: {
           client_id?: string | null
@@ -294,16 +392,23 @@ export type Database = {
           converted_from_quote_id?: string | null
           created_at?: string
           date_paiement?: string | null
+          due_date?: string | null
           echeance?: string
+          facturx_profile?: string | null
+          facturx_xml_url?: string | null
           id?: string
+          issue_date?: string | null
           lignes?: Json | null
           montant?: string
+          notes_legal?: string | null
           numero?: string
+          payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
           statut?: string
           total_ht?: number | null
           total_ttc?: number | null
+          tva_breakdown?: Json | null
         }
         Relationships: [
           {
@@ -687,6 +792,91 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_events: {
+        Row: {
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          occurred_at: string
+          quote_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          occurred_at?: string
+          quote_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          occurred_at?: string
+          quote_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_signatures: {
+        Row: {
+          accepted_terms: boolean
+          id: string
+          ip_address: string | null
+          pdf_hash: string
+          quote_id: string
+          signature_image_url: string
+          signed_at: string
+          signer_email: string | null
+          signer_name: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_terms?: boolean
+          id?: string
+          ip_address?: string | null
+          pdf_hash: string
+          quote_id: string
+          signature_image_url: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_terms?: boolean
+          id?: string
+          ip_address?: string | null
+          pdf_hash?: string
+          quote_id?: string
+          signature_image_url?: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_signatures_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_messages: {
         Row: {
           category: string | null
@@ -879,6 +1069,8 @@ export type Database = {
         Args: { entry_ids: string[]; manager_id: string; reason: string }
         Returns: undefined
       }
+      generate_invoice_number: { Args: never; Returns: string }
+      generate_quote_number: { Args: never; Returns: string }
       is_manager: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
