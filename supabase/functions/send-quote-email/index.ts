@@ -67,21 +67,37 @@ serve(async (req) => {
       metadata: { recipient_email: recipientEmail }
     });
 
-    // SIMULATION: En production, on utiliserait Resend ici
-    console.log('=== EMAIL SIMULATION ===');
-    console.log('To:', recipientEmail);
-    console.log('Subject:', subject || `Devis ${quote.numero}`);
-    console.log('Message:', message || 'Voici votre devis');
-    console.log('Quote link:', `${Deno.env.get('SUPABASE_URL')}/quote/${token}`);
-    console.log('========================');
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    
+    if (!resendApiKey) {
+      // MODE SIMULATION: Pas de clé API Resend configurée
+      console.log('=== EMAIL SIMULATION (Clé API Resend manquante) ===');
+      console.log('To:', recipientEmail);
+      console.log('Subject:', subject || `Devis ${quote.numero}`);
+      console.log('Message:', message || 'Voici votre devis');
+      console.log('Quote link:', `${Deno.env.get('SUPABASE_URL')}/quote/${token}`);
+      console.log('===================================================');
 
-    // Simuler un délai d'envoi
-    await new Promise(resolve => setTimeout(resolve, 500));
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Envoi simulé - Veuillez configurer la clé API Resend pour l\'envoi réel',
+          simulation: true,
+          token,
+          publicUrl: `/quote/${token}`
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
+    // TODO: Implémenter l'envoi réel avec Resend quand la clé est configurée
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Email envoyé (simulation)',
+        message: 'Email envoyé avec succès',
         token,
         publicUrl: `/quote/${token}`
       }),

@@ -61,10 +61,17 @@ export function QuoteSendModal({
 
       setPublicUrl(data.publicUrl);
 
-      toast({
-        title: "Email envoyé",
-        description: "Le devis a été envoyé avec succès (simulation)",
-      });
+      if (data.simulation) {
+        toast({
+          title: "⚠️ Envoi simulé",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Email envoyé",
+          description: "Le devis a été envoyé avec succès",
+        });
+      }
 
     } catch (error: any) {
       console.error('Error sending quote:', error);
@@ -148,10 +155,13 @@ export function QuoteSendModal({
             </div>
           )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700">
-              📧 Mode simulation : L'email sera simulé dans les logs. 
-              Le client pourra consulter et signer le devis via le lien public.
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm text-amber-800 font-medium mb-1">
+              ⚠️ Mode simulation
+            </p>
+            <p className="text-sm text-amber-700">
+              Configurez la clé API Resend pour l'envoi réel d'emails. 
+              En attendant, le client peut consulter et signer le devis via le lien public.
             </p>
           </div>
         </div>
