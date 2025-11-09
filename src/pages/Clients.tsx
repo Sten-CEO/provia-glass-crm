@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone, ChevronUp, ChevronsUpDown, Settings } from "lucide-react";
 import { DisplayOptionsPanel } from "@/components/clients/DisplayOptionsPanel";
+import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -286,6 +289,17 @@ const Clients = () => {
         };
   });
 
+  // Bulk selection for mass delete
+  const {
+    selectedIds,
+    selectedCount,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    allSelected,
+  } = useBulkSelection(clients);
+
   const handleSaveDisplayOptions = (options: any) => {
     setDisplayOptions(options);
     localStorage.setItem("pv_clients_display_options", JSON.stringify(options));
@@ -541,6 +555,25 @@ const Clients = () => {
     toast.success("Client supprimé avec succès");
     setDeleteOpen(false);
     setSelectedClient(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .in("id", selectedIds);
+
+    if (error) {
+      console.error("Erreur lors de la suppression groupée:", error);
+      toast.error("Échec de la suppression groupée");
+      return;
+    }
+
+    toast.success(`${selectedIds.length} client${selectedIds.length > 1 ? "s supprimés" : " supprimé"} avec succès`);
+    clearSelection();
+    loadClients();
   };
 
   // Enhanced search with highlighting
@@ -1175,10 +1208,29 @@ const Clients = () => {
           </div>
         ) : (
           <>
+            {/* Bulk Delete Toolbar */}
+            <div className="p-4 border-b border-white/10">
+              <BulkDeleteToolbar
+                selectedCount={selectedCount}
+                totalCount={filteredAndSortedClients.length}
+                onSelectAll={toggleAll}
+                onDelete={handleBulkDelete}
+                entityName="client"
+                allSelected={allSelected}
+              />
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b border-white/10 sticky top-0 glass-card z-10">
                   <tr>
+                    <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs w-8">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={toggleAll}
+                        aria-label="Tout sélectionner"
+                      />
+                    </th>
                     <th className="text-left p-2 font-semibold uppercase tracking-wide text-xs w-8"></th>
                     <th 
                       className="text-left p-2 font-semibold uppercase tracking-wide text-xs cursor-pointer hover:text-primary transition-colors select-none"
@@ -1268,6 +1320,13 @@ const Clients = () => {
                       key={client.id}
                       className="border-b border-white/5 hover:bg-muted/20 transition-colors"
                     >
+                      <td className="p-2">
+                        <Checkbox
+                          checked={isSelected(client.id)}
+                          onCheckedChange={() => toggleItem(client.id)}
+                          aria-label={`Sélectionner ${client.nom}`}
+                        />
+                      </td>
                       <td className="p-2">
                         <button
                           onClick={() => {
@@ -1446,7 +1505,7 @@ const Clients = () => {
                     </tr>
                     {isExpanded && (
                       <tr key={`${client.id}-expanded`} className="border-b border-white/5 bg-muted/10">
-                        <td colSpan={13} className="p-4">
+                        <td colSpan={14} className="p-4">
                           <ExpandedClientView clientId={client.id} />
                         </td>
                       </tr>

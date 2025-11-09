@@ -6,6 +6,9 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +72,17 @@ const Jobs = () => {
     date: new Date().toISOString().split("T")[0],
   });
   const navigate = useNavigate();
+
+  // Bulk selection for mass delete
+  const {
+    selectedIds,
+    selectedCount,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    allSelected,
+  } = useBulkSelection(jobs);
 
   const loadJobs = async () => {
     const { data, error } = await supabase
@@ -189,6 +203,25 @@ const Jobs = () => {
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: 'jobs' });
     setDeleteOpen(false);
     setSelectedJob(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("jobs")
+      .delete()
+      .in("id", selectedIds);
+
+    if (error) {
+      console.error("Erreur lors de la suppression groupée:", error);
+      toast.error("Échec de la suppression groupée");
+      return;
+    }
+
+    toast.success(`${selectedIds.length} job${selectedIds.length > 1 ? "s supprimés" : " supprimé"} avec succès`);
+    clearSelection();
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: 'jobs' });
   };
 
   const getStatusVariant = (statut: Job["statut"]) => {
@@ -340,10 +373,24 @@ const Jobs = () => {
       </div>
 
       <div className="glass-card overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <BulkDeleteToolbar
+            selectedCount={selectedCount}
+            totalCount={filteredJobs.length}
+            onSelectAll={toggleAll}
+            onDelete={handleBulkDelete}
+            entityName="job"
+            allSelected={allSelected}
+          />
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-white/10">
               <tr>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm w-8">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                </th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Statut</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Titre</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Client</th>
@@ -356,8 +403,14 @@ const Jobs = () => {
             </thead>
             <tbody>
               {filteredJobs.map((job) => (
-                <tr key={job.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/jobs/${job.id}`)}>
+                <tr key={job.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected(job.id)}
+                      onCheckedChange={() => toggleItem(job.id)}
+                      aria-label={`Sélectionner ${job.titre}`}
+                    />
+                  </td>
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
                     <StatusChip variant={getStatusVariant(job.statut)}>{job.statut}</StatusChip>
                   </td>

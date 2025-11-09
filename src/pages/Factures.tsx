@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Menu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +72,17 @@ const Factures = () => {
     statut: "En attente" as const,
     echeance: new Date().toISOString().split("T")[0],
   });
+
+  // Bulk selection for mass delete
+  const {
+    selectedIds,
+    selectedCount,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    allSelected,
+  } = useBulkSelection(invoices);
 
   const loadInvoices = async () => {
     const { data, error } = await supabase
@@ -206,6 +220,25 @@ const Factures = () => {
     setSelectedInvoice(null);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("factures")
+      .delete()
+      .in("id", selectedIds);
+
+    if (error) {
+      console.error("Erreur lors de la suppression groupée:", error);
+      toast.error("Échec de la suppression groupée");
+      return;
+    }
+
+    toast.success(`${selectedIds.length} facture${selectedIds.length > 1 ? "s supprimées" : " supprimée"} avec succès`);
+    clearSelection();
+    loadInvoices();
+  };
+
   const getStatusColor = (statut: Invoice["statut"]) => {
     switch (statut) {
       case "Payée":
@@ -304,10 +337,24 @@ const Factures = () => {
       </div>
 
       <div className="glass-card overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <BulkDeleteToolbar
+            selectedCount={selectedCount}
+            totalCount={invoices.length}
+            onSelectAll={toggleAll}
+            onDelete={handleBulkDelete}
+            entityName="facture"
+            allSelected={allSelected}
+          />
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-white/10">
               <tr>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm w-8">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+                </th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Numéro</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Client</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Montant</th>
@@ -319,8 +366,15 @@ const Factures = () => {
             <tbody>
               {invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected(invoice.id)}
+                      onCheckedChange={() => toggleItem(invoice.id)}
+                      aria-label={`Sélectionner ${invoice.numero}`}
+                    />
+                  </td>
                   <td 
-                    className="p-4 font-medium cursor-pointer hover:text-primary transition-colors" 
+                    className="p-4 font-medium cursor-pointer hover:text-primary transition-colors"
                     onClick={() => navigate(`/factures/${invoice.id}`)}
                   >
                     {invoice.numero}

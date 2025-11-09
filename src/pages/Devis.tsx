@@ -7,6 +7,9 @@ import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog"
 import { StatusChip } from "@/components/ui/status-chip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +48,17 @@ const Devis = () => {
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [quoteForAction, setQuoteForAction] = useState<Quote | null>(null);
+
+  // Bulk selection for mass delete
+  const {
+    selectedIds,
+    selectedCount,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    allSelected,
+  } = useBulkSelection(quotes);
 
   const loadQuotes = async () => {
     const { data, error } = await supabase
@@ -98,6 +112,25 @@ const Devis = () => {
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
     setDeleteOpen(false);
     setSelectedQuote(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("devis")
+      .delete()
+      .in("id", selectedIds);
+
+    if (error) {
+      console.error("Erreur lors de la suppression groupée:", error);
+      toast.error("Échec de la suppression groupée");
+      return;
+    }
+
+    toast.success(`${selectedIds.length} devis supprimé${selectedIds.length > 1 ? "s" : ""} avec succès`);
+    clearSelection();
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
   };
 
   const getStatusVariant = (status: Quote["statut"]) => {
@@ -180,10 +213,28 @@ const Devis = () => {
 
       {/* Table */}
       <div className="glass-card overflow-hidden">
+        <div className="p-4 border-b border-white/10">
+          <BulkDeleteToolbar
+            selectedCount={selectedCount}
+            totalCount={filteredQuotes.length}
+            onSelectAll={toggleAll}
+            onDelete={handleBulkDelete}
+            entityName="devis"
+            allSelected={allSelected}
+          />
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-white/10">
               <tr>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm w-8">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Tout sélectionner"
+                  />
+                </th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">N°</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Client</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Total TTC</th>
@@ -197,10 +248,16 @@ const Devis = () => {
               {filteredQuotes.map((quote) => (
                 <tr
                   key={quote.id}
-                  className="border-b border-white/5 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/devis/${quote.id}`)}
+                  className="border-b border-white/5 hover:bg-muted/30 transition-colors"
                 >
-                  <td className="p-4">
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected(quote.id)}
+                      onCheckedChange={() => toggleItem(quote.id)}
+                      aria-label={`Sélectionner ${quote.numero}`}
+                    />
+                  </td>
+                  <td className="p-4 cursor-pointer" onClick={() => navigate(`/devis/${quote.id}`)}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
