@@ -85,6 +85,9 @@ const DevisEditor = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  // Templates devis
+  const [quoteTemplates, setQuoteTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const [quote, setQuote] = useState<Quote>({
     numero: "DRAFT-" + Date.now(),
@@ -135,6 +138,7 @@ const DevisEditor = () => {
     // Load reference data in background (non-blocking)
     loadClients();
     loadEmployees();
+    loadTemplates();
   }, []);
 
   const loadClients = async () => {
@@ -152,6 +156,23 @@ const DevisEditor = () => {
       setEmployees(data || []);
     } catch (error) {
       console.error("Error loading employees:", error);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("doc_templates")
+        .select("*")
+        .eq("type", "quote")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setQuoteTemplates(data || []);
+      const def = (data || []).find((t: any) => t.is_default);
+      if (def && !selectedTemplateId) setSelectedTemplateId(def.id);
+    } catch (error) {
+      console.error("Error loading quote templates:", error);
     }
   };
 
@@ -222,6 +243,7 @@ const DevisEditor = () => {
         conditions: data.conditions || "",
         attachments: [],
       });
+      setSelectedTemplateId(data.template_id || selectedTemplateId);
       setPreviousStatus(data.statut);
     } catch (err: any) {
       console.error("Error loading quote:", err);
@@ -294,6 +316,7 @@ const DevisEditor = () => {
       message_client: quote.client_message,
       conditions: quote.disclaimer,
       montant: String(quote.total_ttc),
+      template_id: selectedTemplateId || null,
     };
 
     if (id && !isNewQuote && quote.id) {
@@ -676,6 +699,24 @@ const DevisEditor = () => {
                 <div>
                   <Label>N° Devis</Label>
                   <Input value={quote.numero} disabled className="mt-1" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Modèle PDF</Label>
+                  <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Sélectionner un modèle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quoteTemplates.map((t: any) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name} {t.is_default ? "(par défaut)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
