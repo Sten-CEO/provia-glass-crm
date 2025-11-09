@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import DevisDetail from "./pages/DevisDetail";
 import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
+import FactureEditor from "./pages/FactureEditor";
 import Inventaire from "./pages/inventaire/Inventaire";
 import InventaireConsommables from "./pages/inventaire/InventaireConsommables";
 import InventaireMateriels from "./pages/inventaire/InventaireMateriels";
@@ -55,7 +56,9 @@ const App = () => (
             <Route path="/devis/:id" element={<DevisDetail />} />
             <Route path="/devis/:id/edit" element={<DevisEditor />} />
             <Route path="/factures" element={<Factures />} />
+            <Route path="/factures/new" element={<FactureEditor />} />
             <Route path="/factures/:id" element={<FactureDetail />} />
+            <Route path="/factures/:id/edit" element={<FactureEditor />} />
             
             {/* Interventions routes (renamed from jobs) */}
             <Route path="/interventions" element={<Interventions />} />

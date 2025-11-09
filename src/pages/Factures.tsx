@@ -226,12 +226,17 @@ const Factures = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold uppercase tracking-wide">Factures</h1>
+        <div className="flex gap-2">
+          <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide" onClick={() => navigate("/factures/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouvelle Facture
+          </Button>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
+            <Button variant="outline" className="gap-2">
               <Plus className="mr-2 h-4 w-4" />
-              Nouvelle Facture
+              Ajout rapide
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-modal">
@@ -295,6 +300,7 @@ const Factures = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="glass-card overflow-hidden">
@@ -332,10 +338,7 @@ const Factures = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setSelectedInvoice(invoice);
-                          setEditOpen(true);
-                        }}
+                        onClick={() => navigate(`/factures/${invoice.id}/edit`)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -418,7 +421,7 @@ const Factures = () => {
               </div>
 
               <Button 
-                onClick={() => navigate(`/factures/${selectedInvoice.id}`)} 
+                onClick={() => navigate(`/factures/${selectedInvoice.id}/edit`)} 
                 variant="outline"
                 className="w-full"
               >
