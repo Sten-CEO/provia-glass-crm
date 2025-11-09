@@ -644,11 +644,13 @@ const InventaireAchats = () => {
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {filteredItems.map((invItem) => (
-                                  <SelectItem key={invItem.id} value={invItem.id}>
-                                    {invItem.name}
-                                  </SelectItem>
-                                ))}
+                                {filteredItems
+                                  .filter((invItem) => invItem.id)
+                                  .map((invItem) => (
+                                    <SelectItem key={invItem.id} value={invItem.id}>
+                                      {invItem.name}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           </TableCell>

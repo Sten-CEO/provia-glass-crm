@@ -658,7 +658,7 @@ const AchatEditor = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems
-                          .filter((i) => i.type === item.type)
+                          .filter((i) => i.type === item.type && i.id)
                           .map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
