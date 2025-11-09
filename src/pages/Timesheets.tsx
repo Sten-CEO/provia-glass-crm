@@ -496,12 +496,12 @@ const Timesheets = () => {
 
             <div>
               <Label>Job (optionnel)</Label>
-              <Select value={newEntry.job_id} onValueChange={(v) => setNewEntry({ ...newEntry, job_id: v })}>
+              <Select value={newEntry.job_id || undefined} onValueChange={(v) => setNewEntry({ ...newEntry, job_id: v === "none" ? undefined : v })}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Aucun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {jobs.map((j) => (
                     <SelectItem key={j.id} value={j.id}>
                       {j.titre}
