@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Save, Trash2, FileText, Star, Eye, Palette } from "lucide-react";
+import { TemplatePreview } from "@/components/templates/TemplatePreview";
 
 interface Template {
   id: string;
@@ -39,6 +40,7 @@ const Templates = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
 
   useEffect(() => {
@@ -571,7 +573,7 @@ const Templates = () => {
                     Annuler
                   </Button>
                   <div className="flex gap-2">
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => setIsPreviewOpen(true)}>
                       <Eye className="mr-2 h-4 w-4" />
                       Prévisualiser
                     </Button>
@@ -684,6 +686,18 @@ const Templates = () => {
           Aucun modèle trouvé. Créez-en un !
         </div>
       )}
+
+      {/* Modal de prévisualisation */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prévisualisation du modèle</DialogTitle>
+          </DialogHeader>
+          {selectedTemplate && (
+            <TemplatePreview template={selectedTemplate} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
