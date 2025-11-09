@@ -177,13 +177,21 @@ const DevisEditor = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase
+      // Increase timeout to 30s
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout loading quote")), 30000)
+      );
+      
+      const dataPromise = supabase
         .from("devis")
         .select("*")
         .eq("id", id)
         .maybeSingle();
+      
+      const { data, error } = await Promise.race([dataPromise, timeoutPromise]) as any;
         
       if (error || !data) {
+        console.error("Error loading quote:", error);
         toast.error("Erreur de chargement");
         navigate("/devis");
         return;
@@ -215,9 +223,13 @@ const DevisEditor = () => {
         attachments: [],
       });
       setPreviousStatus(data.statut);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading quote:", err);
-      toast.error("Erreur de chargement");
+      if (err.message === "Timeout loading quote") {
+        toast.error("Délai dépassé lors du chargement du devis");
+      } else {
+        toast.error("Erreur de chargement");
+      }
       navigate("/devis");
     } finally {
       setLoading(false);

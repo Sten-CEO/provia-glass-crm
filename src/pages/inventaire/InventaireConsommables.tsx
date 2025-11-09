@@ -45,9 +45,8 @@ const InventaireConsommables = () => {
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   
-  // Determine type from current route
-  const type = location.pathname.includes('/materiels') ? 'materiel' : 'consommable';
-  const activeTab = type === 'materiel' ? 'materiels' : 'consommables';
+  // Type is ALWAYS consommable for this page
+  const type = 'consommable';
   
   const [newItem, setNewItem] = useState({
     name: "",
@@ -119,7 +118,7 @@ const InventaireConsommables = () => {
       return;
     }
 
-    toast.success(`${type === 'materiel' ? 'Matériel' : 'Consommable'} créé avec succès`);
+    toast.success("Consommable créé avec succès");
     setNewItem({
       name: "",
       sku: "",
@@ -145,7 +144,7 @@ const InventaireConsommables = () => {
       return;
     }
 
-    toast.success(`${type === 'materiel' ? 'Matériel' : 'Consommable'} supprimé avec succès`);
+    toast.success("Consommable supprimé avec succès");
     setDeleteId(null);
   };
 
@@ -156,51 +155,31 @@ const InventaireConsommables = () => {
     (item.supplier_name && item.supplier_name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const emptyMessage = type === 'materiel' 
-    ? "Aucun matériel pour le moment…" 
-    : "Aucun consommable pour le moment…";
-  
-  const ctaLabel = type === 'materiel' 
-    ? "Nouveau matériel" 
-    : "Nouveau consommable";
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Persistent tab bar */}
-      <div className="glass-card p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold uppercase tracking-wide">
-          {type === 'materiel' ? 'Matériels' : 'Consommables'}
+          Consommables
         </h1>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
               <Plus className="mr-2 h-4 w-4" />
-              {ctaLabel}
+              Nouveau consommable
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-modal max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="uppercase tracking-wide">{ctaLabel}</DialogTitle>
+              <DialogTitle className="uppercase tracking-wide">Nouveau consommable</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Nom *</Label>
                   <Input
-                    placeholder={type === 'materiel' ? "Ordinateur portable" : "Vis M6"}
+                    placeholder="Vis M6"
                     value={newItem.name}
                     onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                     className="glass-card"
@@ -218,7 +197,7 @@ const InventaireConsommables = () => {
                 <div>
                   <Label>Catégorie</Label>
                   <Input
-                    placeholder={type === 'materiel' ? "Informatique" : "Quincaillerie"}
+                    placeholder="Quincaillerie"
                     value={newItem.category}
                     onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                     className="glass-card"
@@ -377,7 +356,7 @@ const InventaireConsommables = () => {
           
           {filteredItems.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              {emptyMessage}
+              Aucun consommable pour le moment…
             </div>
           )}
         </div>
