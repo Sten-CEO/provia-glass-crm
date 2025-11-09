@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Plus, Eye, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,6 @@ interface Item {
 
 const InventaireConsommables = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -159,9 +159,7 @@ const InventaireConsommables = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold uppercase tracking-wide">
-          Consommables
-        </h1>
+        <h1 className="text-3xl font-bold uppercase tracking-wide">Inventaire</h1>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -276,6 +274,14 @@ const InventaireConsommables = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Tabs for navigation */}
+      <Tabs value="consommables" onValueChange={(v) => navigate(`/inventaire/${v}`)}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="consommables">Consommables</TabsTrigger>
+          <TabsTrigger value="materiels">Matériels</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Search */}
       <div className="glass-card p-4">

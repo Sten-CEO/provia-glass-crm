@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRight, Filter, Eye, Phone, ChevronUp, ChevronsUpDown, Settings } from "lucide-react";
+import { DisplayOptionsPanel } from "@/components/clients/DisplayOptionsPanel";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -260,6 +261,35 @@ const Clients = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const navigate = useNavigate();
+  
+  // Display options state
+  const [displayOptionsOpen, setDisplayOptionsOpen] = useState(false);
+  const [displayOptions, setDisplayOptions] = useState(() => {
+    const saved = localStorage.getItem("pv_clients_display_options");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          standardFields: {
+            telephone: true,
+            ville: true,
+            adresse: false,
+            tva: false,
+            tags: true,
+            statut: true,
+            devis: true,
+            factures: true,
+            jobs: true,
+            planning: true,
+            activite: true,
+          },
+          customFields: [],
+        };
+  });
+
+  const handleSaveDisplayOptions = (options: any) => {
+    setDisplayOptions(options);
+    localStorage.setItem("pv_clients_display_options", JSON.stringify(options));
+  };
 
   // Debounce search
   useEffect(() => {
@@ -790,6 +820,10 @@ const Clients = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold uppercase tracking-wide">Clients</h1>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setDisplayOptionsOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Options d'affichage
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-4 w-4" />
           </Button>
@@ -1650,6 +1684,14 @@ const Clients = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Display Options Panel */}
+      <DisplayOptionsPanel
+        open={displayOptionsOpen}
+        onOpenChange={setDisplayOptionsOpen}
+        onSave={handleSaveDisplayOptions}
+        currentOptions={displayOptions}
+      />
     </div>
   );
 };
