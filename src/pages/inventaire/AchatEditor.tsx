@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Trash2, Plus, X, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createInventoryMovement, cancelMovement } from "@/lib/inventoryMovements";
+import { eventBus, EVENTS } from "@/lib/eventBus";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface PurchaseItem {
@@ -191,6 +192,8 @@ const AchatEditor = () => {
 
   // Synchronize inventory movements after saving the purchase
   const syncMovementsForPurchase = async (refId: string) => {
+    let createdPlanned = 0;
+    let createdDone = 0;
     try {
       // Cancel existing planned movements for this purchase (if any)
       const { data: existing } = await supabase
@@ -224,7 +227,9 @@ const AchatEditor = () => {
               ref_number: formData.number,
               note: `Entrée prévue ${formData.delivery_site}`,
               status: "planned",
+              date: formData.expected_date ? new Date(formData.expected_date).toISOString() : undefined,
             });
+            createdPlanned += 1;
           }
         } else if (formData.status === "reçue") {
           // Convert to real inbound movement (prefer received, fallback to ordered)
@@ -240,6 +245,7 @@ const AchatEditor = () => {
               note: `Réception ${formData.delivery_site}`,
               status: "done",
             });
+            createdDone += 1;
           }
         } else if (formData.status === "partielle") {
           // Create done for received and planned for remaining
@@ -254,6 +260,7 @@ const AchatEditor = () => {
               note: `Réception partielle ${formData.delivery_site}`,
               status: "done",
             });
+            createdDone += 1;
           }
           const remaining = Math.max(0, qtyOrdered - qtyReceived);
           if (remaining > 0) {
@@ -266,14 +273,28 @@ const AchatEditor = () => {
               ref_number: formData.number,
               note: `Reste à recevoir ${formData.delivery_site}`,
               status: "planned",
+              date: formData.expected_date ? new Date(formData.expected_date).toISOString() : undefined,
             });
+            createdPlanned += 1;
           }
         } else if (formData.status === "annulée") {
           // Nothing more to do, planned were canceled above
         }
       }
+
+      // Emit refresh event for lists depending on inventory
+      eventBus.emit(EVENTS.DATA_CHANGED, { scope: "inventory" });
+
+      if (createdDone + createdPlanned === 0) {
+        toast.message("Aucun mouvement créé", { description: "Vérifiez les quantités des lignes." });
+      } else {
+        toast.success(
+          `${createdDone} mouvement(s) confirmé(s)${createdPlanned ? `, ${createdPlanned} prévu(s)` : ""}`
+        );
+      }
     } catch (err) {
       console.error("syncMovementsForPurchase error", err);
+      toast.error("Échec de la synchronisation des mouvements");
       throw err;
     }
   };
