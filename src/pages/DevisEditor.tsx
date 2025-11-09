@@ -48,6 +48,9 @@ import { EmailComposerModal } from "@/components/devis/EmailComposerModal";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+import { InventoryItemSelector } from "@/components/devis/InventoryItemSelector";
+import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
+
 interface Quote {
   id?: string;
   numero: string;
@@ -107,6 +110,18 @@ const DevisEditor = () => {
     conditions: "",
     attachments: [],
   });
+
+  const [previousStatus, setPreviousStatus] = useState<string | undefined>(quote.statut);
+
+  // Sync inventory when quote status changes
+  const inventoryLines = quote.lignes
+    .filter((line) => line.inventory_item_id)
+    .map((line) => ({
+      item_id: line.inventory_item_id,
+      qty: line.qty,
+    }));
+
+  useQuoteInventorySync(quote.id, quote.numero, quote.statut, previousStatus, inventoryLines);
 
   useEffect(() => {
     if (!isNewQuote && id) {
@@ -199,6 +214,7 @@ const DevisEditor = () => {
         conditions: data.conditions || "",
         attachments: [],
       });
+      setPreviousStatus(data.statut);
     } catch (err) {
       console.error("Error loading quote:", err);
       toast.error("Erreur de chargement");
@@ -765,7 +781,26 @@ const DevisEditor = () => {
         <TabsContent value="lines" className="space-y-4">
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Lignes du devis</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Lignes du devis</CardTitle>
+                <InventoryItemSelector
+                  onSelect={(item) => {
+                    const newLine: QuoteLine = {
+                      id: crypto.randomUUID(),
+                      name: item.name,
+                      description: "",
+                      qty: 1,
+                      unit: "unité",
+                      unit_price_ht: item.unit_price_ht,
+                      tva_rate: 20,
+                      optional: false,
+                      included: true,
+                      inventory_item_id: item.id,
+                    };
+                    setQuote((q) => ({ ...q, lignes: [...q.lignes, newLine] }));
+                  }}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {quote.lignes.map((line, idx) => (

@@ -77,16 +77,16 @@ export const unreserveStock = async (
 ): Promise<void> => {
   const stock = await getStockInfo(itemId);
 
-  // Create unreservation movement
+  // Create unreservation movement (using 'out' with negative reserved impact)
   await createInventoryMovement({
     item_id: itemId,
-    type: "unreserve",
-    qty,
+    type: "reserve",
+    qty: -qty,
     source: "devis",
     ref_id: quoteId,
     ref_number: quoteNumber,
     note: `Annulation réservation devis ${quoteNumber}`,
-    status: "done",
+    status: "canceled",
   });
 
   // Update reserved quantity

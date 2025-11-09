@@ -11,6 +11,7 @@ export interface QuoteLine {
   optional?: boolean;
   included?: boolean; // for optional lines
   photo_url?: string;
+  inventory_item_id?: string; // Link to inventory item for automatic stock reservation
 }
 
 export interface QuotePackage {

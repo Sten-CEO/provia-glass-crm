@@ -218,9 +218,9 @@ const AchatEditor = () => {
       expected_date: formData.expected_date || null,
       status: formData.status,
       kind: "consommable",
-      items: formData.items,
+      items: formData.items as any,
       note: formData.notes,
-      files: [],
+      files: [] as any,
     };
 
     const { data: savedData, error } = isEditing

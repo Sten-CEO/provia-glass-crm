@@ -25,33 +25,24 @@ export const StockAlertsCard = () => {
 
   const loadStockAlerts = async () => {
     try {
-      // Get items with their movements
+      // Get items with qty_reserved
       const { data: items, error } = await supabase
         .from("inventory_items")
-        .select(`
-          *,
-          inventory_movements (qty, type, status)
-        `)
+        .select("*")
         .order("name");
 
       if (error) throw error;
 
       // Calculate disponible for each item
       const itemsWithStock = items?.map(item => {
-        const movements = item.inventory_movements || [];
-        
-        // Calculate reserved from planned movements
-        const reserved = movements
-          .filter((m: any) => m.status === "planned" && (m.type === "reserve" || m.type === "expected_out"))
-          .reduce((sum: number, m: any) => sum + Number(m.qty), 0);
-
+        const reserved = item.qty_reserved || 0;
         const disponible = item.qty_on_hand - reserved;
         
         return {
           ...item,
           reserved,
           disponible,
-          isLowStock: disponible <= (item.min_qty_alert || 0),
+          isLowStock: disponible <= (item.min_qty_alert || 0) && item.min_qty_alert > 0,
         };
       }) || [];
 
