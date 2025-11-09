@@ -225,7 +225,7 @@ const AchatEditor = () => {
               source: "achat",
               ref_id: refId,
               ref_number: formData.number,
-              note: `Entrée prévue ${formData.delivery_site}`,
+              note: `En attente • réception prévue le ${formData.expected_date || ""} • ${formData.delivery_site}`,
               status: "planned",
               date: formData.expected_date ? new Date(formData.expected_date).toISOString() : undefined,
             });
@@ -278,7 +278,19 @@ const AchatEditor = () => {
             createdPlanned += 1;
           }
         } else if (formData.status === "annulée") {
-          // Nothing more to do, planned were canceled above
+          // Enregistrer un mouvement annulé pour trace
+          if (qtyOrdered > 0 || qtyReceived > 0) {
+            await createInventoryMovement({
+              item_id: item.item_id,
+              type: "in",
+              qty: qtyReceived > 0 ? qtyReceived : qtyOrdered,
+              source: "achat",
+              ref_id: refId,
+              ref_number: formData.number,
+              note: `Commande annulée ${formData.delivery_site}`,
+              status: "canceled",
+            });
+          }
         }
       }
 
@@ -355,13 +367,14 @@ const AchatEditor = () => {
 
     if (error) {
       console.error("Save error:", error);
-      if (error.code === "23505") {
+      if ((error as any).code === "23505") {
         toast.error("Référence déjà utilisée");
-      } else if (error.code === "23514") {
+      } else if ((error as any).code === "23514") {
         toast.error("Vérifiez que tous les champs sont corrects");
       } else {
         toast.error("Échec de l'enregistrement. Réessayez.");
       }
+    } else {
       const refId = (savedData?.id || id) as string;
       try {
         await syncMovementsForPurchase(refId);
