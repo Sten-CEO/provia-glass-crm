@@ -92,12 +92,12 @@ const AchatEditor = () => {
         id: data.id,
         number: data.number,
         supplier: data.supplier || "",
-        order_date: data.created_at?.split("T")[0] || "",
+        order_date: data.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
         expected_date: data.expected_date || "",
-        delivery_site: (data as any).delivery_location || "Dépôt principal",
+        delivery_site: "Dépôt principal",
         status: data.status as any,
         notes: data.note || "",
-        items: (data.items as any) || [],
+        items: Array.isArray(data.items) ? (data.items as any) : [],
       });
     }
     setLoading(false);
@@ -217,22 +217,32 @@ const AchatEditor = () => {
       supplier: formData.supplier,
       expected_date: formData.expected_date || null,
       status: formData.status,
-      kind: "purchase",
-      items: formData.items as any,
+      kind: "consommable",
+      items: formData.items,
       note: formData.notes,
-      files: [] as any,
+      files: [],
     };
 
-    const { error } = isEditing
-      ? await supabase.from("purchase_orders").update(payload).eq("id", id)
-      : await supabase.from("purchase_orders").insert([payload]);
+    const { data: savedData, error } = isEditing
+      ? await supabase.from("purchase_orders").update(payload).eq("id", id).select().single()
+      : await supabase.from("purchase_orders").insert([payload]).select().single();
 
     if (error) {
-      console.error(error);
-      toast.error("Échec de l'enregistrement. Réessayez.");
+      console.error("Save error:", error);
+      if (error.code === "23505") {
+        toast.error("Référence déjà utilisée");
+      } else if (error.code === "23514") {
+        toast.error("Vérifiez que tous les champs sont corrects");
+      } else {
+        toast.error("Échec de l'enregistrement. Réessayez.");
+      }
     } else {
       toast.success("Commande enregistrée");
-      navigate("/inventaire/achats");
+      if (!isEditing && savedData) {
+        navigate(`/inventaire/achats/${savedData.id}`, { replace: true });
+      } else {
+        navigate("/inventaire/achats");
+      }
     }
     setLoading(false);
   };

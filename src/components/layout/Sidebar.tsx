@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       className={cn(
         "glass-sidebar transition-all duration-300 h-screen sticky top-0 z-50 flex flex-col border-r border-border/50",
         !isOpen && "hidden",
-        isCollapsed ? "w-16" : "w-64",
+        isCollapsed ? "w-[72px]" : "w-[264px]",
         "overflow-hidden"
       )}
     >

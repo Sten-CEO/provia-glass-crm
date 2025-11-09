@@ -64,9 +64,9 @@ const App = () => (
             <Route path="/jobs/:id" element={<Navigate to="/interventions/:id" replace />} />
             
             {/* Inventaire routes */}
-            <Route path="/inventaire" element={<Inventaire />} />
-            <Route path="/inventaire/consommables" element={<InventaireConsommables />} />
-            <Route path="/inventaire/materiels" element={<InventaireMateriels />} />
+            <Route path="/inventaire" element={<Navigate to="/inventaire/consommables" replace />} />
+            <Route path="/inventaire/consommables" element={<Inventaire />} />
+            <Route path="/inventaire/materiels" element={<Inventaire />} />
             <Route path="/inventaire/items/:id" element={<InventaireItemDetail />} />
             <Route path="/inventaire/mouvements" element={<InventaireMouvements />} />
             <Route path="/inventaire/achats" element={<InventaireAchats />} />
