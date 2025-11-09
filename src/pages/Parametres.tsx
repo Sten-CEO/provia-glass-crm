@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Templates from "./parametres/Templates";
+import ServiceCatalog from "./parametres/ServiceCatalog";
 
 const Parametres = () => {
   return (
@@ -12,6 +14,7 @@ const Parametres = () => {
         <TabsList className="glass-card">
           <TabsTrigger value="societe" className="uppercase tracking-wide">Société</TabsTrigger>
           <TabsTrigger value="modeles" className="uppercase tracking-wide">Modèles</TabsTrigger>
+          <TabsTrigger value="catalogue" className="uppercase tracking-wide">Catalogue</TabsTrigger>
           <TabsTrigger value="taxes" className="uppercase tracking-wide">Taxes</TabsTrigger>
           <TabsTrigger value="rgpd" className="uppercase tracking-wide">RGPD</TabsTrigger>
         </TabsList>
@@ -36,8 +39,12 @@ const Parametres = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="modeles" className="glass-card p-6">
-          <p className="text-muted-foreground">Configuration des modèles de documents</p>
+        <TabsContent value="modeles">
+          <Templates />
+        </TabsContent>
+
+        <TabsContent value="catalogue">
+          <ServiceCatalog />
         </TabsContent>
 
         <TabsContent value="taxes" className="glass-card p-6">

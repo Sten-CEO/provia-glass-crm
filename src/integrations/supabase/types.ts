@@ -170,6 +170,7 @@ export type Database = {
           acompte: number | null
           approved_at: string | null
           approved_by: string | null
+          billing_address: Json | null
           client_id: string | null
           client_nom: string
           conditions: string | null
@@ -178,9 +179,12 @@ export type Database = {
           converted_to_invoice_id: string | null
           converted_to_job_id: string | null
           created_at: string
+          currency: string | null
           custom_fields: Json | null
           date_envoi: string | null
           declined_at: string | null
+          discount_global: number | null
+          discount_type: string | null
           expires_at: string | null
           expiry_date: string | null
           id: string
@@ -194,12 +198,15 @@ export type Database = {
           pdf_signed_url: string | null
           pdf_url: string | null
           property_address: string | null
+          quote_valid_days: number | null
           remise: number | null
           salesperson: string | null
           sent_at: string | null
+          shipping_address: Json | null
           signature_date: string | null
           signature_image: string | null
           statut: string
+          template_id: string | null
           title: string | null
           token: string | null
           total_ht: number | null
@@ -211,6 +218,7 @@ export type Database = {
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          billing_address?: Json | null
           client_id?: string | null
           client_nom: string
           conditions?: string | null
@@ -219,9 +227,12 @@ export type Database = {
           converted_to_invoice_id?: string | null
           converted_to_job_id?: string | null
           created_at?: string
+          currency?: string | null
           custom_fields?: Json | null
           date_envoi?: string | null
           declined_at?: string | null
+          discount_global?: number | null
+          discount_type?: string | null
           expires_at?: string | null
           expiry_date?: string | null
           id?: string
@@ -235,12 +246,15 @@ export type Database = {
           pdf_signed_url?: string | null
           pdf_url?: string | null
           property_address?: string | null
+          quote_valid_days?: number | null
           remise?: number | null
           salesperson?: string | null
           sent_at?: string | null
+          shipping_address?: Json | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
+          template_id?: string | null
           title?: string | null
           token?: string | null
           total_ht?: number | null
@@ -252,6 +266,7 @@ export type Database = {
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          billing_address?: Json | null
           client_id?: string | null
           client_nom?: string
           conditions?: string | null
@@ -260,9 +275,12 @@ export type Database = {
           converted_to_invoice_id?: string | null
           converted_to_job_id?: string | null
           created_at?: string
+          currency?: string | null
           custom_fields?: Json | null
           date_envoi?: string | null
           declined_at?: string | null
+          discount_global?: number | null
+          discount_type?: string | null
           expires_at?: string | null
           expiry_date?: string | null
           id?: string
@@ -276,12 +294,15 @@ export type Database = {
           pdf_signed_url?: string | null
           pdf_url?: string | null
           property_address?: string | null
+          quote_valid_days?: number | null
           remise?: number | null
           salesperson?: string | null
           sent_at?: string | null
+          shipping_address?: Json | null
           signature_date?: string | null
           signature_image?: string | null
           statut?: string
+          template_id?: string | null
           title?: string | null
           token?: string | null
           total_ht?: number | null
@@ -296,7 +317,77 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "devis_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "doc_templates"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      doc_templates: {
+        Row: {
+          content_html: string
+          created_at: string | null
+          css: string | null
+          footer_html: string | null
+          header_html: string | null
+          id: string
+          is_default: boolean | null
+          locale: string | null
+          margin_bottom: number | null
+          margin_left: number | null
+          margin_right: number | null
+          margin_top: number | null
+          name: string
+          paper_format: string | null
+          paper_orientation: string | null
+          type: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          content_html: string
+          created_at?: string | null
+          css?: string | null
+          footer_html?: string | null
+          header_html?: string | null
+          id?: string
+          is_default?: boolean | null
+          locale?: string | null
+          margin_bottom?: number | null
+          margin_left?: number | null
+          margin_right?: number | null
+          margin_top?: number | null
+          name: string
+          paper_format?: string | null
+          paper_orientation?: string | null
+          type: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          content_html?: string
+          created_at?: string | null
+          css?: string | null
+          footer_html?: string | null
+          header_html?: string | null
+          id?: string
+          is_default?: boolean | null
+          locale?: string | null
+          margin_bottom?: number | null
+          margin_left?: number | null
+          margin_right?: number | null
+          margin_top?: number | null
+          name?: string
+          paper_format?: string | null
+          paper_orientation?: string | null
+          type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       equipe: {
         Row: {
@@ -339,16 +430,20 @@ export type Database = {
       }
       factures: {
         Row: {
+          billing_address: Json | null
           client_id: string | null
           client_nom: string
           converted_from_quote_id: string | null
           created_at: string
+          currency: string | null
           date_paiement: string | null
+          deposit_percent: number | null
           due_date: string | null
           echeance: string
           facturx_profile: string | null
           facturx_xml_url: string | null
           id: string
+          invoice_type: string | null
           issue_date: string | null
           lignes: Json | null
           montant: string
@@ -357,22 +452,29 @@ export type Database = {
           payment_terms: string | null
           pdf_url: string | null
           remise: number | null
+          shipping_address: Json | null
+          source_quote_id: string | null
           statut: string
+          template_id: string | null
           total_ht: number | null
           total_ttc: number | null
           tva_breakdown: Json | null
         }
         Insert: {
+          billing_address?: Json | null
           client_id?: string | null
           client_nom: string
           converted_from_quote_id?: string | null
           created_at?: string
+          currency?: string | null
           date_paiement?: string | null
+          deposit_percent?: number | null
           due_date?: string | null
           echeance: string
           facturx_profile?: string | null
           facturx_xml_url?: string | null
           id?: string
+          invoice_type?: string | null
           issue_date?: string | null
           lignes?: Json | null
           montant: string
@@ -381,22 +483,29 @@ export type Database = {
           payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
+          shipping_address?: Json | null
+          source_quote_id?: string | null
           statut?: string
+          template_id?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           tva_breakdown?: Json | null
         }
         Update: {
+          billing_address?: Json | null
           client_id?: string | null
           client_nom?: string
           converted_from_quote_id?: string | null
           created_at?: string
+          currency?: string | null
           date_paiement?: string | null
+          deposit_percent?: number | null
           due_date?: string | null
           echeance?: string
           facturx_profile?: string | null
           facturx_xml_url?: string | null
           id?: string
+          invoice_type?: string | null
           issue_date?: string | null
           lignes?: Json | null
           montant?: string
@@ -405,7 +514,10 @@ export type Database = {
           payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
+          shipping_address?: Json | null
+          source_quote_id?: string | null
           statut?: string
+          template_id?: string | null
           total_ht?: number | null
           total_ttc?: number | null
           tva_breakdown?: Json | null
@@ -423,6 +535,20 @@ export type Database = {
             columns: ["converted_from_quote_id"]
             isOneToOne: false
             referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factures_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factures_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "doc_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -536,6 +662,77 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_reservations: {
+        Row: {
+          consumed_at: string | null
+          created_at: string | null
+          id: string
+          inventory_item_id: string | null
+          invoice_id: string | null
+          job_id: string | null
+          qty_consumed: number | null
+          qty_reserved: number
+          quote_id: string | null
+          reserved_at: string | null
+          status: string | null
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          invoice_id?: string | null
+          job_id?: string | null
+          qty_consumed?: number | null
+          qty_reserved?: number
+          quote_id?: string | null
+          reserved_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          invoice_id?: string | null
+          job_id?: string | null
+          qty_consumed?: number | null
+          qty_reserved?: number
+          quote_id?: string | null
+          reserved_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_reservations_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_reservations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_reservations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_reservations_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
             referencedColumns: ["id"]
           },
         ]
@@ -876,6 +1073,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          default_price_ht: number | null
+          default_tva_rate: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          default_price_ht?: number | null
+          default_tva_rate?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          default_price_ht?: number | null
+          default_tva_rate?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       support_messages: {
         Row: {
