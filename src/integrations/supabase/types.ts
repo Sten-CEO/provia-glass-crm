@@ -331,11 +331,16 @@ export type Database = {
           content_html: string
           created_at: string | null
           css: string | null
+          email_body: string | null
+          email_subject: string | null
+          font_family: string | null
           footer_html: string | null
           header_html: string | null
+          header_logo: string | null
           id: string
           is_default: boolean | null
           locale: string | null
+          main_color: string | null
           margin_bottom: number | null
           margin_left: number | null
           margin_right: number | null
@@ -343,6 +348,10 @@ export type Database = {
           name: string
           paper_format: string | null
           paper_orientation: string | null
+          show_discounts: boolean | null
+          show_vat: boolean | null
+          signature_enabled: boolean | null
+          theme: string | null
           type: string
           updated_at: string | null
           updated_by: string | null
@@ -351,11 +360,16 @@ export type Database = {
           content_html: string
           created_at?: string | null
           css?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          font_family?: string | null
           footer_html?: string | null
           header_html?: string | null
+          header_logo?: string | null
           id?: string
           is_default?: boolean | null
           locale?: string | null
+          main_color?: string | null
           margin_bottom?: number | null
           margin_left?: number | null
           margin_right?: number | null
@@ -363,6 +377,10 @@ export type Database = {
           name: string
           paper_format?: string | null
           paper_orientation?: string | null
+          show_discounts?: boolean | null
+          show_vat?: boolean | null
+          signature_enabled?: boolean | null
+          theme?: string | null
           type: string
           updated_at?: string | null
           updated_by?: string | null
@@ -371,11 +389,16 @@ export type Database = {
           content_html?: string
           created_at?: string | null
           css?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          font_family?: string | null
           footer_html?: string | null
           header_html?: string | null
+          header_logo?: string | null
           id?: string
           is_default?: boolean | null
           locale?: string | null
+          main_color?: string | null
           margin_bottom?: number | null
           margin_left?: number | null
           margin_right?: number | null
@@ -383,6 +406,10 @@ export type Database = {
           name?: string
           paper_format?: string | null
           paper_orientation?: string | null
+          show_discounts?: boolean | null
+          show_vat?: boolean | null
+          signature_enabled?: boolean | null
+          theme?: string | null
           type?: string
           updated_at?: string | null
           updated_by?: string | null
