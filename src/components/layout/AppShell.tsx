@@ -10,13 +10,7 @@ const AppShell = () => {
     <div className="min-h-screen flex w-full">
       <Sidebar isOpen={!isCollapsed} />
       
-      <div 
-        className="flex-1 flex flex-col transition-all duration-200"
-        style={{ 
-          marginLeft: isCollapsed ? '72px' : '264px',
-          width: `calc(100% - ${isCollapsed ? '72px' : '264px'})`
-        }}
-      >
+      <div className="flex-1 flex flex-col min-w-0">
         <Navbar onMenuClick={toggleCollapsed} />
         
         <main className="flex-1 p-6 overflow-auto">
