@@ -229,85 +229,13 @@ const Interventions = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold uppercase tracking-wide">Interventions</h1>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
-              <Plus className="mr-2 h-4 w-4" />
-              Nouvelle Intervention
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="glass-modal">
-            <DialogHeader>
-              <DialogTitle className="uppercase tracking-wide">Nouvelle Intervention</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Titre *</Label>
-                <Input
-                  placeholder="Installation système"
-                  value={newIntervention.titre}
-                  onChange={(e) => setNewIntervention({ ...newIntervention, titre: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Client *</Label>
-                <Select value={newIntervention.client_id} onValueChange={(v) => setNewIntervention({ ...newIntervention, client_id: v })}>
-                  <SelectTrigger className="glass-card">
-                    <SelectValue placeholder="Sélectionner un client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Employé *</Label>
-                <Select value={newIntervention.employe_id} onValueChange={(v) => setNewIntervention({ ...newIntervention, employe_id: v })}>
-                  <SelectTrigger className="glass-card">
-                    <SelectValue placeholder="Sélectionner un employé" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employes.map((employe) => (
-                      <SelectItem key={employe.id} value={employe.id}>
-                        {employe.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Date *</Label>
-                <Input
-                  type="date"
-                  value={newIntervention.date}
-                  onChange={(e) => setNewIntervention({ ...newIntervention, date: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Statut</Label>
-                <Select value={newIntervention.statut} onValueChange={(v: any) => setNewIntervention({ ...newIntervention, statut: v })}>
-                  <SelectTrigger className="glass-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="À faire">À faire</SelectItem>
-                    <SelectItem value="En cours">En cours</SelectItem>
-                    <SelectItem value="Terminé">Terminé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleAddIntervention} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
-                Créer
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => navigate("/interventions/nouvelle")}
+          className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Nouvelle Intervention
+        </Button>
       </div>
 
       {/* Search and Filters */}

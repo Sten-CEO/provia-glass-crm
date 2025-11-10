@@ -17,6 +17,7 @@ import Devis from "./pages/Devis";
 import Factures from "./pages/Factures";
 import Interventions from "./pages/Interventions";
 import InterventionDetail from "./pages/InterventionDetail";
+import InterventionEditor from "./pages/InterventionEditor";
 import Equipe from "./pages/Equipe";
 import Timesheets from "./pages/Timesheets";
 import Paiements from "./pages/Paiements";
@@ -72,7 +73,9 @@ const App = () => {
             
             {/* Interventions routes (renamed from jobs) */}
             <Route path="/interventions" element={<Interventions />} />
+            <Route path="/interventions/nouvelle" element={<InterventionEditor />} />
             <Route path="/interventions/:id" element={<InterventionDetail />} />
+            <Route path="/interventions/:id/editer" element={<InterventionEditor />} />
             
             {/* Legacy routes redirect to new interventions routes */}
             <Route path="/jobs" element={<Navigate to="/interventions" replace />} />
