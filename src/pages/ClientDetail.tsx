@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X, Menu, Settings, Plus } from "lucide-react";
+import { ArrowLeft, Save, FileText, Briefcase, Receipt, Paperclip, X, Menu, Settings, Plus, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QuickCreateDialog } from "@/components/clients/QuickCreateDialog";
 
 const subFunctions = [
   { label: "Contrats", path: "/clients?filter=contrats" },
@@ -50,6 +51,8 @@ const ClientDetail = () => {
     };
   });
   const [customFields, setCustomFields] = useState<Array<{ key: string; type: string; value?: any }>>([]);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateType, setQuickCreateType] = useState<"devis" | "intervention" | "facture">("devis");
 
   useEffect(() => {
     localStorage.setItem("pv_client_display_prefs", JSON.stringify(visibleFields));
@@ -479,36 +482,170 @@ const ClientDetail = () => {
 
         <TabsContent value="devis">
           <Card className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Devis du client</h3>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setQuickCreateType("devis");
+                    setQuickCreateOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => navigate(`/devis/new?client_id=${id}`)}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Ouvrir en version avancée
+                </Button>
+              </div>
+            </div>
             {devis.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">Aucun devis pour ce client</p>
-                <Button onClick={() => navigate("/devis/new")}>Créer un devis</Button>
               </div>
             ) : (
               <div className="space-y-2">
                 {devis.map(d => (
                   <div key={d.id} className="flex justify-between items-center p-3 glass-card rounded hover:bg-muted/30 cursor-pointer"
                     onClick={() => navigate(`/devis/${d.id}`)}>
-                    <span>{d.numero}</span>
+                    <div>
+                      <span className="font-medium">{d.numero}</span>
+                      <p className="text-sm text-muted-foreground">{d.montant} €</p>
+                    </div>
                     <Badge>{d.statut}</Badge>
                   </div>
                 ))}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Nom</Label>
-                <Input
-                  value={formData.nom || ""}
-                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  className="glass-card"
-                />
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="interventions">
+          <Card className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Interventions du client</h3>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setQuickCreateType("intervention");
+                    setQuickCreateOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => navigate(`/interventions/new?client_id=${id}`)}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Ouvrir en version avancée
+                </Button>
               </div>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  value={formData.email || ""}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            </div>
+            {jobs.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">Aucune intervention pour ce client</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {jobs.map(j => (
+                  <div key={j.id} className="flex justify-between items-center p-3 glass-card rounded hover:bg-muted/30 cursor-pointer"
+                    onClick={() => navigate(`/interventions/${j.id}`)}>
+                    <div>
+                      <span className="font-medium">{j.titre}</span>
+                      <p className="text-sm text-muted-foreground">{j.date} · {j.employe_nom}</p>
+                    </div>
+                    <Badge>{j.statut}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="facturation">
+          <Card className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Factures du client</h3>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setQuickCreateType("facture");
+                    setQuickCreateOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={() => navigate(`/factures/new?client_id=${id}`)}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Ouvrir en version avancée
+                </Button>
+              </div>
+            </div>
+            {factures.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">Aucune facture pour ce client</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {factures.map(f => (
+                  <div key={f.id} className="flex justify-between items-center p-3 glass-card rounded hover:bg-muted/30 cursor-pointer"
+                    onClick={() => navigate(`/factures/${f.id}`)}>
+                    <div>
+                      <span className="font-medium">{f.numero}</span>
+                      <p className="text-sm text-muted-foreground">{f.montant} €</p>
+                    </div>
+                    <Badge>{f.statut}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contrat">
+          <Card className="glass-card p-6">
+            <h3 className="font-semibold mb-4">Contrats</h3>
+            <p className="text-muted-foreground text-center py-8">
+              Fonctionnalité en cours de développement
+            </p>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contact">
+          <Card className="glass-card p-6">
+            <h3 className="font-semibold mb-4">Informations de contact</h3>
+            <p className="text-muted-foreground text-center py-8">
+              Voir l'onglet "Données" pour les informations de contact
+            </p>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="planning">
+          <Card className="glass-card p-6">
+            <h3 className="font-semibold mb-4">Planning</h3>
+            <Button onClick={() => navigate(`/planning?client_id=${id}`)}>
+              Voir le planning de ce client
+            </Button>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="historique" className="space-y-4">
                   className="glass-card"
                 />
               </div>
@@ -888,6 +1025,14 @@ const ClientDetail = () => {
         onOpenChange={setSubFunctionsOpen}
         title="Clients"
         subFunctions={subFunctions}
+      />
+
+      <QuickCreateDialog
+        open={quickCreateOpen}
+        onOpenChange={setQuickCreateOpen}
+        type={quickCreateType}
+        clientId={id || ""}
+        clientName={client?.nom || ""}
       />
     </div>
   );
