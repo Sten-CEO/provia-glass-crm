@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, FileText, Mail, Copy, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, FileText, Mail, Copy, RefreshCw, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ import { QuoteInvoiceDocument, DocumentLine, DocumentStatus } from "@/types/docu
 import { calculateDocumentTotals } from "@/lib/documentCalculations";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
+import { InventoryItemSelector } from "@/components/devis/InventoryItemSelector";
 
 interface QuoteInvoiceEditorV2Props {
   type: "quote" | "invoice";
@@ -384,6 +385,36 @@ export function QuoteInvoiceEditorV2({
               </TabsContent>
               
               <TabsContent value="consumables" className="mt-4">
+                <div className="mb-4 flex justify-end">
+                  <InventoryItemSelector
+                    onSelect={(item) => {
+                      const newLine: DocumentLine = {
+                        id: crypto.randomUUID(),
+                        type: item.type === "consommable" ? "consumable" : "material",
+                        ref: item.sku || "",
+                        label: item.name,
+                        description: "",
+                        qty: 1,
+                        unit: "unité",
+                        unitPriceHT: item.unit_price_ht || 0,
+                        vatRate: item.tva_rate || 20,
+                        totalHT: item.unit_price_ht || 0,
+                        totalVAT: ((item.unit_price_ht || 0) * (item.tva_rate || 20)) / 100,
+                        totalTTC: (item.unit_price_ht || 0) * (1 + (item.tva_rate || 20) / 100),
+                        inventory_item_id: item.id,
+                        costPriceHT: item.unit_cost_ht,
+                      };
+                      updateLines([...document.lines, newLine]);
+                      toast.success(`${item.name} ajouté`);
+                    }}
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        <Package className="h-4 w-4 mr-2" />
+                        Articles d'inventaire
+                      </Button>
+                    }
+                  />
+                </div>
                 <ConsumablesGrid
                   lines={document.lines}
                   onChange={updateLines}

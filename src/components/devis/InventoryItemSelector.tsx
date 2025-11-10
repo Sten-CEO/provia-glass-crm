@@ -13,6 +13,8 @@ interface InventoryItem {
   sku: string | null;
   type: string;
   unit_price_ht: number;
+  unit_cost_ht: number;
+  tva_rate: number;
   qty_on_hand: number;
   qty_reserved: number;
 }
@@ -37,7 +39,7 @@ export const InventoryItemSelector = ({ onSelect, trigger }: Props) => {
   const loadItems = async () => {
     const { data } = await supabase
       .from("inventory_items")
-      .select("id, name, sku, type, unit_price_ht, qty_on_hand, qty_reserved")
+      .select("id, name, sku, type, unit_price_ht, unit_cost_ht, tva_rate, qty_on_hand, qty_reserved")
       .order("name");
     
     if (data) setItems(data as InventoryItem[]);

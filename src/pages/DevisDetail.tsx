@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Plus, Trash2, Send, Mail, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { eventBus, EVENTS } from "@/lib/eventBus";
 import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
 import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
 
@@ -76,6 +77,7 @@ const DevisDetail = () => {
   };
 
   const handleSave = async () => {
+    const previousStatus = devis.statut;
     const { totalHT, totalTTC } = calculateTotals();
     const { error } = await supabase
       .from("devis")
@@ -91,6 +93,22 @@ const DevisDetail = () => {
       toast.error("Erreur lors de la sauvegarde");
     } else {
       toast.success("Devis mis à jour");
+      
+      // Émettre l'événement si le statut passe à "Accepté"
+      if (devis.statut === "Accepté" && previousStatus !== "Accepté") {
+        eventBus.emit(EVENTS.QUOTE_ACCEPTED, {
+          quoteId: id,
+          quoteNumber: devis.numero,
+          scheduledDate: devis.expires_at || new Date().toISOString(),
+        });
+      }
+      
+      // Émettre l'événement si le statut passe à "Refusé" ou "Annulé"
+      if ((devis.statut === "Refusé" || devis.statut === "Annulé") && 
+          (previousStatus === "Accepté" || previousStatus === "Envoyé")) {
+        eventBus.emit(EVENTS.QUOTE_CANCELED, { quoteId: id });
+      }
+      
       loadDevis();
     }
   };
