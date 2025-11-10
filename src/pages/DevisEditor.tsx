@@ -374,18 +374,14 @@ const DevisEditor = () => {
         auto_create_enabled: payload.auto_create_job_on_accept,
         new_status: payload.statut,
         prev_status: prevStatus,
-        should_create: payload.auto_create_job_on_accept && 
-          (payload.statut === "Accepté" || payload.statut === "Signé") && 
-          prevStatus !== "Accepté" && 
-          prevStatus !== "Signé"
+        should_create: payload.auto_create_job_on_accept &&
+          (payload.statut === "Accepté" || payload.statut === "Signé")
       });
       
-      // Auto-créer l'intervention si activé et statut devient Accepté/Signé
+      // Auto-créer l'intervention si activé et statut est Accepté/Signé
       if (payload.auto_create_job_on_accept && 
-          (payload.statut === "Accepté" || payload.statut === "Signé") && 
-          prevStatus !== "Accepté" && 
-          prevStatus !== "Signé") {
-        console.log("Création automatique de l'intervention...");
+          (payload.statut === "Accepté" || payload.statut === "Signé")) {
+        console.log("Création automatique de l'intervention (mode édition)...");
         await createJobFromQuote();
       }
     } else {
@@ -394,7 +390,14 @@ const DevisEditor = () => {
         toast.error("Erreur de création");
         return;
       }
-      setQuote((q) => ({ ...q, id: data.id, numero: finalNumber }));
+      const newQuoteState: Quote = { ...quote, id: data.id, numero: finalNumber };
+      setQuote(newQuoteState);
+      // Auto-créer l'intervention si activé et statut est Accepté/Signé
+      if (payload.auto_create_job_on_accept &&
+          (payload.statut === "Accepté" || payload.statut === "Signé")) {
+        console.log("Création automatique de l'intervention (création de devis)...");
+        await createJobFromQuote(newQuoteState);
+      }
       navigate(`/devis/${data.id}`, { replace: true });
     }
 
@@ -422,19 +425,20 @@ const DevisEditor = () => {
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
   };
 
-  const createJobFromQuote = async () => {
-    if (!quote.id) {
+  const createJobFromQuote = async (q?: Quote) => {
+    const src = q ?? quote;
+    if (!src.id) {
       console.error("Pas d'ID de devis pour créer l'intervention");
       return;
     }
 
-    console.log("createJobFromQuote appelée pour devis:", quote.id);
+    console.log("createJobFromQuote appelée pour devis:", src.id);
 
     // Vérifier qu'aucune intervention n'existe déjà
     const { data: existingJob } = await supabase
       .from("jobs")
       .select("id")
-      .eq("quote_id", quote.id)
+      .eq("quote_id", src.id)
       .maybeSingle();
 
     if (existingJob) {
@@ -443,23 +447,23 @@ const DevisEditor = () => {
       return;
     }
 
-    const employee = employees.find(e => e.id === quote.assignee_id);
+    const employee = employees.find(e => e.id === src.assignee_id);
 
     const jobPayload = {
-      titre: quote.title || `Intervention suite au devis ${quote.numero}`,
-      client_id: quote.client_id,
-      client_nom: quote.client_nom,
-      employe_id: quote.assignee_id || null,
+      titre: src.title || `Intervention suite au devis ${src.numero}`,
+      client_id: src.client_id,
+      client_nom: src.client_nom,
+      employe_id: src.assignee_id || null,
       employe_nom: employee?.nom || "",
-      assigned_employee_ids: quote.assignee_id ? [quote.assignee_id] : [],
-      date: quote.planned_date || new Date().toISOString().split("T")[0],
-      heure_debut: quote.planned_start_time || null,
+      assigned_employee_ids: src.assignee_id ? [src.assignee_id] : [],
+      date: src.planned_date || new Date().toISOString().split("T")[0],
+      heure_debut: src.planned_start_time || null,
       statut: "À faire",
-      adresse: quote.site_address || quote.property_address || "",
-      description: quote.client_message || quote.title || "",
-      notes: `Créée automatiquement depuis le devis ${quote.numero}`,
-      quote_id: quote.id,
-      checklist: quote.lignes.map((l) => ({
+      adresse: src.site_address || src.property_address || "",
+      description: src.client_message || src.title || "",
+      notes: `Créée automatiquement depuis le devis ${src.numero}`,
+      quote_id: src.id,
+      checklist: src.lignes.map((l) => ({
         id: crypto.randomUUID(),
         label: l.name,
         done: false,
@@ -489,6 +493,7 @@ const DevisEditor = () => {
     console.log("Intervention créée avec succès:", newJob.id);
     toast.success(`Intervention créée automatiquement (${newJob.titre})`);
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
+    eventBus.emit(EVENTS.PLANNING_UPDATED, { jobId: newJob.id });
   };
 
   const handleConvertToJob = async () => {
