@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { createInvoiceFromIntervention } from "@/lib/invoiceConversion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Save, FileText, CheckCircle2 } from "lucide-react";
 import { GeneralInfoSection } from "@/components/interventions/GeneralInfoSection";
@@ -136,9 +137,33 @@ export default function InterventionEditor() {
   };
 
   const handleCreateInvoice = async () => {
-    if (!isEditMode || !intervention) return;
-    
-    navigate(`/factures/nouvelle?intervention=${id}`);
+    if (!intervention?.id) {
+      toast.error("Veuillez d'abord enregistrer l'intervention");
+      return;
+    }
+
+    if (intervention.invoice_id) {
+      toast.info("Une facture existe déjà pour cette intervention");
+      navigate(`/factures/${intervention.invoice_id}`);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newInvoice = await createInvoiceFromIntervention(intervention.id);
+      toast.success("Facture créée avec succès");
+      
+      // Refresh intervention to get invoice_id
+      await loadIntervention();
+      
+      // Navigate to invoice
+      navigate(`/factures/${newInvoice.id}`);
+    } catch (error: any) {
+      console.error("Error creating invoice:", error);
+      toast.error(error.message || "Erreur lors de la création de la facture");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const calculateActualDuration = () => {

@@ -8,37 +8,48 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 233 100% 97%;
+    --background: 0 0% 98%;
     --foreground: 0 0% 12%;
 
-    --card: 233 100% 97%;
+    --card: 0 0% 100%;
     --card-foreground: 0 0% 12%;
 
-    --popover: 233 100% 97%;
+    --popover: 0 0% 100%;
     --popover-foreground: 0 0% 12%;
 
-    --primary: 45 100% 69%;
+    /* Primary: Professional Yellow #FBCB45 */
+    --primary: 45 97% 63%;
     --primary-foreground: 0 0% 12%;
 
-    --secondary: 28 100% 64%;
+    /* Secondary: Light Gray #F5F6FA */
+    --secondary: 220 25% 97%;
     --secondary-foreground: 0 0% 12%;
 
-    --muted: 233 30% 92%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 220 25% 97%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 45 100% 69%;
+    --accent: 45 97% 63%;
     --accent-foreground: 0 0% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Danger: Light Red #F87171 */
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 233 30% 90%;
-    --input: 233 30% 90%;
-    --ring: 45 100% 69%;
+    /* Success: Green #4ADE80 */
+    --success: 142 71% 58%;
+    --success-foreground: 0 0% 12%;
 
-    --radius: 1rem;
+    /* Warning: Orange */
+    --warning: 38 92% 62%;
+    --warning-foreground: 0 0% 12%;
 
-    --glass-bg: 233 100% 97% / 0.7;
+    --border: 220 25% 90%;
+    --input: 220 25% 90%;
+    --ring: 45 97% 63%;
+
+    --radius: 0.5rem;
+
+    --glass-bg: 0 0% 100% / 0.7;
     --glass-border: 0 0% 100% / 0.2;
     --glass-shadow: 0 0% 0% / 0.1;
   }
@@ -47,30 +58,36 @@ All colors MUST be HSL.
     --background: 0 0% 12%;
     --foreground: 0 0% 97%;
 
-    --card: 0 0% 12%;
+    --card: 0 0% 15%;
     --card-foreground: 0 0% 97%;
 
-    --popover: 0 0% 12%;
+    --popover: 0 0% 15%;
     --popover-foreground: 0 0% 97%;
 
-    --primary: 45 100% 69%;
+    --primary: 45 97% 63%;
     --primary-foreground: 0 0% 12%;
 
-    --secondary: 28 100% 64%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 0 0% 97%;
 
     --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 45 100% 69%;
+    --accent: 45 97% 63%;
     --accent-foreground: 0 0% 12%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 0 0% 12%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 45 100% 69%;
+    --success: 142 71% 58%;
+    --success-foreground: 0 0% 12%;
+
+    --warning: 38 92% 62%;
+    --warning-foreground: 0 0% 12%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 45 97% 63%;
   }
 }
 
@@ -87,22 +104,43 @@ All colors MUST be HSL.
 
 @layer components {
   .glass-card {
-    @apply bg-white/70 backdrop-blur-[12px] rounded-2xl shadow-md border border-white/20;
+    @apply bg-card/80 backdrop-blur-[12px] rounded-lg shadow-sm border border-border;
   }
 
   .glass-modal {
-    @apply bg-white/90 backdrop-blur-[20px] rounded-2xl shadow-xl border border-white/30;
+    @apply bg-card backdrop-blur-[20px] rounded-lg shadow-lg border border-border;
   }
 
   .soft-divider {
-    @apply border-t border-white/10;
+    @apply border-t border-border;
   }
 
   .glass-sidebar {
-    @apply bg-white/60 backdrop-blur-[16px] border-r border-white/20;
+    @apply bg-card/60 backdrop-blur-[16px] border-r border-border;
   }
 
   .glass-navbar {
-    @apply bg-white/60 backdrop-blur-[16px] border-b border-white/20;
+    @apply bg-card/60 backdrop-blur-[16px] border-b border-border;
+  }
+
+  /* Professional button styles */
+  .btn-pro {
+    @apply h-10 px-4 rounded-lg font-medium text-sm transition-all;
+  }
+
+  .btn-pro-primary {
+    @apply btn-pro bg-primary hover:bg-primary/90 text-primary-foreground;
+  }
+
+  .btn-pro-secondary {
+    @apply btn-pro bg-secondary hover:bg-secondary/80 text-secondary-foreground;
+  }
+
+  .btn-pro-success {
+    @apply btn-pro bg-success hover:bg-success/90 text-success-foreground;
+  }
+
+  .btn-pro-danger {
+    @apply btn-pro bg-destructive hover:bg-destructive/90 text-destructive-foreground;
   }
 }

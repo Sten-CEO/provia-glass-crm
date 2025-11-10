@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { RevenueModule } from "@/components/dashboard/RevenueModule";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 import { StockAlertsCard } from "@/components/dashboard/StockAlertsCard";
+import { ToPlanCard } from "@/components/dashboard/ToPlanCard";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -94,6 +95,7 @@ const Dashboard = () => {
     <div className="space-y-6 animate-fade-in">
       <RevenueModule />
       <AlertsStrip />
+      <ToPlanCard />
       <StockAlertsCard />
       
       <div className="flex items-center justify-between">
