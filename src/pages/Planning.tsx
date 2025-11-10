@@ -23,15 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { JobDetailPanel } from "@/components/planning/JobDetailPanel";
+import { useNavigate } from "react-router-dom";
 
 const Planning = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [allJobs, setAllJobs] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   
   // Load filters from localStorage
   const [filters, setFilters] = useState(() => {
@@ -293,7 +293,7 @@ const Planning = () => {
           droppable={true}
           dateClick={handleDateClick}
           eventDrop={handleEventDrop}
-          eventClick={(info) => setSelectedJobId(info.event.id)}
+          eventClick={(info) => navigate(`/interventions/${info.event.id}`)}
           height="auto"
           locale="fr"
           slotMinTime="07:00:00"
@@ -301,14 +301,6 @@ const Planning = () => {
           allDaySlot={false}
         />
       </div>
-
-      {selectedJobId && (
-        <JobDetailPanel
-          jobId={selectedJobId}
-          onClose={() => setSelectedJobId(null)}
-          onUpdate={loadJobs}
-        />
-      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="glass-modal">

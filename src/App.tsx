@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { initializeInventoryEventHandlers } from "./lib/inventoryEventHandlers";
 import Login from "./pages/auth/Login";
 import AppShell from "./components/layout/AppShell";
 import Dashboard from "./pages/Dashboard";
@@ -37,7 +39,13 @@ import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Initialize event handlers on app startup
+  useEffect(() => {
+    initializeInventoryEventHandlers();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -97,5 +105,6 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+};
 
 export default App;
