@@ -40,7 +40,12 @@ const DevisDetail = () => {
     const { data } = await supabase.from("devis").select("*").eq("id", id).single();
     if (data) {
       setDevis(data);
-      const parsedLignes = (Array.isArray(data.lignes) ? data.lignes : []) as unknown as LigneDevis[];
+      const parsedLignes = (Array.isArray(data.lignes) ? data.lignes : []).map((ligne: any) => ({
+        description: ligne.description || "",
+        quantite: ligne.quantite || ligne.qty || 0,
+        prix_unitaire: ligne.prix_unitaire || ligne.unit_price_ht || 0,
+        total: ligne.total || (ligne.quantite || ligne.qty || 0) * (ligne.prix_unitaire || ligne.unit_price_ht || 0)
+      })) as LigneDevis[];
       setLignes(parsedLignes);
     }
   };
