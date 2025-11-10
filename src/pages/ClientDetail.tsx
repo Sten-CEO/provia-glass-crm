@@ -186,7 +186,7 @@ const ClientDetail = () => {
 
         {/* Devis */}
         <Card 
-          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors relative group"
           onClick={() => navigate(`/devis?client_id=${id}`)}
         >
           <div className="text-xs text-muted-foreground mb-1">Devis</div>
@@ -194,11 +194,23 @@ const ClientDetail = () => {
           {devis.some(d => d.statut === "Accepté") && (
             <Badge variant="outline" className="text-xs mt-1">Accepté</Badge>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setQuickCreateType("devis");
+              setQuickCreateOpen(true);
+            }}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
         </Card>
 
         {/* Factures */}
         <Card 
-          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors relative group"
           onClick={() => navigate(`/factures?client_id=${id}`)}
         >
           <div className="text-xs text-muted-foreground mb-1">Factures</div>
@@ -208,11 +220,23 @@ const ClientDetail = () => {
           <div className="text-xs text-muted-foreground">
             {factures.filter(f => f.statut !== "Payée").reduce((sum, f) => sum + (Number(f.total_ttc) || 0), 0).toLocaleString()} € dû
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setQuickCreateType("facture");
+              setQuickCreateOpen(true);
+            }}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
         </Card>
 
         {/* Interventions */}
         <Card 
-          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors"
+          className="glass-card p-3 cursor-pointer hover:bg-primary/5 transition-colors relative group"
           onClick={() => navigate(`/interventions?client_id=${id}`)}
         >
           <div className="text-xs text-muted-foreground mb-1">Interventions</div>
@@ -222,6 +246,18 @@ const ClientDetail = () => {
           <div className="text-xs text-muted-foreground">
             {jobs.filter(j => j.statut === "Terminé").length} terminés
           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 px-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              setQuickCreateType("intervention");
+              setQuickCreateOpen(true);
+            }}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
         </Card>
 
         {/* Planning */}
@@ -875,6 +911,21 @@ const ClientDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Create Dialog */}
+      <QuickCreateDialog
+        open={quickCreateOpen}
+        onOpenChange={setQuickCreateOpen}
+        type={quickCreateType}
+        clientId={id || ""}
+        clientName={client.nom}
+        clientData={{
+          email: client.email,
+          telephone: client.telephone,
+          adresse: client.adresse,
+          ville: client.ville,
+        }}
+      />
 
       <SubFunctionsDrawer
         open={subFunctionsOpen}

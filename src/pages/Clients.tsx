@@ -855,7 +855,7 @@ const Clients = () => {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setDisplayOptionsOpen(true)}>
             <Settings className="h-4 w-4 mr-2" />
-            Options d'affichage
+            Options
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="h-4 w-4" />

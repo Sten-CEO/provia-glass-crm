@@ -16,9 +16,15 @@ interface QuickCreateDialogProps {
   type: "devis" | "intervention" | "facture";
   clientId: string;
   clientName: string;
+  clientData?: {
+    email?: string;
+    telephone?: string;
+    adresse?: string;
+    ville?: string;
+  };
 }
 
-export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientName }: QuickCreateDialogProps) {
+export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientName, clientData }: QuickCreateDialogProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({
@@ -40,6 +46,12 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
           montant: formData.montant || "0",
           title: formData.titre,
           message_client: formData.description,
+          contact_email: clientData?.email,
+          contact_phone: clientData?.telephone,
+          billing_address: clientData?.adresse ? {
+            street: clientData.adresse,
+            city: clientData.ville || "",
+          } : null,
           lignes: [],
         }).select().single();
 
@@ -68,6 +80,10 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
           statut: "Brouillon",
           montant: formData.montant || "0",
           echeance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          billing_address: clientData?.adresse ? {
+            street: clientData.adresse,
+            city: clientData.ville || "",
+          } : null,
           lignes: [],
         }).select().single();
 

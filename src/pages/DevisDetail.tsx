@@ -123,202 +123,262 @@ const DevisDetail = () => {
   const { totalHT, totalApresRemise, totalTTC, acompte } = calculateTotals();
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
+      {/* Clean header with quote number and status */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button onClick={() => navigate("/devis")} variant="ghost" size="icon">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold uppercase tracking-wide">{devis.numero}</h1>
+          <div>
+            <h1 className="text-3xl font-bold uppercase tracking-wide">{devis.numero}</h1>
+            <p className="text-sm text-muted-foreground">{devis.client_nom}</p>
+          </div>
+          <Select value={devis.statut} onValueChange={(v) => setDevis({ ...devis, statut: v })}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Brouillon">Brouillon</SelectItem>
+              <SelectItem value="Envoyé">Envoyé</SelectItem>
+              <SelectItem value="Accepté">Accepté</SelectItem>
+              <SelectItem value="Refusé">Refusé</SelectItem>
+              <SelectItem value="Annulé">Annulé</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
-          <Save className="mr-2 h-4 w-4" />
-          Sauvegarder
-        </Button>
+        
+        {/* Primary action buttons */}
+        <div className="flex gap-2">
+          <Button onClick={handleSave} variant="outline">
+            <Save className="mr-2 h-4 w-4" />
+            Enregistrer
+          </Button>
+          <Button
+            onClick={async () => {
+              await handleSave();
+              setSendModalOpen(true);
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Envoyer
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="glass-card p-6 col-span-2">
-          <h2 className="text-xl font-bold mb-4">Informations générales</h2>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label>Client</Label>
-              <Select value={devis.client_id || ""} onValueChange={(v) => setDevis({ ...devis, client_id: v })}>
-                <SelectTrigger className="glass-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Statut</Label>
-              <Select value={devis.statut} onValueChange={(v) => setDevis({ ...devis, statut: v })}>
-                <SelectTrigger className="glass-card">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Brouillon">Brouillon</SelectItem>
-                  <SelectItem value="Envoyé">Envoyé</SelectItem>
-                  <SelectItem value="Accepté">Accepté</SelectItem>
-                  <SelectItem value="Refusé">Refusé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Vendeur</Label>
-              <Input
-                value={devis.vendeur || ""}
-                onChange={(e) => setDevis({ ...devis, vendeur: e.target.value })}
-                className="glass-card"
-              />
-            </div>
-            <div>
-              <Label>Date d'envoi</Label>
-              <Input
-                type="date"
-                value={devis.date_envoi?.split("T")[0] || ""}
-                onChange={(e) => setDevis({ ...devis, date_envoi: e.target.value })}
-                className="glass-card"
-              />
-            </div>
-          </div>
-
-          <h3 className="text-lg font-bold mb-4 flex items-center justify-between">
-            Lignes du devis
-            <Button onClick={addLigne} size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter
-            </Button>
-          </h3>
-          <div className="space-y-3">
-            {lignes.map((ligne, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-center glass-card p-3 rounded-lg">
-                <Input
-                  placeholder="Description"
-                  value={ligne.description}
-                  onChange={(e) => updateLigne(index, "description", e.target.value)}
-                  className="col-span-5 glass-card"
-                />
-                <Input
-                  type="number"
-                  placeholder="Qté"
-                  value={ligne.quantite}
-                  onChange={(e) => updateLigne(index, "quantite", Number(e.target.value))}
-                  className="col-span-2 glass-card"
-                />
-                <Input
-                  type="number"
-                  placeholder="Prix unit."
-                  value={ligne.prix_unitaire}
-                  onChange={(e) => updateLigne(index, "prix_unitaire", Number(e.target.value))}
-                  className="col-span-2 glass-card"
-                />
-                <div className="col-span-2 font-semibold">{ligne.total.toFixed(2)} €</div>
-                <Button onClick={() => removeLigne(index)} variant="ghost" size="icon" className="col-span-1">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+      {/* Two-column layout: main content + totals sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main content - Left side (2/3) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* General Information */}
+          <Card className="glass-card p-6">
+            <h2 className="text-lg font-bold mb-4 uppercase tracking-wide">Informations générales</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Client</Label>
+                <Select value={devis.client_id || ""} onValueChange={(v) => setDevis({ ...devis, client_id: v })}>
+                  <SelectTrigger className="glass-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
-          </div>
+              <div>
+                <Label>Commercial</Label>
+                <Input
+                  value={devis.vendeur || ""}
+                  onChange={(e) => setDevis({ ...devis, vendeur: e.target.value })}
+                  className="glass-card"
+                  placeholder="Nom du commercial"
+                />
+              </div>
+              <div>
+                <Label>Date d'émission</Label>
+                <Input
+                  type="date"
+                  value={devis.issued_at?.split("T")[0] || ""}
+                  onChange={(e) => setDevis({ ...devis, issued_at: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+              <div>
+                <Label>Date d'expiration</Label>
+                <Input
+                  type="date"
+                  value={devis.expiry_date?.split("T")[0] || ""}
+                  onChange={(e) => setDevis({ ...devis, expiry_date: e.target.value })}
+                  className="glass-card"
+                />
+              </div>
+            </div>
+          </Card>
 
-          <div className="mt-6">
-            <Label>Message au client</Label>
-            <Textarea
-              value={devis.message_client || ""}
-              onChange={(e) => setDevis({ ...devis, message_client: e.target.value })}
-              className="glass-card"
-              rows={3}
-            />
-          </div>
+          {/* Quote Lines */}
+          <Card className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold uppercase tracking-wide">Lignes du devis</h2>
+              <Button onClick={addLigne} size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une ligne
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {lignes.map((ligne, index) => (
+                <div key={index} className="grid grid-cols-12 gap-2 items-center glass-card p-3 rounded-lg">
+                  <Input
+                    placeholder="Description"
+                    value={ligne.description}
+                    onChange={(e) => updateLigne(index, "description", e.target.value)}
+                    className="col-span-5 glass-card"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Qté"
+                    value={ligne.quantite}
+                    onChange={(e) => updateLigne(index, "quantite", Number(e.target.value))}
+                    className="col-span-2 glass-card"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Prix unit."
+                    value={ligne.prix_unitaire}
+                    onChange={(e) => updateLigne(index, "prix_unitaire", Number(e.target.value))}
+                    className="col-span-2 glass-card"
+                  />
+                  <div className="col-span-2 font-semibold text-right">{ligne.total.toFixed(2)} €</div>
+                  <Button onClick={() => removeLigne(index)} variant="ghost" size="icon" className="col-span-1">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
 
-          <div className="mt-4">
-            <Label>Conditions</Label>
-            <Textarea
-              value={devis.conditions || ""}
-              onChange={(e) => setDevis({ ...devis, conditions: e.target.value })}
-              className="glass-card"
-              rows={2}
-            />
-          </div>
+          {/* Additional Info */}
+          <Card className="glass-card p-6">
+            <h2 className="text-lg font-bold mb-4 uppercase tracking-wide">Informations complémentaires</h2>
+            <div className="space-y-4">
+              <div>
+                <Label>Message au client</Label>
+                <Textarea
+                  value={devis.message_client || ""}
+                  onChange={(e) => setDevis({ ...devis, message_client: e.target.value })}
+                  className="glass-card"
+                  rows={3}
+                  placeholder="Message visible sur le devis..."
+                />
+              </div>
+              <div>
+                <Label>Conditions</Label>
+                <Textarea
+                  value={devis.conditions || ""}
+                  onChange={(e) => setDevis({ ...devis, conditions: e.target.value })}
+                  className="glass-card"
+                  rows={2}
+                  placeholder="Conditions de paiement, garanties..."
+                />
+              </div>
+              <div>
+                <Label>Notes internes</Label>
+                <Textarea
+                  value={devis.notes_internes || ""}
+                  onChange={(e) => setDevis({ ...devis, notes_internes: e.target.value })}
+                  className="glass-card"
+                  rows={2}
+                  placeholder="Notes visibles uniquement en interne..."
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
 
-          <div className="mt-4">
-            <Label>Notes internes</Label>
-            <Textarea
-              value={devis.notes_internes || ""}
-              onChange={(e) => setDevis({ ...devis, notes_internes: e.target.value })}
-              className="glass-card"
-              rows={2}
-            />
-          </div>
-        </Card>
+        {/* Totals sidebar - Right side (1/3) */}
+        <div className="space-y-4">
+          <Card className="glass-card p-6 sticky top-4">
+            <h2 className="text-lg font-bold mb-4 uppercase tracking-wide">Totaux</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total HT</span>
+                <span className="font-semibold">{totalHT.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Remise</span>
+                <Input
+                  type="number"
+                  value={devis.remise || 0}
+                  onChange={(e) => setDevis({ ...devis, remise: Number(e.target.value) })}
+                  className="w-24 glass-card text-right h-8"
+                />
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Après remise</span>
+                <span className="font-semibold">{totalApresRemise.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">TVA (20%)</span>
+                <span className="font-semibold">{(totalApresRemise * 0.2).toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t border-white/10 pt-3">
+                <span>Total TTC</span>
+                <span>{totalTTC.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-white/10 pt-3">
+                <span className="text-muted-foreground">Acompte</span>
+                <Input
+                  type="number"
+                  value={devis.acompte || 0}
+                  onChange={(e) => setDevis({ ...devis, acompte: Number(e.target.value) })}
+                  className="w-24 glass-card text-right h-8"
+                />
+              </div>
+              <div className="flex justify-between text-lg font-bold">
+                <span>Reste à payer</span>
+                <span>{(totalTTC - acompte).toFixed(2)} €</span>
+              </div>
+            </div>
+          </Card>
 
-        <Card className="glass-card p-6">
-          <h2 className="text-xl font-bold mb-4">Totaux</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total HT</span>
-              <span className="font-semibold">{totalHT.toFixed(2)} €</span>
+          {/* Action buttons card */}
+          <Card className="glass-card p-4">
+            <div className="space-y-2">
+              <Button
+                onClick={() => setConvertDialogOpen(true)}
+                variant="outline"
+                className="w-full"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Convertir en facture/chantier
+              </Button>
+              <Button
+                onClick={async () => {
+                  await handleSave();
+                  const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
+                  if (!error) toast.success("Devis en brouillon");
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                Mettre en brouillon
+              </Button>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Remise</span>
-              <Input
-                type="number"
-                value={devis.remise || 0}
-                onChange={(e) => setDevis({ ...devis, remise: Number(e.target.value) })}
-                className="w-24 glass-card text-right"
-              />
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Après remise</span>
-              <span className="font-semibold">{totalApresRemise.toFixed(2)} €</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">TVA (20%)</span>
-              <span className="font-semibold">{(totalApresRemise * 0.2).toFixed(2)} €</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold border-t border-white/10 pt-3">
-              <span>Total TTC</span>
-              <span>{totalTTC.toFixed(2)} €</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-white/10 pt-3">
-              <span className="text-muted-foreground">Acompte</span>
-              <Input
-                type="number"
-                value={devis.acompte || 0}
-                onChange={(e) => setDevis({ ...devis, acompte: Number(e.target.value) })}
-                className="w-24 glass-card text-right"
-              />
-            </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Reste à payer</span>
-              <span>{(totalTTC - acompte).toFixed(2)} €</span>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
-      <div className="flex gap-2 mt-6">
+      {/* Bottom action bar */}
+      <div className="flex gap-2 justify-end border-t border-white/10 pt-4">
         <Button onClick={() => navigate("/devis")} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Retour
         </Button>
-        <Button
-          onClick={async () => {
-            await handleSave();
-            const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
-            if (!error) toast.success("Devis en brouillon");
-          }}
-          variant="outline"
-        >
-          Mettre en brouillon
-        </Button>
-        <Button onClick={handleSave} className="bg-secondary hover:bg-secondary/90">
+        <Button onClick={handleSave} variant="outline">
           <Save className="h-4 w-4 mr-2" />
           Enregistrer
         </Button>
@@ -330,14 +390,7 @@ const DevisDetail = () => {
           className="bg-primary hover:bg-primary/90"
         >
           <Mail className="h-4 w-4 mr-2" />
-          Envoyer
-        </Button>
-        <Button
-          onClick={() => setConvertDialogOpen(true)}
-          variant="outline"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          Convertir
+          Envoyer par email
         </Button>
       </div>
 
