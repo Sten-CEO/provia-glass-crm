@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Plus, Eye, Search, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Eye, Search, Trash2, AlertTriangle, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ItemDetailSheet } from "@/components/inventaire/ItemDetailSheet";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ interface Item {
   supplier_name: string | null;
   unit_price_ht: number;
   qty_on_hand: number;
+  qty_reserved: number;
   min_qty_alert: number;
   category: string | null;
 }
@@ -44,6 +46,8 @@ const InventaireConsommables = () => {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   
   // Type is ALWAYS consommable for this page
   const type = 'consommable';
@@ -154,6 +158,11 @@ const InventaireConsommables = () => {
     (item.sku && item.sku.toLowerCase().includes(search.toLowerCase())) ||
     (item.supplier_name && item.supplier_name.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleViewDetails = (itemId: string) => {
+    setSelectedItemId(itemId);
+    setDetailSheetOpen(true);
+  };
 
 
   return (
@@ -305,14 +314,16 @@ const InventaireConsommables = () => {
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">SKU</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Fournisseur</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Prix HT</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Quantité</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Seuil</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">En stock</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Réservé</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Disponible</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.map((item) => {
-                const isLowStock = item.qty_on_hand <= item.min_qty_alert;
+                const qtyAvailable = item.qty_on_hand - item.qty_reserved;
+                const isLowStock = qtyAvailable <= item.min_qty_alert;
                 return (
                   <tr key={item.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
                     <td className="p-4">
@@ -330,16 +341,39 @@ const InventaireConsommables = () => {
                     <td className="p-4 text-muted-foreground text-sm">{item.supplier_name || "—"}</td>
                     <td className="p-4 text-muted-foreground">{item.unit_price_ht.toFixed(2)} €</td>
                     <td className="p-4">
-                      <Badge variant={isLowStock ? "destructive" : "outline"}>{item.qty_on_hand}</Badge>
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        {item.qty_on_hand}
+                      </Badge>
                     </td>
-                    <td className="p-4 text-muted-foreground text-sm">{item.min_qty_alert}</td>
+                    <td className="p-4">
+                      {item.qty_reserved > 0 ? (
+                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+                          {item.qty_reserved}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <Badge variant={isLowStock ? "destructive" : "outline"} className="bg-primary/10 text-primary border-primary/20">
+                        {qtyAvailable}
+                      </Badge>
+                    </td>
                     <td className="p-4">
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleViewDetails(item.id)}
+                          title="Voir détails"
+                        >
+                          <Info className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => navigate(`/inventaire/items/${item.id}`)}
-                          title="Voir fiche"
+                          title="Voir fiche complète"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -367,6 +401,13 @@ const InventaireConsommables = () => {
           )}
         </div>
       </div>
+
+      {/* Item Detail Sheet */}
+      <ItemDetailSheet 
+        itemId={selectedItemId}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+      />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

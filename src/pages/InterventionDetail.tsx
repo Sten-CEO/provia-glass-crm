@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RecurrencePanel } from "@/components/interventions/RecurrencePanel";
 import { eventBus, EVENTS } from "@/lib/eventBus";
+import { cancelInventoryReservations } from "@/lib/interventionInventorySync";
+import { consumeReservedInventory } from "@/lib/interventionInventorySync";
 
 export default function InterventionDetail() {
   const { id } = useParams();
@@ -45,7 +47,7 @@ export default function InterventionDetail() {
   };
 
   const handleMarkComplete = async () => {
-    if (!id) return;
+    if (!id || !job) return;
 
     const { error } = await supabase
       .from("jobs")
@@ -57,7 +59,18 @@ export default function InterventionDetail() {
       return;
     }
 
-    toast.success("Intervention marquée comme terminée");
+    // Consume reserved inventory
+    try {
+      await consumeReservedInventory(
+        id,
+        job.intervention_number || "INT-" + id
+      );
+      toast.success("Intervention marquée comme terminée et stock mis à jour");
+    } catch (error) {
+      console.error("Error consuming inventory:", error);
+      toast.success("Intervention marquée comme terminée (erreur mise à jour stock)");
+    }
+
     eventBus.emit(EVENTS.JOB_COMPLETED, { jobId: id });
     loadJob();
   };
@@ -109,7 +122,15 @@ export default function InterventionDetail() {
       return;
     }
 
-    toast.success("Intervention annulée");
+    // Cancel inventory reservations
+    try {
+      await cancelInventoryReservations(id);
+      toast.success("Intervention annulée et réservations stock annulées");
+    } catch (error) {
+      console.error("Error canceling reservations:", error);
+      toast.success("Intervention annulée (erreur annulation réservations)");
+    }
+
     eventBus.emit(EVENTS.JOB_CANCELED, { jobId: id });
     loadJob();
   };

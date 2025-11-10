@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createInvoiceFromIntervention } from "@/lib/invoiceConversion";
+import {
+  consumeReservedInventory,
+  cancelInventoryReservations,
+  reserveInventoryForIntervention,
+  rescheduleInventoryReservations
+} from "@/lib/interventionInventorySync";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Save, FileText, CheckCircle2 } from "lucide-react";
 import { GeneralInfoSection } from "@/components/interventions/GeneralInfoSection";
@@ -89,12 +95,28 @@ export default function InterventionEditor() {
     setSaving(true);
     try {
       if (isEditMode) {
+        // Check if date changed for rescheduling reservations
+        const { data: oldIntervention } = await supabase
+          .from("jobs")
+          .select("date, statut")
+          .eq("id", id)
+          .single();
+
         const { error } = await supabase
           .from("jobs")
           .update(intervention)
           .eq("id", id);
         
         if (error) throw error;
+
+        // Reschedule reservations if date changed and intervention is still planned
+        if (oldIntervention && 
+            oldIntervention.date !== intervention.date && 
+            intervention.statut !== "Terminée" &&
+            intervention.statut !== "Annulée") {
+          await rescheduleInventoryReservations(id!, intervention.date);
+        }
+
         toast.success("Intervention mise à jour");
       } else {
         const { data, error } = await supabase
@@ -104,6 +126,30 @@ export default function InterventionEditor() {
           .single();
         
         if (error) throw error;
+
+        // Reserve inventory if intervention is planned
+        if (data && intervention.date && intervention.statut !== "Annulée") {
+          const { data: consumables } = await supabase
+            .from("intervention_consumables")
+            .select("inventory_item_id")
+            .eq("intervention_id", data.id);
+
+          if (consumables && consumables.length > 0) {
+            const itemIds = consumables
+              .map(c => c.inventory_item_id)
+              .filter(id => id) as string[];
+            
+            if (itemIds.length > 0) {
+              await reserveInventoryForIntervention(
+                data.id,
+                intervention.intervention_number || data.intervention_number,
+                intervention.date,
+                itemIds
+              );
+            }
+          }
+        }
+
         toast.success("Intervention créée");
         navigate(`/interventions/${data.id}`);
       }
@@ -116,17 +162,25 @@ export default function InterventionEditor() {
   };
 
   const handleMarkComplete = async () => {
-    if (!isEditMode) return;
+    if (!isEditMode || !intervention) return;
     
     setSaving(true);
     try {
+      // Update intervention status
       const { error } = await supabase
         .from("jobs")
         .update({ statut: "Terminée", duration_actual: calculateActualDuration() })
         .eq("id", id);
       
       if (error) throw error;
-      toast.success("Intervention marquée comme terminée");
+
+      // Consume reserved inventory
+      await consumeReservedInventory(
+        id!,
+        intervention.intervention_number || "INT-" + id
+      );
+
+      toast.success("Intervention marquée comme terminée et stock mis à jour");
       loadIntervention();
     } catch (error) {
       console.error("Erreur:", error);
