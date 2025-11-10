@@ -699,6 +699,189 @@ export type Database = {
           },
         ]
       }
+      intervention_consumables: {
+        Row: {
+          created_at: string | null
+          id: string
+          intervention_id: string
+          inventory_item_id: string | null
+          location: string | null
+          product_name: string
+          product_ref: string | null
+          quantity: number
+          serial_number: string | null
+          tax_rate: number | null
+          total_ht: number | null
+          total_ttc: number | null
+          unit: string | null
+          unit_price_ht: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          intervention_id: string
+          inventory_item_id?: string | null
+          location?: string | null
+          product_name: string
+          product_ref?: string | null
+          quantity?: number
+          serial_number?: string | null
+          tax_rate?: number | null
+          total_ht?: number | null
+          total_ttc?: number | null
+          unit?: string | null
+          unit_price_ht?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          intervention_id?: string
+          inventory_item_id?: string | null
+          location?: string | null
+          product_name?: string
+          product_ref?: string | null
+          quantity?: number
+          serial_number?: string | null
+          tax_rate?: number | null
+          total_ht?: number | null
+          total_ttc?: number | null
+          unit?: string | null
+          unit_price_ht?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_consumables_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_consumables_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intervention_files: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          intervention_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          intervention_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          intervention_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_files_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intervention_services: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          description: string
+          id: string
+          intervention_id: string
+          is_billable: boolean | null
+          quantity: number
+          service_item_id: string | null
+          tax_rate: number | null
+          total_ht: number | null
+          total_ttc: number | null
+          unit: string | null
+          unit_price_ht: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          intervention_id: string
+          is_billable?: boolean | null
+          quantity?: number
+          service_item_id?: string | null
+          tax_rate?: number | null
+          total_ht?: number | null
+          total_ttc?: number | null
+          unit?: string | null
+          unit_price_ht?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          intervention_id?: string
+          is_billable?: boolean | null
+          quantity?: number
+          service_item_id?: string | null
+          tax_rate?: number | null
+          total_ht?: number | null
+          total_ttc?: number | null
+          unit?: string | null
+          unit_price_ht?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_services_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_services_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_services_service_item_id_fkey"
+            columns: ["service_item_id"]
+            isOneToOne: false
+            referencedRelation: "service_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           category: string | null
@@ -909,17 +1092,23 @@ export type Database = {
           checklist: Json | null
           client_id: string | null
           client_nom: string
+          client_notes: string | null
           contract_id: string | null
           converted_from_quote_id: string | null
           costs: Json | null
           created_at: string
           date: string
           description: string | null
+          duration_actual: number | null
+          duration_estimated: number | null
           employe_id: string | null
           employe_nom: string
           heure_debut: string | null
           heure_fin: string | null
           id: string
+          internal_notes: string | null
+          intervention_number: string | null
+          invoice_id: string | null
           lieu: string | null
           linked_invoice_id: string | null
           linked_quote_id: string | null
@@ -927,9 +1116,13 @@ export type Database = {
           notes: string | null
           notes_timeline: Json | null
           planning_event_id: string | null
+          priority: string | null
           quote_id: string | null
           scheduled_end: string | null
           scheduled_start: string | null
+          signature_date: string | null
+          signature_image: string | null
+          signature_name: string | null
           statut: string
           time_entries: Json | null
           titre: string
@@ -942,17 +1135,23 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom: string
+          client_notes?: string | null
           contract_id?: string | null
           converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
           date: string
           description?: string | null
+          duration_actual?: number | null
+          duration_estimated?: number | null
           employe_id?: string | null
           employe_nom: string
           heure_debut?: string | null
           heure_fin?: string | null
           id?: string
+          internal_notes?: string | null
+          intervention_number?: string | null
+          invoice_id?: string | null
           lieu?: string | null
           linked_invoice_id?: string | null
           linked_quote_id?: string | null
@@ -960,9 +1159,13 @@ export type Database = {
           notes?: string | null
           notes_timeline?: Json | null
           planning_event_id?: string | null
+          priority?: string | null
           quote_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
+          signature_date?: string | null
+          signature_image?: string | null
+          signature_name?: string | null
           statut?: string
           time_entries?: Json | null
           titre: string
@@ -975,17 +1178,23 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom?: string
+          client_notes?: string | null
           contract_id?: string | null
           converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
           date?: string
           description?: string | null
+          duration_actual?: number | null
+          duration_estimated?: number | null
           employe_id?: string | null
           employe_nom?: string
           heure_debut?: string | null
           heure_fin?: string | null
           id?: string
+          internal_notes?: string | null
+          intervention_number?: string | null
+          invoice_id?: string | null
           lieu?: string | null
           linked_invoice_id?: string | null
           linked_quote_id?: string | null
@@ -993,9 +1202,13 @@ export type Database = {
           notes?: string | null
           notes_timeline?: Json | null
           planning_event_id?: string | null
+          priority?: string | null
           quote_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
+          signature_date?: string | null
+          signature_image?: string | null
+          signature_name?: string | null
           statut?: string
           time_entries?: Json | null
           titre?: string
@@ -1029,6 +1242,13 @@ export type Database = {
             columns: ["employe_id"]
             isOneToOne: false
             referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
             referencedColumns: ["id"]
           },
           {
@@ -1588,6 +1808,7 @@ export type Database = {
         Args: { entry_ids: string[]; manager_id: string; reason: string }
         Returns: undefined
       }
+      generate_intervention_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_quote_number: { Args: never; Returns: string }
       is_manager: { Args: { user_id: string }; Returns: boolean }
