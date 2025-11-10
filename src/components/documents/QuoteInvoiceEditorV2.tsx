@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, FileText, Mail, Copy } from "lucide-react";
+import { ArrowLeft, Save, FileText, Mail, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ClientPicker } from "./ClientPicker";
 import { ServicesGrid } from "./ServicesGrid";
 import { ConsumablesGrid } from "./ConsumablesGrid";
 import { TotalsPanel } from "./TotalsPanel";
+import { AddressFields, Address } from "./AddressFields";
+import { AttachmentsPanel, Attachment } from "./AttachmentsPanel";
 import { QuoteInvoiceDocument, DocumentLine, DocumentStatus } from "@/types/documents";
 import { calculateDocumentTotals } from "@/lib/documentCalculations";
 import { useTemplates } from "@/hooks/useTemplates";
@@ -57,6 +60,13 @@ export function QuoteInvoiceEditorV2({
       totalVAT: 0,
       totalTTC: 0,
     },
+    billingAddress: {},
+    siteAddress: {},
+    externalRef: "",
+    paymentTerms: type === "invoice" ? "Paiement à 30 jours" : "",
+    hourlyRate: 0,
+    attachments: [],
+    miscFees: 0,
   });
 
   // Auto-générer le numéro et sélectionner le template par défaut
@@ -205,8 +215,12 @@ export function QuoteInvoiceEditorV2({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column - Main form */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Client & Dates */}
-          <div className="glass-card p-6 space-y-4">
+          {/* Template & Client */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Informations générales</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
             <div>
               <Label>Modèle de document</Label>
               <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId} disabled={templatesLoading}>
@@ -285,11 +299,76 @@ export function QuoteInvoiceEditorV2({
                   />
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Lines - Tabs pour Services et Consommables */}
-          <div className="glass-card p-6">
+              <div>
+                <Label htmlFor="externalRef">Référence externe (optionnel)</Label>
+                <Input
+                  id="externalRef"
+                  value={document.externalRef || ""}
+                  onChange={(e) => updateDocument({ externalRef: e.target.value })}
+                  placeholder="Numéro de commande client..."
+                  disabled={loading}
+                />
+              </div>
+
+              {type === "invoice" && (
+                <div>
+                  <Label htmlFor="paymentTerms">Conditions de paiement</Label>
+                  <Input
+                    id="paymentTerms"
+                    value={document.paymentTerms || ""}
+                    onChange={(e) => updateDocument({ paymentTerms: e.target.value })}
+                    placeholder="Ex: Paiement à 30 jours fin de mois"
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="hourlyRate">Taux horaire global (optionnel)</Label>
+                <Input
+                  id="hourlyRate"
+                  type="number"
+                  step="0.01"
+                  value={document.hourlyRate || ""}
+                  onChange={(e) => updateDocument({ hourlyRate: Number(e.target.value) })}
+                  placeholder="0.00"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+            </CardContent>
+          </Card>
+
+          {/* Addresses */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Adresses</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <AddressFields
+                address={document.billingAddress as Address}
+                onChange={(addr) => updateDocument({ billingAddress: addr })}
+                label="Adresse de facturation"
+                disabled={loading}
+              />
+              <div className="border-t pt-6">
+                <AddressFields
+                  address={document.siteAddress as Address}
+                  onChange={(addr) => updateDocument({ siteAddress: addr })}
+                  label="Adresse du site / chantier"
+                  disabled={loading}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lines - Tabs */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Lignes du document</CardTitle>
+            </CardHeader>
+            <CardContent>
             <Tabs defaultValue="services" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="services">Services / Prestations</TabsTrigger>
@@ -312,10 +391,15 @@ export function QuoteInvoiceEditorV2({
                 />
               </TabsContent>
             </Tabs>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Notes */}
-          <div className="glass-card p-6 space-y-4">
+          {/* Notes & Attachments */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Notes et documents</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
             <div>
               <Label htmlFor="notesClient">Notes client (visibles sur le PDF)</Label>
               <Textarea
@@ -351,12 +435,22 @@ export function QuoteInvoiceEditorV2({
                 disabled={loading}
               />
             </div>
-          </div>
+
+            <div className="border-t pt-4">
+              <AttachmentsPanel
+                attachments={(document.attachments || []) as Attachment[]}
+                onChange={(attachments) => updateDocument({ attachments })}
+                disabled={loading}
+              />
+            </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right column - Totals & Actions */}
         <div className="space-y-6">
-          <div className="glass-card p-6">
+          <Card className="glass-card">
+            <CardContent className="pt-6">
             <h2 className="text-lg font-semibold mb-4">Totaux</h2>
             <TotalsPanel
               totals={document.totals}
@@ -374,10 +468,54 @@ export function QuoteInvoiceEditorV2({
               showDiscounts={selectedTemplate?.show_discounts ?? true}
               showRemainingBalance={selectedTemplate?.show_remaining_balance ?? (type === "invoice")}
             />
-          </div>
+
+            <div className="mt-4 pt-4 border-t">
+              <Label htmlFor="miscFees">Frais divers (€)</Label>
+              <Input
+                id="miscFees"
+                type="number"
+                step="0.01"
+                value={document.miscFees || ""}
+                onChange={(e) => updateDocument({ miscFees: Number(e.target.value) })}
+                placeholder="0.00"
+                disabled={loading}
+                className="mt-1"
+              />
+            </div>
+            </CardContent>
+          </Card>
+
+          {/* Convert & Actions */}
+          <Card className="glass-card">
+            <CardContent className="pt-6 space-y-3">
+              {type === "quote" && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => toast.info("Conversion en facture...")}
+                    disabled={loading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Convertir en facture
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => toast.info("Conversion en intervention...")}
+                    disabled={loading}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Convertir en intervention
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Status */}
-          <div className="glass-card p-6">
+          <Card className="glass-card">
+            <CardContent className="pt-6">
             <Label htmlFor="status">Statut</Label>
             <Select
               value={document.status}
@@ -404,7 +542,8 @@ export function QuoteInvoiceEditorV2({
                 <SelectItem value="cancelled">Annulé</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

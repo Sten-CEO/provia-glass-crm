@@ -68,9 +68,19 @@ export interface QuoteInvoiceDocument {
   clientName: string;
   siteAddress?: DocumentAddress;
   billingAddress?: DocumentAddress;
+  externalRef?: string;
+  paymentTerms?: string;
+  hourlyRate?: number;
+  miscFees?: number;
   lines: DocumentLine[];
   totals: DocumentTotals;
-  attachments?: string[];
+  attachments?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+  }>;
   theme?: string;
   notesInternal?: string;
   notesClient?: string;

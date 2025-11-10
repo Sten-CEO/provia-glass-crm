@@ -1394,6 +1394,39 @@ export type Database = {
           },
         ]
       }
+      user_display_settings: {
+        Row: {
+          active_view: string | null
+          created_at: string
+          custom_views: Json | null
+          id: string
+          page: string
+          updated_at: string
+          user_id: string
+          visible_columns: Json
+        }
+        Insert: {
+          active_view?: string | null
+          created_at?: string
+          custom_views?: Json | null
+          id?: string
+          page: string
+          updated_at?: string
+          user_id: string
+          visible_columns?: Json
+        }
+        Update: {
+          active_view?: string | null
+          created_at?: string
+          custom_views?: Json | null
+          id?: string
+          page?: string
+          updated_at?: string
+          user_id?: string
+          visible_columns?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
