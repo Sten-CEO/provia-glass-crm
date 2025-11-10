@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Menu } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
@@ -59,8 +59,14 @@ const Planning = () => {
   }, [filters]);
 
   // Get unique values for filters
-  const uniqueTypes = Array.from(new Set(allJobs.map(j => j.type).filter(Boolean)));
-  const uniqueZones = Array.from(new Set(allJobs.map(j => j.zone).filter(Boolean)));
+  const uniqueTypes = useMemo(
+    () => Array.from(new Set(allJobs.map(j => j.type).filter(Boolean))),
+    [allJobs]
+  );
+  const uniqueZones = useMemo(
+    () => Array.from(new Set(allJobs.map(j => j.zone).filter(Boolean))),
+    [allJobs]
+  );
 
   useEffect(() => {
     loadJobs();
