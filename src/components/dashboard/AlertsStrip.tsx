@@ -10,6 +10,7 @@ interface AlertsData {
   overdueQuotes: number;
   upcomingDeadlines: number;
   quotesToSchedule: number;
+  upcomingJobs7d: number;
 }
 
 export const AlertsStrip = () => {
@@ -19,6 +20,7 @@ export const AlertsStrip = () => {
     overdueQuotes: 0,
     upcomingDeadlines: 0,
     quotesToSchedule: 0,
+    upcomingJobs7d: 0,
   });
 
   const loadAlerts = async () => {
@@ -51,13 +53,21 @@ export const AlertsStrip = () => {
       .gte("echeance", today)
       .lte("echeance", in7Days);
 
-    const { data: upcomingJobsData } = await supabase
+    const { data: upcomingJobsScheduled } = await supabase
       .from("jobs")
-      .select("*")
+      .select("id, scheduled_start")
       .gte("scheduled_start", today)
       .lte("scheduled_start", in7Days);
 
-    const upcomingTotal = (upcomingInvoicesData?.length || 0) + (upcomingJobsData?.length || 0);
+    const { data: upcomingJobsByDate } = await supabase
+      .from("jobs")
+      .select("id, date")
+      .gte("date", today)
+      .lte("date", in7Days);
+
+    const upcomingJobs7d = (upcomingJobsByDate?.length || 0) || 0;
+
+    const upcomingTotal = (upcomingInvoicesData?.length || 0) + ((upcomingJobsScheduled?.length || 0));
 
     // 4. Accepted quotes without linked intervention (To Schedule)
     const { data: acceptedQuotes } = await supabase
@@ -83,6 +93,7 @@ export const AlertsStrip = () => {
       overdueQuotes: overdueQuotesData?.length || 0,
       upcomingDeadlines: upcomingTotal,
       quotesToSchedule,
+      upcomingJobs7d,
     });
   };
 
@@ -136,6 +147,14 @@ export const AlertsStrip = () => {
       icon: Calendar,
       color: alerts.quotesToSchedule > 0 ? "blue" : "gray",
       onClick: () => navigate("/devis?filter=to_schedule"),
+    },
+    {
+      label: "Interventions (7j)",
+      count: alerts.upcomingJobs7d,
+      detail: null,
+      icon: Calendar,
+      color: alerts.upcomingJobs7d > 0 ? "blue" : "gray",
+      onClick: () => navigate("/planning"),
     },
     {
       label: "Échéances proches (7j)",
