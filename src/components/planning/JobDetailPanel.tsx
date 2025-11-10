@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Edit, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,12 +20,6 @@ export const JobDetailPanel = ({ jobId, onClose, onUpdate }: JobDetailPanelProps
   const [employees, setEmployees] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
-  useState(() => {
-    loadJob();
-    loadClients();
-    loadEmployees();
-  });
-
   const loadJob = async () => {
     const { data } = await supabase.from("jobs").select("*").eq("id", jobId).single();
     setJob(data);
@@ -40,6 +34,12 @@ export const JobDetailPanel = ({ jobId, onClose, onUpdate }: JobDetailPanelProps
     const { data } = await supabase.from("equipe").select("id, nom");
     setEmployees(data || []);
   };
+
+  useEffect(() => {
+    loadJob();
+    loadClients();
+    loadEmployees();
+  }, [jobId]);
 
   const handleSave = async () => {
     const { error } = await supabase
