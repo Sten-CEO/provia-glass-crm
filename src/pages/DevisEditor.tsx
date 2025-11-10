@@ -76,6 +76,12 @@ interface Quote {
   disclaimer?: string;
   conditions?: string;
   attachments: Array<{ id: string; name: string; url: string }>;
+  auto_create_job_on_accept?: boolean;
+  planned_date?: string;
+  planned_start_time?: string;
+  planned_duration_minutes?: number;
+  assignee_id?: string;
+  site_address?: string;
 }
 
 const DevisEditor = () => {
@@ -114,6 +120,12 @@ const DevisEditor = () => {
     disclaimer: "",
     conditions: "",
     attachments: [],
+    auto_create_job_on_accept: false,
+    planned_date: "",
+    planned_start_time: "",
+    planned_duration_minutes: undefined,
+    assignee_id: "",
+    site_address: "",
   });
 
   const [previousStatus, setPreviousStatus] = useState<string | undefined>(quote.statut);
@@ -249,6 +261,12 @@ const DevisEditor = () => {
         disclaimer: data.conditions || "",
         conditions: data.conditions || "",
         attachments: [],
+        auto_create_job_on_accept: data.auto_create_job_on_accept || false,
+        planned_date: data.planned_date || "",
+        planned_start_time: data.planned_start_time || "",
+        planned_duration_minutes: data.planned_duration_minutes || undefined,
+        assignee_id: data.assignee_id || "",
+        site_address: data.site_address || data.property_address || "",
       });
       setSelectedTemplateId(data.template_id || selectedTemplateId);
       setPreviousStatus(data.statut);
@@ -324,7 +342,15 @@ const DevisEditor = () => {
       conditions: quote.disclaimer,
       montant: String(quote.total_ttc),
       template_id: selectedTemplateId || null,
+      auto_create_job_on_accept: quote.auto_create_job_on_accept || false,
+      planned_date: quote.planned_date || null,
+      planned_start_time: quote.planned_start_time || null,
+      planned_duration_minutes: quote.planned_duration_minutes || null,
+      assignee_id: quote.assignee_id || null,
+      site_address: quote.site_address || quote.property_address || null,
     };
+
+    const prevStatus = previousStatus;
 
     if (id && !isNewQuote && quote.id) {
       const { error } = await supabase.from("devis").update(payload).eq("id", id);
@@ -333,6 +359,14 @@ const DevisEditor = () => {
         return;
       }
       setQuote((q) => ({ ...q, numero: finalNumber }));
+      
+      // Auto-créer l'intervention si activé et statut devient Accepté/Signé
+      if (quote.auto_create_job_on_accept && 
+          (payload.statut === "Accepté" || payload.statut === "Signé") && 
+          prevStatus !== "Accepté" && 
+          prevStatus !== "Signé") {
+        await createJobFromQuote();
+      }
     } else {
       const { data, error } = await supabase.from("devis").insert([payload]).select().single();
       if (error) {
@@ -340,11 +374,12 @@ const DevisEditor = () => {
         return;
       }
       setQuote((q) => ({ ...q, id: data.id, numero: finalNumber }));
-      navigate(`/devis/${data.id}/edit`, { replace: true });
+      navigate(`/devis/${data.id}`, { replace: true });
     }
 
     toast.success("Devis enregistré");
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
+    setPreviousStatus(payload.statut);
   };
 
   const handleSend = async () => {
@@ -366,44 +401,66 @@ const DevisEditor = () => {
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
   };
 
+  const createJobFromQuote = async () => {
+    if (!quote.id) return;
+
+    // Vérifier qu'aucune intervention n'existe déjà
+    const { data: existingJob } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("quote_id", quote.id)
+      .maybeSingle();
+
+    if (existingJob) {
+      console.log("Une intervention existe déjà pour ce devis");
+      return;
+    }
+
+    const employee = employees.find(e => e.id === quote.assignee_id);
+
+    const jobPayload = {
+      titre: quote.title || `Intervention suite au devis ${quote.numero}`,
+      client_id: quote.client_id,
+      client_nom: quote.client_nom,
+      employe_id: quote.assignee_id,
+      employe_nom: employee?.nom || "",
+      assigned_employee_ids: quote.assignee_id ? [quote.assignee_id] : [],
+      date: quote.planned_date || new Date().toISOString().split("T")[0],
+      heure_debut: quote.planned_start_time || null,
+      statut: "À faire",
+      adresse: quote.site_address || quote.property_address || "",
+      description: quote.client_message || quote.title || "",
+      notes: `Créée automatiquement depuis le devis ${quote.numero}`,
+      quote_id: quote.id,
+      checklist: quote.lignes.map((l) => ({
+        id: crypto.randomUUID(),
+        label: l.name,
+        done: false,
+      })) as unknown as any,
+    };
+
+    const { data: newJob, error: jobError } = await supabase.from("jobs").insert([jobPayload]).select().single();
+
+    if (jobError || !newJob) {
+      toast.error("Erreur lors de la création de l'intervention");
+      console.error(jobError);
+      return;
+    }
+
+    toast.success(`Intervention créée automatiquement et liée au devis ${quote.numero}`);
+    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
+  };
+
   const handleConvertToJob = async () => {
     if (!quote.id) {
       toast.error("Veuillez d'abord enregistrer le devis");
       return;
     }
 
-    const jobPayload = {
-      titre: quote.title || `Intervention ${quote.numero}`,
-      client_id: quote.client_id,
-      client_nom: quote.client_nom,
-      employe_nom: "",
-      adresse: quote.property_address || "",
-      statut: "À faire",
-      date: new Date().toISOString().split("T")[0],
-      checklist: quote.lignes.map((l) => ({
-        id: crypto.randomUUID(),
-        label: l.name,
-        done: false,
-      })) as unknown as any,
-      notes: `Créé depuis devis ${quote.numero}`,
-      converted_from_quote_id: quote.id,
-    };
-
-    const { data: newJob, error: jobError } = await supabase.from("jobs").insert([jobPayload]).select().single();
-
-    if (jobError || !newJob) {
-      toast.error("Erreur", { description: "Échec de création du job" });
-      return;
-    }
-
-    await supabase.from("devis").update({ converted_to_job_id: newJob.id }).eq("id", quote.id);
-
-    toast.success("Job créé avec succès");
-    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
-    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
+    await createJobFromQuote();
     
-    // Navigate to the new job
-    navigate(`/jobs/${newJob.id}`);
+    // Navigate to interventions list
+    navigate(`/interventions`);
   };
 
   const handleConvertToInvoice = async () => {
@@ -614,6 +671,12 @@ const DevisEditor = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {quote.id && (
+              <Button onClick={handleConvertToJob} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Créer une intervention
+              </Button>
+            )}
             <Button onClick={handleSave} variant="outline">
               <Save className="h-4 w-4 mr-2" />
               Enregistrer
@@ -686,8 +749,9 @@ const DevisEditor = () => {
 
       {/* Editor Tabs */}
       <Tabs defaultValue="header" className="w-full">
-        <TabsList className="glass-card grid w-full grid-cols-6">
+        <TabsList className="glass-card grid w-full grid-cols-7">
           <TabsTrigger value="header">En-tête</TabsTrigger>
+          <TabsTrigger value="planning">Planification</TabsTrigger>
           <TabsTrigger value="lines">Produits/Services</TabsTrigger>
           <TabsTrigger value="payment">Paiement</TabsTrigger>
           <TabsTrigger value="custom">Champs perso</TabsTrigger>
@@ -847,6 +911,104 @@ const DevisEditor = () => {
                     </StatusChip>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Planification */}
+        <TabsContent value="planning" className="space-y-4">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle>Planification d'intervention</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-lg border">
+                <Checkbox
+                  id="auto-create"
+                  checked={quote.auto_create_job_on_accept || false}
+                  onCheckedChange={(checked) => 
+                    setQuote({ ...quote, auto_create_job_on_accept: checked as boolean })
+                  }
+                />
+                <div className="flex-1">
+                  <Label htmlFor="auto-create" className="cursor-pointer font-medium">
+                    Créer l'intervention à la validation
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Quand ce devis passe en "Accepté/Signé", une intervention sera créée automatiquement avec les informations ci-dessous
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Date d'intervention souhaitée</Label>
+                  <Input
+                    type="date"
+                    value={quote.planned_date || ""}
+                    onChange={(e) => setQuote({ ...quote, planned_date: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Heure de début</Label>
+                  <Input
+                    type="time"
+                    value={quote.planned_start_time || ""}
+                    onChange={(e) => setQuote({ ...quote, planned_start_time: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Durée estimée (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={quote.planned_duration_minutes || ""}
+                    onChange={(e) => 
+                      setQuote({ 
+                        ...quote, 
+                        planned_duration_minutes: e.target.value ? parseInt(e.target.value) : undefined 
+                      })
+                    }
+                    placeholder="120"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Technicien assigné</Label>
+                  <Select
+                    value={quote.assignee_id || ""}
+                    onValueChange={(v) => setQuote({ ...quote, assignee_id: v })}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Sélectionner un technicien" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Lieu d'intervention</Label>
+                <Input
+                  value={quote.site_address || ""}
+                  onChange={(e) => setQuote({ ...quote, site_address: e.target.value })}
+                  placeholder="Adresse du chantier (si différente de l'adresse client)"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Par défaut, l'adresse du chantier sera utilisée
+                </p>
               </div>
             </CardContent>
           </Card>

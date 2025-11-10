@@ -24,7 +24,6 @@ import Parametres from "./pages/Parametres";
 import Support from "./pages/Support";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import NotFound from "./pages/NotFound";
-import DevisDetail from "./pages/DevisDetail";
 import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
 import FactureEditor from "./pages/FactureEditor";
@@ -63,11 +62,10 @@ const App = () => {
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/contracts/:id" element={<ContractDetail />} />
             <Route path="/planning" element={<Planning />} />
-            <Route path="/devis" element={<Devis />} />
-            <Route path="/devis/new" element={<DevisEditor />} />
-            <Route path="/devis/:id" element={<DevisDetail />} />
-            <Route path="/devis/:id/edit" element={<DevisEditor />} />
-            <Route path="/factures" element={<Factures />} />
+          <Route path="/devis" element={<Devis />} />
+          <Route path="/devis/new" element={<DevisEditor />} />
+          <Route path="/devis/:id" element={<DevisEditor />} />
+          <Route path="/factures" element={<Factures />} />
             <Route path="/factures/new" element={<FactureEditor />} />
             <Route path="/factures/:id" element={<FactureDetail />} />
             <Route path="/factures/:id/edit" element={<FactureEditor />} />
