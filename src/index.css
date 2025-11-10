@@ -123,24 +123,72 @@ All colors MUST be HSL.
     @apply bg-card/60 backdrop-blur-[16px] border-b border-border;
   }
 
-  /* Professional button styles */
+  /* Professional button styles - 8px radius, clean design */
   .btn-pro {
-    @apply h-10 px-4 rounded-lg font-medium text-sm transition-all;
+    @apply h-10 px-4 rounded-lg font-medium text-sm transition-all inline-flex items-center justify-center gap-2;
   }
 
   .btn-pro-primary {
-    @apply btn-pro bg-primary hover:bg-primary/90 text-primary-foreground;
+    @apply btn-pro bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow;
   }
 
   .btn-pro-secondary {
-    @apply btn-pro bg-secondary hover:bg-secondary/80 text-secondary-foreground;
+    @apply btn-pro bg-secondary hover:bg-secondary/80 text-secondary-foreground shadow-sm;
   }
 
   .btn-pro-success {
-    @apply btn-pro bg-success hover:bg-success/90 text-success-foreground;
+    @apply btn-pro bg-success hover:bg-success/90 text-success-foreground shadow-sm hover:shadow;
   }
 
   .btn-pro-danger {
-    @apply btn-pro bg-destructive hover:bg-destructive/90 text-destructive-foreground;
+    @apply btn-pro bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm hover:shadow;
+  }
+
+  .btn-pro-outline {
+    @apply btn-pro border border-input bg-background hover:bg-accent/50 hover:text-accent-foreground;
+  }
+
+  .btn-pro-ghost {
+    @apply btn-pro hover:bg-accent/50 hover:text-accent-foreground;
+  }
+
+  /* Professional table styles */
+  .table-pro {
+    @apply w-full;
+  }
+
+  .table-pro thead {
+    @apply border-b border-border bg-muted/30;
+  }
+
+  .table-pro th {
+    @apply text-left p-4 font-semibold text-sm text-muted-foreground uppercase tracking-wide;
+  }
+
+  .table-pro tbody tr {
+    @apply border-b border-border hover:bg-muted/30 transition-colors;
+  }
+
+  .table-pro td {
+    @apply p-4 text-sm;
+  }
+
+  /* Professional input styles */
+  .input-pro {
+    @apply h-10 px-3 rounded-lg border border-input bg-background text-foreground transition-all;
+    @apply focus:border-ring focus:ring-2 focus:ring-ring/20;
+  }
+
+  /* Professional card styles */
+  .card-pro {
+    @apply glass-card p-6 space-y-4;
+  }
+
+  .card-pro-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .card-pro-title {
+    @apply text-lg font-semibold;
   }
 }

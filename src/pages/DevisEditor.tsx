@@ -51,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { InventoryItemSelector } from "@/components/devis/InventoryItemSelector";
 import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
+import { InterventionInfoBlock } from "@/components/devis/InterventionInfoBlock";
 
 interface Quote {
   id?: string;
@@ -449,7 +450,11 @@ const DevisEditor = () => {
 
     const employee = employees.find(e => e.id === src.assignee_id);
 
+    // Generate intervention number
+    const { data: numberData } = await supabase.rpc("generate_intervention_number");
+
     const jobPayload = {
+      intervention_number: numberData || `INT-${Date.now()}`,
       titre: src.title || `Intervention suite au devis ${src.numero}`,
       client_id: src.client_id,
       client_nom: src.client_nom,
@@ -458,10 +463,11 @@ const DevisEditor = () => {
       assigned_employee_ids: src.assignee_id ? [src.assignee_id] : [],
       date: src.planned_date || new Date().toISOString().split("T")[0],
       heure_debut: src.planned_start_time || null,
-      statut: "À faire",
+      duration_estimated: src.planned_duration_minutes || null,
+      statut: "À planifier",
       adresse: src.site_address || src.property_address || "",
       description: src.client_message || src.title || "",
-      notes: `Créée automatiquement depuis le devis ${src.numero}`,
+      internal_notes: `Créée automatiquement depuis le devis ${src.numero}`,
       quote_id: src.id,
       checklist: src.lignes.map((l) => ({
         id: crypto.randomUUID(),
@@ -491,6 +497,18 @@ const DevisEditor = () => {
     }
 
     console.log("Intervention créée avec succès:", newJob.id);
+
+    // Import the sync function
+    const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
+    
+    // Sync consumables and services from quote
+    try {
+      await syncQuoteConsumablesToIntervention(src.id, newJob.id);
+      console.log("Articles du devis synchronisés");
+    } catch (syncError) {
+      console.error("Error syncing quote items:", syncError);
+    }
+
     toast.success(`Intervention créée automatiquement (${newJob.titre})`);
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
     eventBus.emit(EVENTS.PLANNING_UPDATED, { jobId: newJob.id });
@@ -502,10 +520,11 @@ const DevisEditor = () => {
       return;
     }
 
-    await createJobFromQuote();
-    
-    // Navigate to interventions list
-    navigate(`/interventions`);
+    // Save first to ensure all data is persisted
+    await handleSave();
+
+    // Navigate to new intervention with quoteId parameter
+    navigate(`/interventions/nouvelle?quoteId=${quote.id}`);
   };
 
   const handleConvertToInvoice = async () => {
@@ -1055,6 +1074,16 @@ const DevisEditor = () => {
                   Par défaut, l'adresse du chantier sera utilisée
                 </p>
               </div>
+
+              {/* Intervention Info Block */}
+              <InterventionInfoBlock
+                plannedDate={quote.planned_date}
+                plannedStartTime={quote.planned_start_time}
+                plannedDurationMinutes={quote.planned_duration_minutes}
+                assigneeName={employees.find(e => e.id === quote.assignee_id)?.nom}
+                siteAddress={quote.site_address || quote.property_address}
+                autoCreateEnabled={quote.auto_create_job_on_accept || false}
+              />
             </CardContent>
           </Card>
         </TabsContent>

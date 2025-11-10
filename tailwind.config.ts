@@ -74,6 +74,11 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
+      height: {
+        'btn': '40px',
+        'btn-sm': '36px',
+        'btn-lg': '44px',
+      },
       keyframes: {
         "accordion-down": {
           from: {

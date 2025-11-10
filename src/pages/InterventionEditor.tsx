@@ -10,8 +10,9 @@ import {
   reserveInventoryForIntervention,
   rescheduleInventoryReservations
 } from "@/lib/interventionInventorySync";
+import { syncQuoteConsumablesToIntervention } from "@/lib/quoteToInterventionSync";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, FileText, CheckCircle2, Repeat } from "lucide-react";
 import { GeneralInfoSection } from "@/components/interventions/GeneralInfoSection";
 import { ConsumablesSection } from "@/components/interventions/ConsumablesSection";
 import { ServicesSection } from "@/components/interventions/ServicesSection";
@@ -19,6 +20,7 @@ import { TimesheetsSection } from "@/components/interventions/TimesheetsSection"
 import { FilesSection } from "@/components/interventions/FilesSection";
 import { NotesSignatureSection } from "@/components/interventions/NotesSignatureSection";
 import { InvoiceSection } from "@/components/interventions/InvoiceSection";
+import { RecurrenceDialog } from "@/components/interventions/RecurrenceDialog";
 
 export default function InterventionEditor() {
   const { id } = useParams();
@@ -28,6 +30,7 @@ export default function InterventionEditor() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [intervention, setIntervention] = useState<any>(null);
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
 
   // Charger l'intervention si mode édition
   useEffect(() => {
@@ -39,10 +42,14 @@ export default function InterventionEditor() {
   }, [id]);
 
   const initNewIntervention = async () => {
+    // Check for quoteId in URL params
+    const params = new URLSearchParams(window.location.search);
+    const quoteId = params.get('quoteId');
+
     // Générer un numéro d'intervention
     const { data: numberData } = await supabase.rpc("generate_intervention_number");
     
-    setIntervention({
+    let baseIntervention = {
       intervention_number: numberData || "INT-2025-0001",
       titre: "",
       client_id: null,
@@ -64,7 +71,44 @@ export default function InterventionEditor() {
       quote_id: null,
       invoice_id: null,
       contract_id: null,
-    });
+    };
+
+    // Preload from quote if quoteId provided
+    if (quoteId) {
+      try {
+        const { data: quote, error } = await supabase
+          .from("devis")
+          .select("*")
+          .eq("id", quoteId)
+          .single();
+
+        if (!error && quote) {
+          baseIntervention = {
+            ...baseIntervention,
+            titre: quote.title || `Intervention suite au devis ${quote.numero}`,
+            client_id: quote.client_id,
+            client_nom: quote.client_nom,
+            adresse: quote.site_address || quote.property_address || "",
+            employe_id: quote.assignee_id || null,
+            employe_nom: quote.assignee_id ? (await supabase.from("equipe").select("nom").eq("id", quote.assignee_id).single()).data?.nom || "" : "",
+            assigned_employee_ids: quote.assignee_id ? [quote.assignee_id] : [],
+            date: quote.planned_date || new Date().toISOString().split("T")[0],
+            heure_debut: quote.planned_start_time || "08:00",
+            duration_estimated: quote.planned_duration_minutes || 480,
+            description: quote.message_client || quote.title || "",
+            internal_notes: `Créée depuis le devis ${quote.numero}`,
+            quote_id: quoteId,
+          };
+
+          toast.success("Informations du devis chargées");
+        }
+      } catch (error) {
+        console.error("Error loading quote:", error);
+        toast.error("Erreur lors du chargement du devis");
+      }
+    }
+
+    setIntervention(baseIntervention);
   };
 
   const loadIntervention = async () => {
@@ -127,6 +171,24 @@ export default function InterventionEditor() {
         
         if (error) throw error;
 
+        // Sync consumables from quote if quote_id exists
+        if (data && intervention.quote_id) {
+          try {
+            const result = await syncQuoteConsumablesToIntervention(
+              intervention.quote_id,
+              data.id
+            );
+            toast.success(
+              `Intervention créée avec ${result.consumablesCount} consommables et ${result.servicesCount} services`
+            );
+          } catch (syncError) {
+            console.error("Error syncing quote items:", syncError);
+            toast.warning("Intervention créée mais erreur lors de la copie des articles");
+          }
+        } else {
+          toast.success("Intervention créée");
+        }
+
         // Reserve inventory if intervention is planned
         if (data && intervention.date && intervention.statut !== "Annulée") {
           const { data: consumables } = await supabase
@@ -150,8 +212,7 @@ export default function InterventionEditor() {
           }
         }
 
-        toast.success("Intervention créée");
-        navigate(`/interventions/${data.id}`);
+        navigate(`/interventions/${data.id}/editer`);
       }
     } catch (error) {
       console.error("Erreur sauvegarde:", error);
@@ -261,10 +322,16 @@ export default function InterventionEditor() {
             
             <div className="flex gap-2">
               {isEditMode && intervention.statut !== "Terminée" && (
-                <Button variant="outline" onClick={handleMarkComplete} disabled={saving}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Marquer terminée
-                </Button>
+                <>
+                  <Button variant="outline" onClick={() => setRecurrenceOpen(true)}>
+                    <Repeat className="h-4 w-4 mr-2" />
+                    Récurrence
+                  </Button>
+                  <Button variant="outline" onClick={handleMarkComplete} disabled={saving}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Marquer terminée
+                  </Button>
+                </>
               )}
               {isEditMode && intervention.statut === "Terminée" && !intervention.invoice_id && (
                 <Button variant="outline" onClick={handleCreateInvoice}>
@@ -325,6 +392,16 @@ export default function InterventionEditor() {
           )}
         </Tabs>
       </div>
+
+      {/* Recurrence Dialog */}
+      {isEditMode && (
+        <RecurrenceDialog
+          open={recurrenceOpen}
+          onOpenChange={setRecurrenceOpen}
+          interventionId={id!}
+          interventionData={intervention}
+        />
+      )}
     </div>
   );
 }
