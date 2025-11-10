@@ -293,10 +293,65 @@ const Devis = () => {
                         
                         if (error) {
                           toast.error("Erreur lors du changement de statut");
-                        } else {
-                          toast.success("Statut mis à jour");
-                          loadQuotes();
+                          return;
                         }
+                        
+                        // Tentative de création auto d'intervention si demandé
+                        try {
+                          const { data: q } = await supabase
+                            .from("devis")
+                            .select("id, numero, client_id, client_nom, title, auto_create_job_on_accept, planned_date, planned_start_time, assignee_id, site_address, property_address, message_client, lignes")
+                            .eq("id", quote.id)
+                            .maybeSingle();
+                          
+                          if (q && q.auto_create_job_on_accept && (newStatus === "Accepté" || newStatus === "Signé")) {
+                            const { data: existingJob } = await supabase
+                              .from("jobs")
+                              .select("id")
+                              .eq("quote_id", q.id)
+                              .maybeSingle();
+                            
+                            if (!existingJob) {
+                              let employeNom = "";
+                              if (q.assignee_id) {
+                                const { data: emp } = await supabase
+                                  .from("equipe")
+                                  .select("nom")
+                                  .eq("id", q.assignee_id)
+                                  .maybeSingle();
+                                employeNom = emp?.nom || "";
+                              }
+                              const jobPayload = {
+                                titre: q.title || `Intervention suite au devis ${q.numero}`,
+                                client_id: q.client_id,
+                                client_nom: q.client_nom || "",
+                                employe_id: q.assignee_id || null,
+                                employe_nom: employeNom,
+                                assigned_employee_ids: q.assignee_id ? [q.assignee_id] : [],
+                                date: q.planned_date || new Date().toISOString().split("T")[0],
+                                heure_debut: q.planned_start_time || null,
+                                statut: "À faire",
+                                adresse: q.site_address || q.property_address || "",
+                                description: q.message_client || q.title || "",
+                                notes: `Créée automatiquement depuis le devis ${q.numero}`,
+                                quote_id: q.id,
+                                checklist: Array.isArray(q.lignes) ? (q.lignes as any[]).map((l: any) => ({ id: crypto.randomUUID(), label: l.name, done: false })) as any : [] as any,
+                              };
+                              const { error: jobErr } = await supabase.from("jobs").insert([jobPayload]);
+                              if (jobErr) {
+                                console.error("Auto-create job error:", jobErr);
+                              } else {
+                                eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
+                                eventBus.emit(EVENTS.PLANNING_UPDATED, { scope: "planning" });
+                              }
+                            }
+                          }
+                        } catch (e) {
+                          console.error("Auto-create job check failed:", e);
+                        }
+                        
+                        toast.success("Statut mis à jour");
+                        loadQuotes();
                       }}
                     >
                       <SelectTrigger className="w-[140px]">
