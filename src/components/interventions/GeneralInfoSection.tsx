@@ -145,19 +145,27 @@ export function GeneralInfoSection({ intervention, onChange }: GeneralInfoSectio
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Technicien principal</Label>
-              <Select value={intervention.employe_id || ""} onValueChange={(v) => {
-                const emp = employees.find(e => e.id === v);
-                onChange({
-                  ...intervention,
-                  employe_id: v,
-                  employe_nom: emp?.nom || "",
-                  assigned_employee_ids: [v],
-                });
-              }}>
+              <Select 
+                value={intervention.employe_id || "none"} 
+                onValueChange={(v) => {
+                  if (v === "none") {
+                    onChange({ ...intervention, employe_id: null, employe_nom: "", assigned_employee_ids: [] });
+                  } else {
+                    const emp = employees.find(e => e.id === v);
+                    onChange({
+                      ...intervention,
+                      employe_id: v,
+                      employe_nom: emp?.nom || "",
+                      assigned_employee_ids: [v],
+                    });
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {employees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>{emp.nom}</SelectItem>
                   ))}
@@ -183,12 +191,12 @@ export function GeneralInfoSection({ intervention, onChange }: GeneralInfoSectio
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Rattachement au devis</Label>
-              <Select value={intervention.quote_id || ""} onValueChange={(v) => updateField("quote_id", v || null)}>
+              <Select value={intervention.quote_id || "none"} onValueChange={(v) => updateField("quote_id", v === "none" ? null : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aucun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {quotes.map((q) => (
                     <SelectItem key={q.id} value={q.id}>{q.numero} - {q.client_nom}</SelectItem>
                   ))}
@@ -197,12 +205,12 @@ export function GeneralInfoSection({ intervention, onChange }: GeneralInfoSectio
             </div>
             <div className="space-y-2">
               <Label>Rattachement au contrat</Label>
-              <Select value={intervention.contract_id || ""} onValueChange={(v) => updateField("contract_id", v || null)}>
+              <Select value={intervention.contract_id || "none"} onValueChange={(v) => updateField("contract_id", v === "none" ? null : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aucun" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
+                  <SelectItem value="none">Aucun</SelectItem>
                   {contracts.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.contract_number} - {c.title}</SelectItem>
                   ))}

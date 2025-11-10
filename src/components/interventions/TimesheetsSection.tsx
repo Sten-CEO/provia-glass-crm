@@ -158,13 +158,14 @@ export function TimesheetsSection({ interventionId }: TimesheetsSectionProps) {
                     <TableRow key={entry.id}>
                       <TableCell>
                         <Select 
-                          value={entry.employee_id || ""} 
-                          onValueChange={(v) => updateEntry(entry.id, "employee_id", v)}
+                          value={entry.employee_id || "none"} 
+                          onValueChange={(v) => v !== "none" && updateEntry(entry.id, "employee_id", v)}
                         >
                           <SelectTrigger className="w-[150px]">
                             <SelectValue placeholder="Sélectionner" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">Sélectionner un technicien</SelectItem>
                             {employees.map((emp) => (
                               <SelectItem key={emp.id} value={emp.id}>
                                 {emp.nom}

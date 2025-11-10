@@ -196,13 +196,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                   <TableRow key={line.id}>
                     <TableCell>
                       <Select 
-                        value={line.inventory_item_id || ""} 
-                        onValueChange={(v) => selectInventoryItem(line.id, v)}
+                        value={line.inventory_item_id || "none"} 
+                        onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
                       >
                         <SelectTrigger className="w-[200px]">
                           <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="none">Sélectionner un produit</SelectItem>
                           {inventoryItems.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.name} (Stock: {item.qty_on_hand})

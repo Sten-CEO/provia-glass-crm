@@ -177,13 +177,14 @@ export function ServicesSection({ interventionId }: ServicesSectionProps) {
                   <TableRow key={line.id}>
                     <TableCell>
                       <Select 
-                        value={line.service_item_id || ""} 
-                        onValueChange={(v) => selectServiceItem(line.id, v)}
+                        value={line.service_item_id || "none"} 
+                        onValueChange={(v) => v !== "none" && selectServiceItem(line.id, v)}
                       >
                         <SelectTrigger className="w-[150px]">
                           <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="none">Sélectionner un service</SelectItem>
                           {serviceItems.map((service) => (
                             <SelectItem key={service.id} value={service.id}>
                               {service.name}
@@ -257,14 +258,14 @@ export function ServicesSection({ interventionId }: ServicesSectionProps) {
                     </TableCell>
                     <TableCell>
                       <Select 
-                        value={line.assigned_to || ""} 
-                        onValueChange={(v) => updateLine(line.id, "assigned_to", v || null)}
+                        value={line.assigned_to || "none"} 
+                        onValueChange={(v) => updateLine(line.id, "assigned_to", v === "none" ? null : v)}
                       >
                         <SelectTrigger className="w-[120px]">
                           <SelectValue placeholder="Aucun" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Aucun</SelectItem>
+                          <SelectItem value="none">Aucun</SelectItem>
                           {employees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
                               {emp.nom}
