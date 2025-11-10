@@ -26,6 +26,7 @@ const DevisDetail = () => {
   const navigate = useNavigate();
   const [devis, setDevis] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [lignes, setLignes] = useState<LigneDevis[]>([]);
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -35,6 +36,7 @@ const DevisDetail = () => {
     if (id) {
       loadDevis();
       loadClients();
+      loadEmployees();
     }
   }, [id]);
 
@@ -55,6 +57,11 @@ const DevisDetail = () => {
   const loadClients = async () => {
     const { data } = await supabase.from("clients").select("*");
     setClients(data || []);
+  };
+
+  const loadEmployees = async () => {
+    const { data } = await supabase.from("equipe").select("*");
+    setEmployees(data || []);
   };
 
   const addLigne = () => {
@@ -101,6 +108,14 @@ const DevisDetail = () => {
     } else {
       toast.success("Devis mis à jour");
       
+      // Auto-créer l'intervention si activé et statut devient Accepté/Signé
+      if (devis.auto_create_job_on_accept && 
+          (devis.statut === "Accepté" || devis.statut === "Signé") && 
+          previousStatus !== "Accepté" && 
+          previousStatus !== "Signé") {
+        await createJobFromQuote();
+      }
+      
       // Émettre l'événement si le statut passe à "Accepté"
       if (devis.statut === "Accepté" && previousStatus !== "Accepté") {
         eventBus.emit(EVENTS.QUOTE_ACCEPTED, {
@@ -118,6 +133,57 @@ const DevisDetail = () => {
       
       loadDevis();
     }
+  };
+
+  const createJobFromQuote = async () => {
+    // Vérifier qu'aucune intervention n'existe déjà
+    const { data: existingJob } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("quote_id", id)
+      .neq("statut", "Annulé")
+      .single();
+
+    if (existingJob) {
+      console.log("Une intervention existe déjà pour ce devis");
+      return;
+    }
+
+    const client = clients.find(c => c.id === devis.client_id);
+    const employee = employees.find(e => e.id === devis.assignee_id);
+
+    const { data: newJob, error } = await supabase
+      .from("jobs")
+      .insert({
+        titre: `Intervention suite au devis ${devis.numero}`,
+        client_id: devis.client_id,
+        client_nom: devis.client_nom,
+        employe_id: devis.assignee_id,
+        employe_nom: employee?.nom || "",
+        assigned_employee_ids: devis.assignee_id ? [devis.assignee_id] : [],
+        date: devis.planned_date || new Date().toISOString().split("T")[0],
+        heure_debut: devis.planned_start_time,
+        statut: "À faire",
+        adresse: devis.site_address || client?.adresse || "",
+        description: devis.message_client || devis.title || "",
+        notes: `Créée automatiquement depuis le devis ${devis.numero}`,
+        quote_id: id,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Erreur lors de la création de l'intervention");
+      console.error(error);
+    } else {
+      toast.success(`Intervention créée automatiquement et liée au devis ${devis.numero}`);
+      eventBus.emit(EVENTS.DATA_CHANGED, { scope: 'jobs' });
+    }
+  };
+
+  const handleCreateJob = async () => {
+    await handleSave();
+    navigate(`/interventions/new?quoteId=${id}`);
   };
 
   if (!devis) return <div className="p-6">Chargement...</div>;
@@ -152,6 +218,10 @@ const DevisDetail = () => {
         
         {/* Primary action buttons */}
         <div className="flex gap-2">
+          <Button onClick={handleCreateJob} variant="outline">
+            <Plus className="mr-2 h-4 w-4" />
+            Créer une intervention
+          </Button>
           <Button onClick={handleSave} variant="outline">
             <Save className="mr-2 h-4 w-4" />
             Enregistrer
@@ -221,6 +291,82 @@ const DevisDetail = () => {
                   value={devis.expiry_date?.split("T")[0] || ""}
                   onChange={(e) => setDevis({ ...devis, expiry_date: e.target.value })}
                   className="glass-card"
+                />
+              </div>
+            </div>
+          </Card>
+
+          {/* Planning Information */}
+          <Card className="glass-card p-6">
+            <h2 className="text-lg font-bold mb-4 uppercase tracking-wide">Planification d'intervention</h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="auto-create"
+                  checked={devis.auto_create_job_on_accept || false}
+                  onChange={(e) => setDevis({ ...devis, auto_create_job_on_accept: e.target.checked })}
+                  className="h-4 w-4 rounded"
+                />
+                <Label htmlFor="auto-create" className="cursor-pointer flex-1">
+                  Créer l'intervention à la validation
+                  <span className="block text-xs text-muted-foreground mt-1">
+                    Quand ce devis passe en "Accepté/Signé", une intervention sera créée automatiquement
+                  </span>
+                </Label>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Date d'intervention souhaitée</Label>
+                  <Input
+                    type="date"
+                    value={devis.planned_date || ""}
+                    onChange={(e) => setDevis({ ...devis, planned_date: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Heure de début</Label>
+                  <Input
+                    type="time"
+                    value={devis.planned_start_time || ""}
+                    onChange={(e) => setDevis({ ...devis, planned_start_time: e.target.value })}
+                    className="glass-card"
+                  />
+                </div>
+                <div>
+                  <Label>Durée estimée (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={devis.planned_duration_minutes || ""}
+                    onChange={(e) => setDevis({ ...devis, planned_duration_minutes: parseInt(e.target.value) || null })}
+                    className="glass-card"
+                    placeholder="120"
+                  />
+                </div>
+                <div>
+                  <Label>Technicien assigné</Label>
+                  <Select value={devis.assignee_id || ""} onValueChange={(v) => setDevis({ ...devis, assignee_id: v })}>
+                    <SelectTrigger className="glass-card">
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Lieu d'intervention</Label>
+                <Input
+                  value={devis.site_address || ""}
+                  onChange={(e) => setDevis({ ...devis, site_address: e.target.value })}
+                  className="glass-card"
+                  placeholder="Adresse du chantier"
                 />
               </div>
             </div>

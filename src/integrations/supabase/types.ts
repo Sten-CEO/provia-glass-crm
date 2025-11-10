@@ -229,6 +229,8 @@ export type Database = {
           acompte: number | null
           approved_at: string | null
           approved_by: string | null
+          assignee_id: string | null
+          auto_create_job_on_accept: boolean | null
           billing_address: Json | null
           client_id: string | null
           client_nom: string
@@ -256,6 +258,9 @@ export type Database = {
           packages: Json | null
           pdf_signed_url: string | null
           pdf_url: string | null
+          planned_date: string | null
+          planned_duration_minutes: number | null
+          planned_start_time: string | null
           property_address: string | null
           quote_valid_days: number | null
           remise: number | null
@@ -264,6 +269,7 @@ export type Database = {
           shipping_address: Json | null
           signature_date: string | null
           signature_image: string | null
+          site_address: string | null
           statut: string
           template_id: string | null
           title: string | null
@@ -277,6 +283,8 @@ export type Database = {
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          assignee_id?: string | null
+          auto_create_job_on_accept?: boolean | null
           billing_address?: Json | null
           client_id?: string | null
           client_nom: string
@@ -304,6 +312,9 @@ export type Database = {
           packages?: Json | null
           pdf_signed_url?: string | null
           pdf_url?: string | null
+          planned_date?: string | null
+          planned_duration_minutes?: number | null
+          planned_start_time?: string | null
           property_address?: string | null
           quote_valid_days?: number | null
           remise?: number | null
@@ -312,6 +323,7 @@ export type Database = {
           shipping_address?: Json | null
           signature_date?: string | null
           signature_image?: string | null
+          site_address?: string | null
           statut?: string
           template_id?: string | null
           title?: string | null
@@ -325,6 +337,8 @@ export type Database = {
           acompte?: number | null
           approved_at?: string | null
           approved_by?: string | null
+          assignee_id?: string | null
+          auto_create_job_on_accept?: boolean | null
           billing_address?: Json | null
           client_id?: string | null
           client_nom?: string
@@ -352,6 +366,9 @@ export type Database = {
           packages?: Json | null
           pdf_signed_url?: string | null
           pdf_url?: string | null
+          planned_date?: string | null
+          planned_duration_minutes?: number | null
+          planned_start_time?: string | null
           property_address?: string | null
           quote_valid_days?: number | null
           remise?: number | null
@@ -360,6 +377,7 @@ export type Database = {
           shipping_address?: Json | null
           signature_date?: string | null
           signature_image?: string | null
+          site_address?: string | null
           statut?: string
           template_id?: string | null
           title?: string | null
@@ -909,6 +927,7 @@ export type Database = {
           notes: string | null
           notes_timeline: Json | null
           planning_event_id: string | null
+          quote_id: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           statut: string
@@ -941,6 +960,7 @@ export type Database = {
           notes?: string | null
           notes_timeline?: Json | null
           planning_event_id?: string | null
+          quote_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           statut?: string
@@ -973,6 +993,7 @@ export type Database = {
           notes?: string | null
           notes_timeline?: Json | null
           planning_event_id?: string | null
+          quote_id?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           statut?: string
@@ -1015,6 +1036,13 @@ export type Database = {
             columns: ["planning_event_id"]
             isOneToOne: false
             referencedRelation: "planning_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
             referencedColumns: ["id"]
           },
         ]

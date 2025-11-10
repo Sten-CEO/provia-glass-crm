@@ -33,7 +33,7 @@ interface Quote {
   client_nom: string;
   montant: string;
   total_ttc: number;
-  statut: "Brouillon" | "Envoyé" | "Accepté" | "Refusé" | "Expiré";
+  statut: "Brouillon" | "Envoyé" | "Accepté" | "Signé" | "Refusé" | "Annulé" | "Expiré";
   expiry_date?: string;
   created_at: string;
 }
@@ -44,6 +44,7 @@ const Devis = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [filterParams, setFilterParams] = useState<URLSearchParams | null>(null);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -75,6 +76,12 @@ const Devis = () => {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setFilterParams(params);
+    const filter = params.get("filter");
+    if (filter === "to_schedule") {
+      setFilterStatus("to_schedule");
+    }
     loadQuotes();
 
     const channel = supabase
@@ -151,7 +158,9 @@ const Devis = () => {
       q.client_nom.toLowerCase().includes(search.toLowerCase());
     
     let matchesStatus = true;
-    if (filterStatus === "Envoyés") matchesStatus = q.statut === "Envoyé";
+    if (filterStatus === "to_schedule") {
+      matchesStatus = q.statut === "Accepté" || q.statut === "Signé";
+    } else if (filterStatus === "Envoyés") matchesStatus = q.statut === "Envoyé";
     else if (filterStatus === "Acceptés") matchesStatus = q.statut === "Accepté";
     else if (filterStatus === "Refusés") matchesStatus = q.statut === "Refusé";
     else if (filterStatus === "Brouillons") matchesStatus = q.statut === "Brouillon";
@@ -200,6 +209,7 @@ const Devis = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="to_schedule">À planifier</SelectItem>
               <SelectItem value="Envoyés">Envoyés</SelectItem>
               <SelectItem value="Acceptés">Acceptés</SelectItem>
               <SelectItem value="Refusés">Refusés</SelectItem>

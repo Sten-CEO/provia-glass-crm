@@ -9,6 +9,7 @@ interface AlertsData {
   unpaidInvoices: { count: number; total: number };
   overdueQuotes: number;
   upcomingDeadlines: number;
+  quotesToSchedule: number;
 }
 
 export const AlertsStrip = () => {
@@ -17,6 +18,7 @@ export const AlertsStrip = () => {
     unpaidInvoices: { count: 0, total: 0 },
     overdueQuotes: 0,
     upcomingDeadlines: 0,
+    quotesToSchedule: 0,
   });
 
   const loadAlerts = async () => {
@@ -57,10 +59,30 @@ export const AlertsStrip = () => {
 
     const upcomingTotal = (upcomingInvoicesData?.length || 0) + (upcomingJobsData?.length || 0);
 
+    // 4. Accepted quotes without linked intervention (To Schedule)
+    const { data: acceptedQuotes } = await supabase
+      .from("devis")
+      .select("id")
+      .in("statut", ["Accepté", "Signé"]);
+
+    let quotesToSchedule = 0;
+    if (acceptedQuotes && acceptedQuotes.length > 0) {
+      const quoteIds = acceptedQuotes.map(q => q.id);
+      const { data: linkedJobs } = await supabase
+        .from("jobs")
+        .select("quote_id")
+        .in("quote_id", quoteIds)
+        .not("statut", "eq", "Annulé");
+
+      const linkedQuoteIds = new Set(linkedJobs?.map(j => j.quote_id) || []);
+      quotesToSchedule = acceptedQuotes.filter(q => !linkedQuoteIds.has(q.id)).length;
+    }
+
     setAlerts({
       unpaidInvoices: { count: unpaidInvoicesData?.length || 0, total: unpaidTotal },
       overdueQuotes: overdueQuotesData?.length || 0,
       upcomingDeadlines: upcomingTotal,
+      quotesToSchedule,
     });
   };
 
@@ -106,6 +128,14 @@ export const AlertsStrip = () => {
       icon: FileText,
       color: alerts.overdueQuotes > 0 ? "red" : "gray",
       onClick: () => navigate("/devis?filter=overdue"),
+    },
+    {
+      label: "À planifier",
+      count: alerts.quotesToSchedule,
+      detail: "devis acceptés",
+      icon: Calendar,
+      color: alerts.quotesToSchedule > 0 ? "blue" : "gray",
+      onClick: () => navigate("/devis?filter=to_schedule"),
     },
     {
       label: "Échéances proches (7j)",
