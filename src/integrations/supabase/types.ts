@@ -1297,15 +1297,20 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          billing_status: string | null
           break_min: number | null
+          client_id: string | null
           cost: number
           created_at: string
           date: string
+          description: string | null
           employee_id: string
           end_at: string | null
           hourly_rate: number | null
           hours: number
           id: string
+          invoice_id: string | null
+          is_billable: boolean | null
           job_id: string | null
           note: string | null
           overtime_hours: number | null
@@ -1315,20 +1320,26 @@ export type Database = {
           start_at: string | null
           status: Database["public"]["Enums"]["timesheet_status"]
           submitted_at: string | null
+          travel_minutes: number | null
           updated_at: string
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_status?: string | null
           break_min?: number | null
+          client_id?: string | null
           cost?: number
           created_at?: string
           date: string
+          description?: string | null
           employee_id: string
           end_at?: string | null
           hourly_rate?: number | null
           hours?: number
           id?: string
+          invoice_id?: string | null
+          is_billable?: boolean | null
           job_id?: string | null
           note?: string | null
           overtime_hours?: number | null
@@ -1338,20 +1349,26 @@ export type Database = {
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
           submitted_at?: string | null
+          travel_minutes?: number | null
           updated_at?: string
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_status?: string | null
           break_min?: number | null
+          client_id?: string | null
           cost?: number
           created_at?: string
           date?: string
+          description?: string | null
           employee_id?: string
           end_at?: string | null
           hourly_rate?: number | null
           hours?: number
           id?: string
+          invoice_id?: string | null
+          is_billable?: boolean | null
           job_id?: string | null
           note?: string | null
           overtime_hours?: number | null
@@ -1361,6 +1378,7 @@ export type Database = {
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
           submitted_at?: string | null
+          travel_minutes?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1372,10 +1390,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheets_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "timesheets_entries_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "factures"
             referencedColumns: ["id"]
           },
           {
