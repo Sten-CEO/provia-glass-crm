@@ -38,5 +38,12 @@ export const EVENTS = {
   JOB_DELETED: 'pv:job:deleted',
   INVOICE_UPDATED: 'pv:invoice:updated',
   QUOTE_UPDATED: 'pv:quote:updated',
+  QUOTE_ACCEPTED: 'pv:quote:accepted',
+  QUOTE_CANCELED: 'pv:quote:canceled',
+  JOB_SCHEDULED: 'pv:job:scheduled',
+  JOB_RESCHEDULED: 'pv:job:rescheduled',
+  JOB_COMPLETED: 'pv:job:completed',
+  JOB_CANCELED: 'pv:job:canceled',
+  PURCHASE_RECEIVED: 'pv:purchase:received',
   PLANNING_UPDATED: 'pv:planning:updated',
 };

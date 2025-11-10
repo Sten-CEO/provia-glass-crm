@@ -51,7 +51,14 @@ const navSections = [
   {
     label: "RELATIONNEL",
     items: [
-      { title: "Clients", icon: Users, path: "/clients" },
+      { 
+        title: "Clients", 
+        icon: Users, 
+        path: "/clients",
+        subFunctions: [
+          { label: "Contrats", path: "/contracts" },
+        ]
+      },
       { title: "Devis", icon: FileText, path: "/devis" },
       { title: "Factures", icon: Receipt, path: "/factures" },
       { title: "Paiements", icon: Receipt, path: "/paiements" },

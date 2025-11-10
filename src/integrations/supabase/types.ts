@@ -164,6 +164,65 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          billing_frequency: string | null
+          client_id: string | null
+          contract_number: string
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          value_ht: number | null
+          value_ttc: number | null
+        }
+        Insert: {
+          billing_frequency?: string | null
+          client_id?: string | null
+          contract_number: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          value_ht?: number | null
+          value_ttc?: number | null
+        }
+        Update: {
+          billing_frequency?: string | null
+          client_id?: string | null
+          contract_number?: string
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          value_ht?: number | null
+          value_ttc?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devis: {
         Row: {
           accepted_at: string | null
@@ -629,6 +688,7 @@ export type Database = {
           files: Json | null
           id: string
           location: string | null
+          low_stock_threshold: number | null
           min_qty_alert: number | null
           name: string
           notes: string | null
@@ -649,6 +709,7 @@ export type Database = {
           files?: Json | null
           id?: string
           location?: string | null
+          low_stock_threshold?: number | null
           min_qty_alert?: number | null
           name: string
           notes?: string | null
@@ -669,6 +730,7 @@ export type Database = {
           files?: Json | null
           id?: string
           location?: string | null
+          low_stock_threshold?: number | null
           min_qty_alert?: number | null
           name?: string
           notes?: string | null
@@ -688,44 +750,60 @@ export type Database = {
       inventory_movements: {
         Row: {
           created_at: string
+          created_by: string | null
           date: string
+          effective_at: string | null
           id: string
           item_id: string | null
           note: string | null
           qty: number
           ref_id: string | null
           ref_number: string | null
+          scheduled_at: string | null
           source: string
           status: string
           type: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           date?: string
+          effective_at?: string | null
           id?: string
           item_id?: string | null
           note?: string | null
           qty: number
           ref_id?: string | null
           ref_number?: string | null
+          scheduled_at?: string | null
           source: string
           status?: string
           type: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           date?: string
+          effective_at?: string | null
           id?: string
           item_id?: string | null
           note?: string | null
           qty?: number
           ref_id?: string | null
           ref_number?: string | null
+          scheduled_at?: string | null
           source?: string
           status?: string
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_movements_item_id_fkey"
             columns: ["item_id"]
@@ -813,6 +891,7 @@ export type Database = {
           checklist: Json | null
           client_id: string | null
           client_nom: string
+          contract_id: string | null
           converted_from_quote_id: string | null
           costs: Json | null
           created_at: string
@@ -844,6 +923,7 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom: string
+          contract_id?: string | null
           converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
@@ -875,6 +955,7 @@ export type Database = {
           checklist?: Json | null
           client_id?: string | null
           client_nom?: string
+          contract_id?: string | null
           converted_from_quote_id?: string | null
           costs?: Json | null
           created_at?: string
@@ -906,6 +987,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
           {

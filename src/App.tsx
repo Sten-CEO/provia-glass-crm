@@ -8,6 +8,8 @@ import AppShell from "./components/layout/AppShell";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
+import Contracts from "./pages/Contracts";
+import ContractDetail from "./pages/ContractDetail";
 import Planning from "./pages/Planning";
 import Devis from "./pages/Devis";
 import Factures from "./pages/Factures";
@@ -50,6 +52,8 @@ const App = () => (
             <Route path="/tableau-de-bord" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
+            <Route path="/contracts" element={<Contracts />} />
+            <Route path="/contracts/:id" element={<ContractDetail />} />
             <Route path="/planning" element={<Planning />} />
             <Route path="/devis" element={<Devis />} />
             <Route path="/devis/new" element={<DevisEditor />} />
