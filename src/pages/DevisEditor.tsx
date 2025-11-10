@@ -350,9 +350,18 @@ const DevisEditor = () => {
       site_address: quote.site_address || quote.property_address || null,
     };
 
-    const prevStatus = previousStatus;
-
+    // Récupérer le statut actuel AVANT la mise à jour pour détecter le changement
+    let prevStatus = previousStatus;
     if (id && !isNewQuote && quote.id) {
+      // Charger le statut actuel depuis la DB
+      const { data: currentQuote } = await supabase
+        .from("devis")
+        .select("statut, auto_create_job_on_accept")
+        .eq("id", id)
+        .single();
+      
+      prevStatus = currentQuote?.statut;
+      
       const { error } = await supabase.from("devis").update(payload).eq("id", id);
       if (error) {
         toast.error("Erreur de sauvegarde");
@@ -360,11 +369,23 @@ const DevisEditor = () => {
       }
       setQuote((q) => ({ ...q, numero: finalNumber }));
       
+      // Log pour debug
+      console.log("Auto-create check:", {
+        auto_create_enabled: payload.auto_create_job_on_accept,
+        new_status: payload.statut,
+        prev_status: prevStatus,
+        should_create: payload.auto_create_job_on_accept && 
+          (payload.statut === "Accepté" || payload.statut === "Signé") && 
+          prevStatus !== "Accepté" && 
+          prevStatus !== "Signé"
+      });
+      
       // Auto-créer l'intervention si activé et statut devient Accepté/Signé
-      if (quote.auto_create_job_on_accept && 
+      if (payload.auto_create_job_on_accept && 
           (payload.statut === "Accepté" || payload.statut === "Signé") && 
           prevStatus !== "Accepté" && 
           prevStatus !== "Signé") {
+        console.log("Création automatique de l'intervention...");
         await createJobFromQuote();
       }
     } else {
@@ -402,7 +423,12 @@ const DevisEditor = () => {
   };
 
   const createJobFromQuote = async () => {
-    if (!quote.id) return;
+    if (!quote.id) {
+      console.error("Pas d'ID de devis pour créer l'intervention");
+      return;
+    }
+
+    console.log("createJobFromQuote appelée pour devis:", quote.id);
 
     // Vérifier qu'aucune intervention n'existe déjà
     const { data: existingJob } = await supabase
@@ -412,7 +438,8 @@ const DevisEditor = () => {
       .maybeSingle();
 
     if (existingJob) {
-      console.log("Une intervention existe déjà pour ce devis");
+      console.log("Une intervention existe déjà pour ce devis:", existingJob.id);
+      toast.info("Une intervention existe déjà pour ce devis");
       return;
     }
 
@@ -422,7 +449,7 @@ const DevisEditor = () => {
       titre: quote.title || `Intervention suite au devis ${quote.numero}`,
       client_id: quote.client_id,
       client_nom: quote.client_nom,
-      employe_id: quote.assignee_id,
+      employe_id: quote.assignee_id || null,
       employe_nom: employee?.nom || "",
       assigned_employee_ids: quote.assignee_id ? [quote.assignee_id] : [],
       date: quote.planned_date || new Date().toISOString().split("T")[0],
@@ -439,15 +466,28 @@ const DevisEditor = () => {
       })) as unknown as any,
     };
 
-    const { data: newJob, error: jobError } = await supabase.from("jobs").insert([jobPayload]).select().single();
+    console.log("Payload intervention:", jobPayload);
 
-    if (jobError || !newJob) {
-      toast.error("Erreur lors de la création de l'intervention");
-      console.error(jobError);
+    const { data: newJob, error: jobError } = await supabase
+      .from("jobs")
+      .insert([jobPayload])
+      .select()
+      .single();
+
+    if (jobError) {
+      console.error("Erreur création intervention:", jobError);
+      toast.error("Erreur lors de la création de l'intervention: " + jobError.message);
       return;
     }
 
-    toast.success(`Intervention créée automatiquement et liée au devis ${quote.numero}`);
+    if (!newJob) {
+      console.error("Pas de données retournées après insertion");
+      toast.error("Erreur lors de la création de l'intervention");
+      return;
+    }
+
+    console.log("Intervention créée avec succès:", newJob.id);
+    toast.success(`Intervention créée automatiquement (${newJob.titre})`);
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
   };
 
