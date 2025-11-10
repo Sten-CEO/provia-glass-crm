@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
 import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
+import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 
 interface LigneDevis {
   description: string;
@@ -28,6 +29,7 @@ const DevisDetail = () => {
   const [lignes, setLignes] = useState<LigneDevis[]>([]);
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -153,6 +155,10 @@ const DevisDetail = () => {
           <Button onClick={handleSave} variant="outline">
             <Save className="mr-2 h-4 w-4" />
             Enregistrer
+          </Button>
+          <Button onClick={() => setPdfPreviewOpen(true)} variant="outline">
+            <FileText className="mr-2 h-4 w-4" />
+            Aperçu PDF
           </Button>
           <Button
             onClick={async () => {
@@ -409,6 +415,14 @@ const DevisDetail = () => {
         onOpenChange={setConvertDialogOpen}
         quoteId={devis.id}
         quoteData={devis}
+      />
+
+      <PdfPreviewModal
+        open={pdfPreviewOpen}
+        onOpenChange={setPdfPreviewOpen}
+        documentType="QUOTE"
+        documentData={devis}
+        templateId={devis.template_id}
       />
     </div>
   );

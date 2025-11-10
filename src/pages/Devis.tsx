@@ -273,14 +273,38 @@ const Devis = () => {
                     €{(quote.total_ttc || parseFloat(quote.montant) || 0).toFixed(2)}
                   </td>
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      <StatusChip variant={getStatusVariant(quote.statut)}>
-                        {quote.statut}
-                      </StatusChip>
-                      {isExpired(quote) && (
-                        <StatusChip variant="gray">Expiré</StatusChip>
-                      )}
-                    </div>
+                    <Select 
+                      value={quote.statut} 
+                      onValueChange={async (newStatus) => {
+                        const { error } = await supabase
+                          .from("devis")
+                          .update({ statut: newStatus })
+                          .eq("id", quote.id);
+                        
+                        if (error) {
+                          toast.error("Erreur lors du changement de statut");
+                        } else {
+                          toast.success("Statut mis à jour");
+                          loadQuotes();
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <StatusChip variant={getStatusVariant(quote.statut)}>
+                          {quote.statut}
+                        </StatusChip>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Brouillon">Brouillon</SelectItem>
+                        <SelectItem value="Envoyé">Envoyé</SelectItem>
+                        <SelectItem value="Accepté">Accepté</SelectItem>
+                        <SelectItem value="Refusé">Refusé</SelectItem>
+                        <SelectItem value="Annulé">Annulé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {isExpired(quote) && (
+                      <StatusChip variant="gray" className="ml-2">Expiré</StatusChip>
+                    )}
                   </td>
                   <td className="p-4 text-muted-foreground text-sm">
                     {quote.expiry_date ? formatDate(quote.expiry_date) : "—"}
