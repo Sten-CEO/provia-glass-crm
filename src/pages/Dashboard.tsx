@@ -85,7 +85,7 @@ const Dashboard = () => {
   };
 
   const statsDisplay = [
-    { label: "Jobs du jour", value: stats.jobsCount.toString(), icon: Briefcase, color: "text-primary" },
+    { label: "Interventions du jour", value: stats.jobsCount.toString(), icon: Briefcase, color: "text-primary" },
     { label: "Devis en attente", value: stats.devisCount.toString(), icon: FileText, color: "text-secondary" },
     { label: "Factures à encaisser", value: `${stats.facturesCount} · ${stats.facturesTotal}`, icon: Receipt, color: "text-primary" },
     { label: "Employés actifs", value: stats.employesCount.toString(), icon: Users, color: "text-secondary" },
@@ -114,7 +114,7 @@ const Dashboard = () => {
           <DropdownMenuContent align="end" className="glass-modal w-56">
             <DropdownMenuItem onClick={() => navigate("/clients")}>Créer un client</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/devis")}>Créer un devis</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/jobs")}>Créer un job</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/interventions")}>Créer une intervention</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/factures")}>Créer une facture</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
