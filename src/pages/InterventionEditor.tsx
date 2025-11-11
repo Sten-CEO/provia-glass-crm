@@ -12,7 +12,7 @@ import {
 } from "@/lib/interventionInventorySync";
 import { syncQuoteConsumablesToIntervention } from "@/lib/quoteToInterventionSync";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Save, FileText, CheckCircle2, Repeat } from "lucide-react";
+import { ArrowLeft, Save, FileText, CheckCircle2, Repeat, Settings } from "lucide-react";
 import { GeneralInfoSection } from "@/components/interventions/GeneralInfoSection";
 import { ConsumablesSection } from "@/components/interventions/ConsumablesSection";
 import { ServicesSection } from "@/components/interventions/ServicesSection";
@@ -21,6 +21,8 @@ import { FilesSection } from "@/components/interventions/FilesSection";
 import { NotesSignatureSection } from "@/components/interventions/NotesSignatureSection";
 import { InvoiceSection } from "@/components/interventions/InvoiceSection";
 import { RecurrenceDialog } from "@/components/interventions/RecurrenceDialog";
+import { DisplayOptionsPanel } from "@/components/common/DisplayOptionsPanel";
+import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 
 export default function InterventionEditor() {
   const { id } = useParams();
@@ -31,6 +33,30 @@ export default function InterventionEditor() {
   const [saving, setSaving] = useState(false);
   const [intervention, setIntervention] = useState<any>(null);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [displayOptionsOpen, setDisplayOptionsOpen] = useState(false);
+
+  const availableSections = [
+    { key: "client_info", label: "Informations client" },
+    { key: "employee_info", label: "Informations employé / technicien" },
+    { key: "category_contract", label: "Catégorie & contrat" },
+    { key: "travel_expenses", label: "Frais de déplacement" },
+    { key: "materials", label: "Matériels / consommables utilisés" },
+    { key: "equipment", label: "Équipements" },
+    { key: "internal_notes", label: "Notes internes secrétariat" },
+    { key: "satisfaction", label: "Satisfaction client / suivi qualité" },
+    { key: "gps", label: "Coordonnées GPS / géolocalisation" },
+    { key: "documents", label: "Documents joints / photos" },
+    { key: "history", label: "Historique interventions précédentes" },
+  ];
+
+  const {
+    settings: displaySettings,
+    loading: displayLoading,
+    toggleColumn,
+    saveView,
+    deleteView,
+    applyView,
+  } = useDisplaySettings("intervention", availableSections.map(s => s.key));
 
   // Charger l'intervention si mode édition
   useEffect(() => {
@@ -321,6 +347,14 @@ export default function InterventionEditor() {
             </div>
             
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setDisplayOptionsOpen(true)}
+                title="Options d'affichage"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
               {isEditMode && intervention.statut !== "Terminée" && (
                 <>
                   <Button variant="outline" onClick={() => setRecurrenceOpen(true)}>
@@ -402,6 +436,18 @@ export default function InterventionEditor() {
           interventionData={intervention}
         />
       )}
+
+      {/* Display Options Panel */}
+      <DisplayOptionsPanel
+        open={displayOptionsOpen}
+        onOpenChange={setDisplayOptionsOpen}
+        settings={displaySettings}
+        availableColumns={availableSections}
+        onToggleColumn={toggleColumn}
+        onSaveView={saveView}
+        onDeleteView={deleteView}
+        onApplyView={applyView}
+      />
     </div>
   );
 }
