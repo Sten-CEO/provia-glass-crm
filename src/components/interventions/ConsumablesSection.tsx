@@ -30,11 +30,22 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
   }, [itemCategory]);
 
   const loadInventoryItems = async () => {
-    const { data } = await supabase
+    // Map UI category to DB type
+    const dbType = itemCategory === "consumable" ? "consommable" : "matériel";
+    
+    const { data, error } = await supabase
       .from("inventory_items")
       .select("*")
-      .eq("type", itemCategory)
+      .eq("type", dbType)
       .order("name");
+    
+    if (error) {
+      console.error("Error loading inventory items:", error);
+      toast.error("Erreur lors du chargement des produits");
+      return;
+    }
+    
+    console.log(`Loaded ${data?.length || 0} items for type: ${dbType}`, data);
     if (data) setInventoryItems(data);
   };
 
@@ -231,24 +242,30 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                       onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
                     >
                       <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Sélectionner" />
+                        <SelectValue placeholder="Sélectionner un produit" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
+                      <SelectContent className="z-[100] bg-popover max-h-[300px] overflow-y-auto">
                         <SelectItem value="none">Sélectionner un produit</SelectItem>
-                        {inventoryItems.map((item) => {
-                          const available = item.qty_on_hand - (item.qty_reserved || 0);
-                          return (
-                            <SelectItem key={item.id} value={item.id}>
-                              <div className="flex items-center gap-2">
-                                <span>{item.name}</span>
-                                {item.sku && <span className="text-xs text-muted-foreground">({item.sku})</span>}
-                                <span className={`text-xs ${available <= 0 ? 'text-destructive' : 'text-success'}`}>
-                                  • Dispo: {available}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
+                        {inventoryItems.length === 0 ? (
+                          <div className="p-4 text-sm text-muted-foreground text-center">
+                            Aucun {itemCategory === "consumable" ? "consommable" : "matériau"} disponible
+                          </div>
+                        ) : (
+                          inventoryItems.map((item) => {
+                            const available = item.qty_on_hand - (item.qty_reserved || 0);
+                            return (
+                              <SelectItem key={item.id} value={item.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{item.name}</span>
+                                  {item.sku && <span className="text-xs text-muted-foreground">({item.sku})</span>}
+                                  <span className={`text-xs ${available <= 0 ? 'text-destructive' : 'text-success'}`}>
+                                    • Dispo: {available}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                   </TableCell>
