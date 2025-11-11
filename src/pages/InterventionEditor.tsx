@@ -165,7 +165,7 @@ export default function InterventionEditor() {
     setSaving(true);
     try {
       if (isEditMode) {
-        // Check if date changed for rescheduling reservations
+        // Check if date changed for rescheduling reservations and status changed
         const { data: oldIntervention } = await supabase
           .from("jobs")
           .select("date, statut")
@@ -187,7 +187,18 @@ export default function InterventionEditor() {
           await rescheduleInventoryReservations(id!, intervention.date);
         }
 
-        toast.success("Intervention mise à jour");
+        // Auto-consume inventory when status changes to "Terminée"
+        if (oldIntervention && 
+            oldIntervention.statut !== "Terminée" && 
+            intervention.statut === "Terminée") {
+          await consumeReservedInventory(
+            id!,
+            intervention.intervention_number || "INT-" + id
+          );
+          toast.success("Intervention terminée et stock consommé");
+        } else {
+          toast.success("Intervention mise à jour");
+        }
       } else {
         const { data, error } = await supabase
           .from("jobs")

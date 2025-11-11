@@ -74,13 +74,13 @@ export async function consumeReservedInventory(
 
     if (error) throw error;
 
-    // Cancel planned reservations
+    // Cancel planned reservations (both reserve and out types)
     await supabase
       .from("inventory_movements")
       .update({ status: "canceled" })
       .eq("ref_id", interventionId)
       .eq("status", "planned")
-      .eq("type", "reserve");
+      .in("type", ["reserve", "out"]);
 
     // Create actual consumption movements
     for (const consumable of consumables || []) {
@@ -126,13 +126,13 @@ export async function consumeReservedInventory(
  */
 export async function cancelInventoryReservations(interventionId: string) {
   try {
-    // Get all planned reservations for this intervention
+    // Get all planned reservations for this intervention (both reserve and out types)
     const { data: movements, error } = await supabase
       .from("inventory_movements")
       .select("*")
       .eq("ref_id", interventionId)
       .eq("status", "planned")
-      .eq("type", "reserve");
+      .in("type", ["reserve", "out"]);
 
     if (error) throw error;
 
@@ -178,7 +178,7 @@ export async function rescheduleInventoryReservations(
       .update({ scheduled_at: newScheduledDate })
       .eq("ref_id", interventionId)
       .eq("status", "planned")
-      .eq("type", "reserve");
+      .in("type", ["reserve", "out"]);
   } catch (error) {
     console.error("Error rescheduling reservations:", error);
     throw error;

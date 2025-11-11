@@ -347,9 +347,15 @@ const InventaireConsommables = () => {
                     </td>
                     <td className="p-4">
                       {item.qty_reserved > 0 ? (
-                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-                          {item.qty_reserved}
-                        </Badge>
+                        <Button
+                          variant="ghost"
+                          className="p-0 h-auto hover:bg-transparent"
+                          onClick={() => handleViewDetails(item.id)}
+                        >
+                          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 cursor-pointer hover:bg-warning/20 transition-colors">
+                            {item.qty_reserved} réservés
+                          </Badge>
+                        </Button>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

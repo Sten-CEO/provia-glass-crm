@@ -123,6 +123,17 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       return;
     }
 
+    // Get intervention number for the movement reference
+    let interventionNumber = "";
+    if (interventionId) {
+      const { data: jobData } = await supabase
+        .from("jobs")
+        .select("intervention_number")
+        .eq("id", interventionId)
+        .single();
+      interventionNumber = jobData?.intervention_number || "";
+    }
+
     // Create planned inventory movement instead of immediate consumption
     await supabase.from("inventory_movements").insert([{
       item_id: itemId,
@@ -130,7 +141,8 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       qty: qty,
       source: "intervention",
       ref_id: interventionId,
-      note: `Prévisionnel intervention`,
+      ref_number: interventionNumber,
+      note: `Prévisionnel intervention ${interventionNumber}`,
       status: "planned",
       scheduled_at: new Date().toISOString(),
     }]);
