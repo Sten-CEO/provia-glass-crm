@@ -304,8 +304,18 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                             Chargement...
                           </div>
                         ) : inventoryItems.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground text-center">
-                            Aucun {itemCategory === "consumable" ? "consommable" : "matériau"} disponible
+                          <div className="p-4 text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              Aucun {itemCategory === "consumable" ? "consommable" : "matériau"} disponible
+                            </p>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => window.open(`/inventaire/${itemCategory === "consumable" ? "consommables" : "materiels"}`, '_blank')}
+                              className="text-xs"
+                            >
+                              Créer un {itemCategory === "consumable" ? "consommable" : "matériau"}
+                            </Button>
                           </div>
                         ) : (
                           inventoryItems

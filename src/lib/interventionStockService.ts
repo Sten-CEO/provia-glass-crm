@@ -62,7 +62,7 @@ export async function completeInterventionStock(
       .eq("id", movement.id);
 
     if (isConsumable) {
-      // CONSUMABLE: Create actual consumption (out) - decrements stock
+      // CONSUMABLE: Convert planned to actual consumption - decrements stock
       await createInventoryMovement({
         item_id: movement.item_id,
         type: "out",
@@ -70,45 +70,55 @@ export async function completeInterventionStock(
         source: "intervention",
         ref_id: interventionId,
         ref_number: interventionNumber,
-        note: `Consommation intervention ${interventionNumber} (terminée)`,
+        note: `Consommation intervention ${interventionNumber}`,
         status: "done",
         date: new Date().toISOString(),
       });
 
-      // Update stock (will be decremented by createInventoryMovement)
-      await updateItemStock(movement.item_id);
+      // Decrement stock
+      const { data: item } = await supabase
+        .from("inventory_items")
+        .select("qty_on_hand")
+        .eq("id", movement.item_id)
+        .single();
+
+      if (item) {
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_on_hand: Math.max(0, (item.qty_on_hand || 0) - movement.qty),
+          })
+          .eq("id", movement.item_id);
+      }
     } else {
-      // MATERIAL: Create restitution - unreserve only, no stock change
+      // MATERIAL: Create return/release movement - unreserve only, NO stock deduction
       await createInventoryMovement({
         item_id: movement.item_id,
-        type: "reserve",
-        qty: -movement.qty, // Negative to unreserve
+        type: "in", // Return/release
+        qty: movement.qty,
         source: "intervention",
         ref_id: interventionId,
         ref_number: interventionNumber,
-        note: `Restitution matériel intervention ${interventionNumber} (terminée)`,
+        note: `Restitution matériel intervention ${interventionNumber}`,
         status: "done",
         date: new Date().toISOString(),
       });
 
-      // Manually unreserve the material
-      const { data: currentItem } = await supabase
+      // Unreserve the material (no stock change)
+      const { data: item } = await supabase
         .from("inventory_items")
         .select("qty_reserved")
         .eq("id", movement.item_id)
         .single();
 
-      if (currentItem) {
+      if (item) {
         await supabase
           .from("inventory_items")
           .update({
-            qty_reserved: Math.max(0, (currentItem.qty_reserved || 0) - movement.qty),
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - movement.qty),
           })
           .eq("id", movement.item_id);
       }
-
-      // Update reserved calculation
-      await updateItemStock(movement.item_id);
     }
   }
 }
