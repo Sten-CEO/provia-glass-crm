@@ -96,8 +96,12 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
     }
   };
 
+  const plannedConsumables = movements.filter(
+    m => m.status === "planned" && m.type === "expected_out"
+  );
+
   const plannedReservations = movements.filter(
-    m => m.status === "planned" && (m.type === "reserve" || m.type === "expected_out")
+    m => m.status === "planned" && m.type === "reserve"
   );
 
   const plannedIncoming = movements.filter(
@@ -205,22 +209,74 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
             )}
           </div>
 
-          {/* Planned Reservations */}
-          {plannedReservations.length > 0 && (
-            <div className="glass-card p-4 space-y-3">
+          {/* Planned Consumables (À prévoir) */}
+          {plannedConsumables.length > 0 && (
+            <div className="glass-card p-4 space-y-3 border-l-4 border-orange-500">
               <h3 className="font-semibold flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-warning" />
-                Réservations planifiées ({plannedReservations.length})
+                <Calendar className="h-5 w-5 text-orange-600" />
+                À prévoir - Consommables ({plannedConsumables.length})
               </h3>
+              <p className="text-xs text-muted-foreground">
+                Ces consommables seront déduits du stock lors de la finalisation des interventions
+              </p>
+              <div className="space-y-2">
+                {plannedConsumables.map((movement) => (
+                  <div
+                    key={movement.id}
+                    className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-orange-600">-{movement.qty}</span>
+                        {movement.scheduled_at && (
+                          <span className="text-sm text-muted-foreground">
+                            prévu le {format(new Date(movement.scheduled_at), "dd MMM yyyy", { locale: fr })}
+                          </span>
+                        )}
+                      </div>
+                      {movement.ref_number && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {movement.source === "devis" ? "Devis" : movement.source === "intervention" ? "Intervention" : movement.source} {movement.ref_number}
+                        </p>
+                      )}
+                      {movement.note && (
+                        <p className="text-xs text-muted-foreground mt-1">{movement.note}</p>
+                      )}
+                    </div>
+                    {movement.ref_id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleNavigateToSource(movement)}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Planned Material Reservations */}
+          {plannedReservations.length > 0 && (
+            <div className="glass-card p-4 space-y-3 border-l-4 border-blue-500">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                Réservés - Matériaux ({plannedReservations.length})
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Ces matériaux sont réservés et seront restitués après les interventions (pas de déduction de stock)
+              </p>
               <div className="space-y-2">
                 {plannedReservations.map((movement) => (
                   <div
                     key={movement.id}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-warning">-{movement.qty}</span>
+                        <span className="font-medium text-blue-600">🔒 {movement.qty}</span>
                         {movement.scheduled_at && (
                           <span className="text-sm text-muted-foreground">
                             prévu le {format(new Date(movement.scheduled_at), "dd MMM yyyy", { locale: fr })}
@@ -310,8 +366,15 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
                       <span className="font-medium">
                         {getMovementLabel(movement.type)}
                       </span>
-                      <span className={movement.type === "in" ? "text-success" : "text-destructive"}>
-                        {movement.type === "in" ? "+" : "-"}{movement.qty}
+                       <span className={
+                         movement.type === "in" 
+                           ? "text-success font-medium" 
+                           : movement.type === "reserve" && movement.qty < 0
+                           ? "text-success font-medium"
+                           : "text-destructive font-medium"
+                       }>
+                        {movement.type === "in" || (movement.type === "reserve" && movement.qty < 0) ? "+" : "-"}
+                        {Math.abs(movement.qty)}
                       </span>
                       {getStatusBadge(movement.status)}
                     </div>

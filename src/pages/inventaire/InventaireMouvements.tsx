@@ -62,12 +62,20 @@ const InventaireMouvements = () => {
     };
   }, []);
 
-  const getTypeLabel = (type: string) => {
+  const getTypeLabel = (type: string, status?: string) => {
     const labels: Record<string, string> = {
       in: "Entrée",
       out: "Sortie",
       reserve: "Réservation",
+      expected_out: "Sortie prévue",
     };
+    
+    // Special handling for planned consumables vs reserved materials
+    if (status === "planned") {
+      if (type === "expected_out") return "À prévoir (conso)";
+      if (type === "reserve") return "Réservé (mat)";
+    }
+    
     return labels[type] || type;
   };
 
@@ -119,6 +127,7 @@ const InventaireMouvements = () => {
                 <SelectItem value="in">Entrée</SelectItem>
                 <SelectItem value="out">Sortie</SelectItem>
                 <SelectItem value="reserve">Réservation</SelectItem>
+                <SelectItem value="expected_out">À prévoir</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -198,7 +207,18 @@ const InventaireMouvements = () => {
                     })}
                   </td>
                   <td className="p-4">
-                    <Badge variant="outline">{getTypeLabel(movement.type)}</Badge>
+                    <Badge 
+                      variant="outline"
+                      className={
+                        movement.status === "planned" && movement.type === "expected_out" 
+                          ? "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                          : movement.status === "planned" && movement.type === "reserve"
+                          ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                          : ""
+                      }
+                    >
+                      {getTypeLabel(movement.type, movement.status)}
+                    </Badge>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground capitalize">{movement.source}</td>
                   <td className="p-4 text-sm text-muted-foreground">{movement.ref_number || "—"}</td>
