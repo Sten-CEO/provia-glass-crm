@@ -44,7 +44,14 @@ const navSections = [
     items: [
       { title: "Tableau de bord", icon: LayoutDashboard, path: "/tableau-de-bord" },
       { title: "Planning", icon: Calendar, path: "/planning" },
-      { title: "Interventions", icon: Briefcase, path: "/interventions" },
+      { 
+        title: "Interventions", 
+        icon: Briefcase, 
+        path: "/interventions",
+        subFunctions: [
+          { label: "Historique & rapport", path: "/interventions/history" },
+        ]
+      },
       { title: "Timesheets", icon: Clock, path: "/timesheets" },
     ],
   },

@@ -209,21 +209,12 @@ const Interventions = () => {
             </thead>
             <tbody>
               {filteredInterventions.map((intervention) => (
-                <tr key={intervention.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/interventions/${intervention.id}`)}>
-                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                <tr key={intervention.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
+                  <td className="p-4">
                     <StatusBadgeIntervention status={intervention.statut} />
                   </td>
                   <td className="p-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/interventions/${intervention.id}`);
-                      }}
-                      className="font-medium hover:underline text-left"
-                    >
-                      {intervention.titre}
-                    </button>
+                    <span className="font-medium">{intervention.titre}</span>
                   </td>
                   <td className="p-4 text-muted-foreground">{intervention.client_nom}</td>
                   <td className="p-4 text-muted-foreground">
@@ -260,15 +251,12 @@ const Interventions = () => {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                  <td className="p-4">
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/interventions/${intervention.id}`);
-                        }}
+                        onClick={() => navigate(`/interventions/${intervention.id}/report`)}
                         title="Voir fiche"
                       >
                         <Eye className="h-4 w-4" />
@@ -276,10 +264,7 @@ const Interventions = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/interventions/${intervention.id}/editer`);
-                        }}
+                        onClick={() => navigate(`/interventions/${intervention.id}/editer`)}
                         title="Modifier"
                       >
                         <Edit className="h-4 w-4" />
@@ -287,8 +272,7 @@ const Interventions = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           setSelectedIntervention(intervention);
                           setDeleteOpen(true);
                         }}

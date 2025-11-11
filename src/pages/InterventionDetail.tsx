@@ -207,7 +207,7 @@ export default function InterventionDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => navigate(`/interventions/${id}/edit`)}>
+              <Button variant="outline" onClick={() => navigate(`/interventions/${id}/editer`)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Modifier
               </Button>
@@ -217,10 +217,6 @@ export default function InterventionDetail() {
                   Marquer terminée
                 </Button>
               )}
-              <Button variant="outline" onClick={handleDuplicate}>
-                <Copy className="h-4 w-4 mr-2" />
-                Dupliquer
-              </Button>
               {job.statut !== "Annulé" && (
                 <Button variant="destructive" onClick={handleCancel}>
                   <X className="h-4 w-4 mr-2" />
