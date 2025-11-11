@@ -768,6 +768,44 @@ export type Database = {
           },
         ]
       }
+      intervention_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          intervention_id: string
+          rating: number | null
+          signer_name: string | null
+          submitted_at: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          intervention_id: string
+          rating?: number | null
+          signer_name?: string | null
+          submitted_at?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          intervention_id?: string
+          rating?: number | null
+          signer_name?: string | null
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_feedback_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intervention_files: {
         Row: {
           category: string | null
@@ -802,6 +840,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "intervention_files_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intervention_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          intervention_id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          intervention_id: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          intervention_id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_logs_intervention_id_fkey"
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "jobs"
