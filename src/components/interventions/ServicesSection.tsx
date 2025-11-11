@@ -183,11 +183,19 @@ export function ServicesSection({ interventionId }: ServicesSectionProps) {
                         <SelectTrigger className="w-[150px]">
                           <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-[300px]">
                           <SelectItem value="none">Sélectionner un service</SelectItem>
                           {serviceItems.map((service) => (
                             <SelectItem key={service.id} value={service.id}>
-                              {service.name}
+                              <div className="flex items-center gap-2">
+                                <span>{service.name}</span>
+                                {service.category && (
+                                  <span className="text-xs text-muted-foreground">• {service.category}</span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {service.default_price_ht}€ HT
+                                </span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>

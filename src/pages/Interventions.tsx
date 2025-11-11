@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Eye, Search, MapPin, Users, Menu } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { StatusChip } from "@/components/ui/status-chip";
+import { StatusBadgeIntervention } from "@/components/ui/status-badge-intervention";
+import { type InterventionStatus } from "@/lib/interventionStatuses";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
@@ -41,7 +42,7 @@ interface Intervention {
   client_nom: string;
   employe_id: string | null;
   employe_nom: string;
-  statut: "À faire" | "En cours" | "Terminé" | "Assigné" | "Annulé";
+  statut: InterventionStatus;
   date: string;
   adresse?: string;
   assigned_employee_ids?: string[];
@@ -56,17 +57,8 @@ const Interventions = () => {
   const [employes, setEmployes] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [open, setOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
-  const [newIntervention, setNewIntervention] = useState({
-    titre: "",
-    client_id: "",
-    employe_id: "",
-    statut: "À faire" as const,
-    date: new Date().toISOString().split("T")[0],
-  });
   const navigate = useNavigate();
 
   const loadInterventions = async () => {
@@ -115,65 +107,6 @@ const Interventions = () => {
     };
   }, []);
 
-  const handleAddIntervention = async () => {
-    if (!newIntervention.titre || !newIntervention.client_id || !newIntervention.employe_id) {
-      toast.error("Tous les champs requis");
-      return;
-    }
-
-    const client = clients.find((c) => c.id === newIntervention.client_id);
-    const employe = employes.find((e) => e.id === newIntervention.employe_id);
-
-    const { error } = await supabase.from("jobs").insert([
-      {
-        titre: newIntervention.titre,
-        client_id: newIntervention.client_id,
-        client_nom: client?.nom || "",
-        employe_id: newIntervention.employe_id,
-        employe_nom: employe?.nom || "",
-        statut: newIntervention.statut,
-        date: newIntervention.date,
-      },
-    ]);
-
-    if (error) {
-      toast.error("Échec de création");
-      return;
-    }
-
-    toast.success("Intervention créée avec succès");
-    setNewIntervention({
-      titre: "",
-      client_id: "",
-      employe_id: "",
-      statut: "À faire",
-      date: new Date().toISOString().split("T")[0],
-    });
-    setOpen(false);
-  };
-
-  const handleEditIntervention = async () => {
-    if (!selectedIntervention) return;
-
-    const { error } = await supabase
-      .from("jobs")
-      .update({
-        titre: selectedIntervention.titre,
-        statut: selectedIntervention.statut,
-        date: selectedIntervention.date,
-      })
-      .eq("id", selectedIntervention.id);
-
-    if (error) {
-      toast.error("Échec de modification");
-      return;
-    }
-
-    toast.success("Intervention modifiée avec succès");
-    setEditOpen(false);
-    setSelectedIntervention(null);
-  };
-
   const handleDeleteIntervention = async () => {
     if (!selectedIntervention) return;
 
@@ -190,13 +123,6 @@ const Interventions = () => {
     setSelectedIntervention(null);
   };
 
-  const getStatusVariant = (statut: Intervention["statut"]) => {
-    if (statut === "Terminé") return "gray";
-    if (statut === "En cours") return "amber";
-    if (statut === "Assigné" || statut === "À faire") return "blue";
-    if (statut === "Annulé") return "red";
-    return "gray";
-  };
 
   const getChecklistProgress = (intervention: Intervention) => {
     if (!intervention.checklist || intervention.checklist.length === 0) return 0;
@@ -256,11 +182,11 @@ const Interventions = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="À planifier">À planifier</SelectItem>
               <SelectItem value="À faire">À faire</SelectItem>
-              <SelectItem value="Assigné">Assigné</SelectItem>
               <SelectItem value="En cours">En cours</SelectItem>
-              <SelectItem value="Terminé">Terminé</SelectItem>
-              <SelectItem value="Annulé">Annulé</SelectItem>
+              <SelectItem value="Terminée">Terminée</SelectItem>
+              <SelectItem value="Annulée">Annulée</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -286,7 +212,7 @@ const Interventions = () => {
                 <tr key={intervention.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => navigate(`/interventions/${intervention.id}`)}>
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    <StatusChip variant={getStatusVariant(intervention.statut)}>{intervention.statut}</StatusChip>
+                    <StatusBadgeIntervention status={intervention.statut} />
                   </td>
                   <td className="p-4">
                     <button
@@ -352,8 +278,7 @@ const Interventions = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedIntervention(intervention);
-                          setEditOpen(true);
+                          navigate(`/interventions/${intervention.id}/editer`);
                         }}
                         title="Modifier"
                       >
@@ -379,53 +304,6 @@ const Interventions = () => {
           </table>
         </div>
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="glass-modal">
-          <DialogHeader>
-            <DialogTitle className="uppercase tracking-wide">Modifier Intervention</DialogTitle>
-          </DialogHeader>
-          {selectedIntervention && (
-            <div className="space-y-4">
-              <div>
-                <Label>Titre</Label>
-                <Input
-                  value={selectedIntervention.titre}
-                  onChange={(e) => setSelectedIntervention({ ...selectedIntervention, titre: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={selectedIntervention.date}
-                  onChange={(e) => setSelectedIntervention({ ...selectedIntervention, date: e.target.value })}
-                  className="glass-card"
-                />
-              </div>
-              <div>
-                <Label>Statut</Label>
-                <Select value={selectedIntervention.statut} onValueChange={(v: any) => setSelectedIntervention({ ...selectedIntervention, statut: v })}>
-                  <SelectTrigger className="glass-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="À faire">À faire</SelectItem>
-                    <SelectItem value="En cours">En cours</SelectItem>
-                    <SelectItem value="Terminé">Terminé</SelectItem>
-                    <SelectItem value="Annulé">Annulé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleEditIntervention} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
-                Enregistrer
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Alert */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

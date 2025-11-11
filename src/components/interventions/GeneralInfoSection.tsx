@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ClientPicker } from "@/components/documents/ClientPicker";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAllStatuses, getAvailableTransitions, INTERVENTION_STATUSES, type InterventionStatus } from "@/lib/interventionStatuses";
 
 interface GeneralInfoSectionProps {
   intervention: any;
@@ -56,12 +57,11 @@ export function GeneralInfoSection({ intervention, onChange }: GeneralInfoSectio
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="À planifier">À planifier</SelectItem>
-                  <SelectItem value="Planifiée">Planifiée</SelectItem>
-                  <SelectItem value="En cours">En cours</SelectItem>
-                  <SelectItem value="Terminée">Terminée</SelectItem>
-                  <SelectItem value="Facturée">Facturée</SelectItem>
-                  <SelectItem value="Annulée">Annulée</SelectItem>
+                  {getAllStatuses().map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -91,6 +91,18 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     const item = inventoryItems.find(i => i.id === itemId);
     if (!item) return;
 
+    // Get the line to check quantity
+    const line = lines.find(l => l.id === lineId);
+    const qty = line?.quantity || 1;
+
+    // Check stock availability
+    if (item.qty_on_hand < qty) {
+      const confirmed = window.confirm(
+        `Stock insuffisant! Disponible: ${item.qty_on_hand}, demandé: ${qty}.\n\nVoulez-vous continuer quand même?`
+      );
+      if (!confirmed) return;
+    }
+
     const updates = {
       inventory_item_id: itemId,
       product_ref: item.sku || "",
@@ -111,27 +123,29 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       return;
     }
 
-    // Décrémenter le stock
-    if (item.qty_on_hand > 0) {
-      await supabase
-        .from("inventory_items")
-        .update({ qty_on_hand: item.qty_on_hand - 1 })
-        .eq("id", itemId);
+    // Create planned inventory movement instead of immediate consumption
+    await supabase.from("inventory_movements").insert([{
+      item_id: itemId,
+      type: "out",
+      qty: qty,
+      source: "intervention",
+      ref_id: interventionId,
+      note: `Prévisionnel intervention`,
+      status: "planned",
+      scheduled_at: new Date().toISOString(),
+    }]);
 
-      // Créer mouvement de stock
-      await supabase.from("inventory_movements").insert([{
-        item_id: itemId,
-        type: "out",
-        qty: 1,
-        source: "intervention",
-        ref_id: interventionId,
-        note: "Consommation intervention",
-        status: "done",
-      }]);
-    }
+    // Reserve the stock
+    await supabase
+      .from("inventory_items")
+      .update({ 
+        qty_reserved: (item.qty_reserved || 0) + qty 
+      })
+      .eq("id", itemId);
 
     loadLines();
     loadInventoryItems();
+    toast.success("Article ajouté avec réservation de stock");
   };
 
   const deleteLine = async (lineId: string) => {
@@ -202,13 +216,22 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                         <SelectTrigger className="w-[200px]">
                           <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-[300px]">
                           <SelectItem value="none">Sélectionner un produit</SelectItem>
-                          {inventoryItems.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name} (Stock: {item.qty_on_hand})
-                            </SelectItem>
-                          ))}
+                          {inventoryItems.map((item) => {
+                            const available = item.qty_on_hand - (item.qty_reserved || 0);
+                            return (
+                              <SelectItem key={item.id} value={item.id}>
+                                <div className="flex items-center gap-2">
+                                  <span>{item.name}</span>
+                                  {item.sku && <span className="text-xs text-muted-foreground">({item.sku})</span>}
+                                  <span className={`text-xs ${available <= 0 ? 'text-destructive' : 'text-success'}`}>
+                                    • Dispo: {available}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </TableCell>
