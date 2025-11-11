@@ -29,6 +29,19 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     loadInventoryItems();
   }, [itemCategory]);
 
+  // Reset all line selections when category changes
+  useEffect(() => {
+    if (lines.length > 0) {
+      lines.forEach(line => {
+        if (line.inventory_item_id) {
+          updateLine(line.id, "inventory_item_id", null);
+          updateLine(line.id, "product_ref", "");
+          updateLine(line.id, "product_name", "");
+        }
+      });
+    }
+  }, [itemCategory]);
+
   const loadInventoryItems = async () => {
     // Map UI category to DB type
     const dbType = itemCategory === "consumable" ? "consommable" : "matériel";
@@ -238,6 +251,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                 <TableRow key={line.id}>
                   <TableCell>
                     <Select 
+                      key={`${line.id}-${itemCategory}`}
                       value={line.inventory_item_id || "none"} 
                       onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
                     >
