@@ -36,7 +36,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     setIsLoadingItems(true);
     
     // Map UI category to DB type - strict mapping
-    const dbType = itemCategory === "consumable" ? "consommable" : "matériel";
+    const dbType = itemCategory === "consumable" ? "consommable" : "materiel";
     
     const { data, error } = await supabase
       .from("inventory_items")
@@ -321,8 +321,8 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                           inventoryItems
                             .filter(item => {
                               // Double-check filtering client-side for safety
-                              const expectedType = itemCategory === "consumable" ? "consommable" : "matériel";
-                              return item.type === expectedType;
+                              const expectedType = itemCategory === "consumable" ? "consommable" : "materiel";
+                              return (item.type || "").toLowerCase() === expectedType;
                             })
                             .map((item) => {
                               const available = (item.qty_on_hand || 0) - (item.qty_reserved || 0);
