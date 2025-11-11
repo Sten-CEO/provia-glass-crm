@@ -18,6 +18,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
   const [lines, setLines] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [itemCategory, setItemCategory] = useState<"consumable" | "material">("consumable");
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
 
   useEffect(() => {
     if (interventionId) {
@@ -25,25 +26,16 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     }
   }, [interventionId]);
 
+  // Load items when category changes - force complete reset
   useEffect(() => {
+    setInventoryItems([]); // Clear immediately to force UI refresh
     loadInventoryItems();
   }, [itemCategory]);
 
-  // Reset all line selections when category changes
-  useEffect(() => {
-    if (lines.length > 0) {
-      lines.forEach(line => {
-        if (line.inventory_item_id) {
-          updateLine(line.id, "inventory_item_id", null);
-          updateLine(line.id, "product_ref", "");
-          updateLine(line.id, "product_name", "");
-        }
-      });
-    }
-  }, [itemCategory]);
-
   const loadInventoryItems = async () => {
-    // Map UI category to DB type
+    setIsLoadingItems(true);
+    
+    // Map UI category to DB type - strict mapping
     const dbType = itemCategory === "consumable" ? "consommable" : "matériel";
     
     const { data, error } = await supabase
@@ -55,11 +47,13 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     if (error) {
       console.error("Error loading inventory items:", error);
       toast.error("Erreur lors du chargement des produits");
+      setIsLoadingItems(false);
       return;
     }
     
-    console.log(`Loaded ${data?.length || 0} items for type: ${dbType}`, data);
-    if (data) setInventoryItems(data);
+    console.log(`✅ Loaded ${data?.length || 0} items for type: ${dbType}`, data);
+    setInventoryItems(data || []);
+    setIsLoadingItems(false);
   };
 
   const loadLines = async () => {
@@ -121,12 +115,20 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     const line = lines.find(l => l.id === lineId);
     const qty = line?.quantity || 1;
 
-    // Check stock availability
-    if (item.qty_on_hand < qty) {
-      const confirmed = window.confirm(
-        `Stock insuffisant! Disponible: ${item.qty_on_hand}, demandé: ${qty}.\n\nVoulez-vous continuer quand même?`
-      );
-      if (!confirmed) return;
+    // Calculate available stock
+    const available = (item.qty_on_hand || 0) - (item.qty_reserved || 0);
+
+    // Check stock availability - block for materials, warn for consumables
+    if (available < qty) {
+      if (itemCategory === "material") {
+        toast.error(`Stock insuffisant! Disponible: ${available}, demandé: ${qty}. Impossible de réserver plus que le stock disponible pour les matériaux.`);
+        return;
+      } else {
+        const confirmed = window.confirm(
+          `Stock insuffisant! Disponible: ${available}, demandé: ${qty}.\n\nVoulez-vous continuer quand même?`
+        );
+        if (!confirmed) return;
+      }
     }
 
     const updates = {
@@ -135,6 +137,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       product_name: item.name,
       unit: "unité",
       location: item.location || "",
+      item_type: itemCategory, // Store category for later processing
     };
 
     const { error } = await supabase
@@ -147,41 +150,62 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       return;
     }
 
-    // Get intervention number for the movement reference
+    // Get intervention details
     let interventionNumber = "";
+    let interventionDate = new Date().toISOString();
     if (interventionId) {
       const { data: jobData } = await supabase
         .from("jobs")
-        .select("intervention_number")
+        .select("intervention_number, date")
         .eq("id", interventionId)
         .single();
       interventionNumber = jobData?.intervention_number || "";
+      interventionDate = jobData?.date ? new Date(jobData.date).toISOString() : interventionDate;
     }
 
-    // Create planned inventory movement
-    await supabase.from("inventory_movements").insert([{
-      item_id: itemId,
-      type: "out",
-      qty: qty,
-      source: "intervention",
-      ref_id: interventionId,
-      ref_number: interventionNumber,
-      note: `Prévisionnel intervention ${interventionNumber}`,
-      status: "planned",
-      scheduled_at: new Date().toISOString(),
-    }]);
+    // Different logic for consumables vs materials
+    if (itemCategory === "consumable") {
+      // Consumables: create planned_deduction (will decrement stock when intervention completes)
+      await supabase.from("inventory_movements").insert([{
+        item_id: itemId,
+        type: "expected_out",
+        qty: qty,
+        source: "intervention",
+        ref_id: interventionId,
+        ref_number: interventionNumber,
+        note: `À prévoir: consommation intervention ${interventionNumber}`,
+        status: "planned",
+        scheduled_at: interventionDate,
+      }]);
+      
+      toast.success(`Consommable ajouté - À prévoir le ${new Date(interventionDate).toLocaleDateString()}`);
+    } else {
+      // Materials: reserve immediately (won't decrement stock, will be returned)
+      await supabase.from("inventory_movements").insert([{
+        item_id: itemId,
+        type: "reserve",
+        qty: qty,
+        source: "intervention",
+        ref_id: interventionId,
+        ref_number: interventionNumber,
+        note: `Réservation matériel intervention ${interventionNumber}`,
+        status: "planned",
+        scheduled_at: interventionDate,
+      }]);
 
-    // Reserve the stock
-    await supabase
-      .from("inventory_items")
-      .update({ 
-        qty_reserved: (item.qty_reserved || 0) + qty 
-      })
-      .eq("id", itemId);
+      // Reserve the stock
+      await supabase
+        .from("inventory_items")
+        .update({ 
+          qty_reserved: (item.qty_reserved || 0) + qty 
+        })
+        .eq("id", itemId);
+
+      toast.success("Matériel réservé - sera restitué après l'intervention");
+    }
 
     loadLines();
     loadInventoryItems();
-    toast.success("Article ajouté avec réservation de stock");
   };
 
   const deleteLine = async (lineId: string) => {
@@ -215,7 +239,11 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
           <Label>Catégorie</Label>
           <RadioGroup 
             value={itemCategory} 
-            onValueChange={(val) => setItemCategory(val as "consumable" | "material")} 
+            onValueChange={(val) => {
+              const newCategory = val as "consumable" | "material";
+              console.log(`🔄 Category change: ${itemCategory} → ${newCategory}`);
+              setItemCategory(newCategory);
+            }} 
             className="flex gap-4"
           >
             <div className="flex items-center space-x-2">
@@ -227,6 +255,16 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
               <Label htmlFor="material" className="cursor-pointer font-normal">Matériau</Label>
             </div>
           </RadioGroup>
+          {itemCategory === "material" && (
+            <p className="text-xs text-muted-foreground">
+              💡 Les matériaux sont réservés et seront restitués après l'intervention (pas de déduction de stock)
+            </p>
+          )}
+          {itemCategory === "consumable" && (
+            <p className="text-xs text-muted-foreground">
+              💡 Les consommables seront déduits du stock à la fin de l'intervention
+            </p>
+          )}
         </div>
 
         {lines.length === 0 ? (
@@ -254,31 +292,47 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                       key={`${line.id}-${itemCategory}`}
                       value={line.inventory_item_id || "none"} 
                       onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
+                      disabled={isLoadingItems}
                     >
                       <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Sélectionner un produit" />
+                        <SelectValue placeholder={isLoadingItems ? "Chargement..." : "Sélectionner un produit"} />
                       </SelectTrigger>
                       <SelectContent className="z-[100] bg-popover max-h-[300px] overflow-y-auto">
-                        <SelectItem value="none">Sélectionner un produit</SelectItem>
-                        {inventoryItems.length === 0 ? (
+                        <SelectItem value="none" disabled>Sélectionner un produit</SelectItem>
+                        {isLoadingItems ? (
+                          <div className="p-4 text-sm text-muted-foreground text-center">
+                            Chargement...
+                          </div>
+                        ) : inventoryItems.length === 0 ? (
                           <div className="p-4 text-sm text-muted-foreground text-center">
                             Aucun {itemCategory === "consumable" ? "consommable" : "matériau"} disponible
                           </div>
                         ) : (
-                          inventoryItems.map((item) => {
-                            const available = item.qty_on_hand - (item.qty_reserved || 0);
-                            return (
-                              <SelectItem key={item.id} value={item.id}>
-                                <div className="flex items-center gap-2">
-                                  <span>{item.name}</span>
-                                  {item.sku && <span className="text-xs text-muted-foreground">({item.sku})</span>}
-                                  <span className={`text-xs ${available <= 0 ? 'text-destructive' : 'text-success'}`}>
-                                    • Dispo: {available}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            );
-                          })
+                          inventoryItems
+                            .filter(item => {
+                              // Double-check filtering client-side for safety
+                              const expectedType = itemCategory === "consumable" ? "consommable" : "matériel";
+                              return item.type === expectedType;
+                            })
+                            .map((item) => {
+                              const available = (item.qty_on_hand || 0) - (item.qty_reserved || 0);
+                              const isOutOfStock = available <= 0;
+                              return (
+                                <SelectItem 
+                                  key={item.id} 
+                                  value={item.id}
+                                  disabled={isOutOfStock && itemCategory === "material"}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className={isOutOfStock ? "text-muted-foreground" : ""}>{item.name}</span>
+                                    {item.sku && <span className="text-xs text-muted-foreground">· {item.sku}</span>}
+                                    <span className={`text-xs font-medium ${isOutOfStock ? 'text-destructive' : 'text-success'}`}>
+                                      • Dispo: {available}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
                         )}
                       </SelectContent>
                     </Select>

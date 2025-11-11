@@ -6,7 +6,7 @@ import { Edit, FileText, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { consumeReservedInventory, cancelInventoryReservations } from "@/lib/interventionInventorySync";
+import { completeInterventionStock, cancelInterventionStock } from "@/lib/interventionStockService";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 
 interface InterventionDataTabProps {
@@ -30,9 +30,9 @@ export function InterventionDataTab({ job, onUpdate }: InterventionDataTabProps)
       return;
     }
 
-    // Consume reserved inventory
+    // Process stock: consume consumables, return materials
     try {
-      await consumeReservedInventory(
+      await completeInterventionStock(
         job.id,
         job.intervention_number || "INT-" + job.id
       );
@@ -41,12 +41,12 @@ export function InterventionDataTab({ job, onUpdate }: InterventionDataTabProps)
       await supabase.from("intervention_logs").insert({
         intervention_id: job.id,
         action: "Marquée comme terminée",
-        details: "L'intervention a été marquée comme terminée et le stock a été consommé"
+        details: "L'intervention a été marquée comme terminée. Consommables déduits, matériaux restitués."
       });
 
-      toast.success("Intervention marquée comme terminée");
+      toast.success("Intervention terminée - Stock mis à jour");
     } catch (error) {
-      console.error("Error consuming inventory:", error);
+      console.error("Error processing stock:", error);
       toast.success("Intervention marquée comme terminée (erreur mise à jour stock)");
     }
 
@@ -68,16 +68,19 @@ export function InterventionDataTab({ job, onUpdate }: InterventionDataTabProps)
     }
 
     try {
-      await cancelInventoryReservations(job.id);
+      await cancelInterventionStock(
+        job.id,
+        job.intervention_number || "INT-" + job.id
+      );
       
       // Log action
       await supabase.from("intervention_logs").insert({
         intervention_id: job.id,
         action: "Annulée",
-        details: "L'intervention a été annulée et les réservations stock annulées"
+        details: "L'intervention a été annulée et toutes les réservations stock ont été libérées"
       });
 
-      toast.success("Intervention annulée");
+      toast.success("Intervention annulée - Réservations libérées");
     } catch (error) {
       console.error("Error canceling reservations:", error);
       toast.success("Intervention annulée (erreur annulation réservations)");
