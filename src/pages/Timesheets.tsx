@@ -17,6 +17,7 @@ import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
 import { DisplayOptionsPanel } from "@/components/common/DisplayOptionsPanel";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 import { TimesheetEntryModal } from "@/components/timesheets/TimesheetEntryModal";
+import { TimesheetDetailPanel } from "@/components/timesheets/TimesheetDetailPanel";
 
 interface TimesheetEntry {
   id: string;
@@ -82,6 +83,8 @@ const Timesheets = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [displayPanelOpen, setDisplayPanelOpen] = useState(false);
   const [breaksData, setBreaksData] = useState<Record<string, any[]>>({});
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<TimesheetEntry | null>(null);
 
   const {
     selectedIds,
@@ -100,7 +103,6 @@ const Timesheets = () => {
   const availableColumns = [
     { key: "date", label: "Date" },
     { key: "employee", label: "Employé" },
-    { key: "client", label: "Client" },
     { key: "job", label: "Intervention" },
     { key: "start_time", label: "Heure début" },
     { key: "end_time", label: "Heure fin" },
@@ -108,13 +110,6 @@ const Timesheets = () => {
     { key: "breaks_count", label: "Pause(s)" },
     { key: "break_duration", label: "Durée pause(s)" },
     { key: "net_hours", label: "Heures nettes" },
-    { key: "overtime", label: "Heures supp." },
-    { key: "travel", label: "Trajet (km/min)" },
-    { key: "rate", label: "Taux/h" },
-    { key: "cost", label: "Coût total (€)" },
-    { key: "is_billable", label: "Facturable" },
-    { key: "billing_status", label: "État fact." },
-    { key: "description", label: "Description" },
     { key: "status", label: "Statut" },
   ];
 
@@ -427,7 +422,7 @@ const Timesheets = () => {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div>
             <Label className="text-xs text-muted-foreground uppercase">Employé</Label>
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
@@ -446,7 +441,7 @@ const Timesheets = () => {
           </div>
           
           <div>
-            <Label className="text-xs text-muted-foreground uppercase">Date</Label>
+            <Label className="text-xs text-muted-foreground uppercase">Période</Label>
             <Select 
               value={startDate === format(new Date(), "yyyy-MM-dd") ? "today" : 
                      startDate === format(addDays(new Date(), -7), "yyyy-MM-dd") ? "week" : 
@@ -469,26 +464,9 @@ const Timesheets = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="today">Aujourd'hui</SelectItem>
-                <SelectItem value="week">7 derniers jours</SelectItem>
-                <SelectItem value="month">30 derniers jours</SelectItem>
-                <SelectItem value="custom">Période personnalisée</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase">Client</Label>
-            <Select value={selectedClient} onValueChange={setSelectedClient}>
-              <SelectTrigger className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                {clients.filter((c) => c.id && c.id.trim() !== "").map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nom}
-                  </SelectItem>
-                ))}
+                <SelectItem value="week">Semaine</SelectItem>
+                <SelectItem value="month">Mois</SelectItem>
+                <SelectItem value="custom">Personnalisé</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -502,44 +480,15 @@ const Timesheets = () => {
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="draft">Brouillon</SelectItem>
-                <SelectItem value="submitted">Soumis</SelectItem>
-                <SelectItem value="approved">Validé</SelectItem>
-                <SelectItem value="rejected">Rejeté</SelectItem>
+                <SelectItem value="submitted">En cours</SelectItem>
+                <SelectItem value="approved">Terminé</SelectItem>
+                <SelectItem value="rejected">Validé</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground uppercase">Facturable</Label>
-            <Select value={selectedBillingStatus} onValueChange={setSelectedBillingStatus}>
-              <SelectTrigger className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="non_facturé">Non facturé</SelectItem>
-                <SelectItem value="en_attente">En attente</SelectItem>
-                <SelectItem value="facturé">Facturé</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase">Heures supp.</Label>
-            <Select value={selectedOvertimeFilter} onValueChange={setSelectedOvertimeFilter}>
-              <SelectTrigger className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="with_overtime">Avec heures supp.</SelectItem>
-                <SelectItem value="without_overtime">Sans heures supp.</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs text-muted-foreground uppercase">Début période</Label>
+            <Label className="text-xs text-muted-foreground uppercase">Début</Label>
             <Input
               type="date"
               value={startDate}
@@ -549,7 +498,7 @@ const Timesheets = () => {
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground uppercase">Fin période</Label>
+            <Label className="text-xs text-muted-foreground uppercase">Fin</Label>
             <Input
               type="date"
               value={endDate}
@@ -633,7 +582,6 @@ const Timesheets = () => {
               </TableHead>
               {isColumnVisible("date") && <TableHead className="font-semibold">Date</TableHead>}
               {isColumnVisible("employee") && <TableHead className="font-semibold">Employé</TableHead>}
-              {isColumnVisible("client") && <TableHead className="font-semibold">Client</TableHead>}
               {isColumnVisible("job") && <TableHead className="font-semibold">Intervention</TableHead>}
               {isColumnVisible("start_time") && <TableHead className="font-semibold">Heure début</TableHead>}
               {isColumnVisible("end_time") && <TableHead className="font-semibold">Heure fin</TableHead>}
@@ -641,13 +589,6 @@ const Timesheets = () => {
               {isColumnVisible("breaks_count") && <TableHead className="font-semibold">Pause(s)</TableHead>}
               {isColumnVisible("break_duration") && <TableHead className="font-semibold">Durée pause(s)</TableHead>}
               {isColumnVisible("net_hours") && <TableHead className="font-semibold">Heures nettes</TableHead>}
-              {isColumnVisible("overtime") && <TableHead className="font-semibold">Heures supp.</TableHead>}
-              {isColumnVisible("travel") && <TableHead className="font-semibold">Trajet (km/min)</TableHead>}
-              {isColumnVisible("rate") && <TableHead className="font-semibold">Taux/h</TableHead>}
-              {isColumnVisible("cost") && <TableHead className="font-semibold">Coût total (€)</TableHead>}
-              {isColumnVisible("is_billable") && <TableHead className="font-semibold">Facturable</TableHead>}
-              {isColumnVisible("billing_status") && <TableHead className="font-semibold">État fact.</TableHead>}
-              {isColumnVisible("description") && <TableHead className="font-semibold">Description</TableHead>}
               {isColumnVisible("status") && <TableHead className="font-semibold">Statut</TableHead>}
               <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
@@ -662,8 +603,15 @@ const Timesheets = () => {
               const netHours = entry.hours - (totalBreakMinutes / 60);
 
               return (
-                <TableRow key={entry.id} className="hover:bg-muted/20">
-                  <TableCell>
+                <TableRow 
+                  key={entry.id} 
+                  className="hover:bg-muted/20 cursor-pointer"
+                  onClick={() => {
+                    setSelectedEntry(entry);
+                    setDetailPanelOpen(true);
+                  }}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={isSelected(entry.id)}
                       onCheckedChange={() => toggleItem(entry.id)}
@@ -677,11 +625,8 @@ const Timesheets = () => {
                   {isColumnVisible("employee") && (
                     <TableCell className="font-medium">{emp?.nom || "-"}</TableCell>
                   )}
-                  {isColumnVisible("client") && (
-                    <TableCell>{client?.nom || "-"}</TableCell>
-                  )}
                   {isColumnVisible("job") && (
-                    <TableCell>{job?.titre || "-"}</TableCell>
+                    <TableCell>{job?.titre || "Temps administratif"}</TableCell>
                   )}
                   {isColumnVisible("start_time") && (
                     <TableCell className="text-muted-foreground">
@@ -700,7 +645,7 @@ const Timesheets = () => {
                     <TableCell>
                       {entryBreaks.length > 0 ? (
                         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                          {entryBreaks.length} pause{entryBreaks.length > 1 ? "s" : ""}
+                          {entryBreaks.length}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -717,60 +662,17 @@ const Timesheets = () => {
                       {formatDuration(netHours)}
                     </TableCell>
                   )}
-                  {isColumnVisible("overtime") && (
-                    <TableCell>
-                      {entry.overtime_hours && entry.overtime_hours > 0 ? (
-                        <Badge className="bg-warning/20 text-warning-foreground border-warning">
-                          +{formatDuration(entry.overtime_hours)}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  )}
-                  {isColumnVisible("travel") && (
-                    <TableCell className="text-muted-foreground">
-                      {entry.travel_minutes ? `${entry.travel_minutes} min` : "-"}
-                    </TableCell>
-                  )}
-                  {isColumnVisible("rate") && (
-                    <TableCell className="text-muted-foreground">
-                      {entry.hourly_rate ? `${entry.hourly_rate.toFixed(2)}€` : "-"}
-                    </TableCell>
-                  )}
-                  {isColumnVisible("cost") && (
-                    <TableCell className="font-semibold text-primary">
-                      {entry.cost.toFixed(2)}€
-                    </TableCell>
-                  )}
-                  {isColumnVisible("is_billable") && (
-                    <TableCell>
-                      <Badge 
-                        variant={entry.is_billable ? "default" : "outline"}
-                        className={entry.is_billable ? "bg-success text-success-foreground" : ""}
-                      >
-                        {entry.is_billable ? "Oui" : "Non"}
-                      </Badge>
-                    </TableCell>
-                  )}
-                  {isColumnVisible("billing_status") && (
-                    <TableCell>{getBillingStatusBadge(entry.billing_status)}</TableCell>
-                  )}
-                  {isColumnVisible("description") && (
-                    <TableCell className="max-w-xs truncate text-muted-foreground">
-                      {entry.description || "-"}
-                    </TableCell>
-                  )}
                   {isColumnVisible("status") && (
                     <TableCell>{getStatusBadge(entry.status)}</TableCell>
                   )}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         size="sm"
                         variant="ghost"
                         className="h-8 w-8 p-0"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setEditingEntry(entry);
                           setModalOpen(true);
                         }}
@@ -781,7 +683,8 @@ const Timesheets = () => {
                         size="sm"
                         variant="ghost"
                         className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           if (confirm("Supprimer cette entrée ?")) {
                             await supabase.from("timesheets_entries").delete().eq("id", entry.id);
                             toast.success("Entrée supprimée");
@@ -847,6 +750,23 @@ const Timesheets = () => {
         onSaveView={saveView}
         onDeleteView={deleteView}
         onApplyView={applyView}
+      />
+
+      <TimesheetDetailPanel
+        open={detailPanelOpen}
+        onOpenChange={setDetailPanelOpen}
+        entry={selectedEntry}
+        employeeName={selectedEntry ? employees.find(e => e.id === selectedEntry.employee_id)?.nom : undefined}
+        clientName={selectedEntry ? clients.find(c => c.id === selectedEntry.client_id)?.nom : undefined}
+        jobTitle={selectedEntry ? jobs.find(j => j.id === selectedEntry.job_id)?.titre : undefined}
+        breaks={selectedEntry ? breaksData[selectedEntry.id] || [] : []}
+        onEdit={() => {
+          if (selectedEntry) {
+            setEditingEntry(selectedEntry);
+            setModalOpen(true);
+            setDetailPanelOpen(false);
+          }
+        }}
       />
     </div>
   );
