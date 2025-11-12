@@ -1975,6 +1975,44 @@ export type Database = {
         }
         Relationships: []
       }
+      timesheet_breaks: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          end_at: string | null
+          id: string
+          start_at: string
+          timesheet_entry_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          end_at?: string | null
+          id?: string
+          start_at: string
+          timesheet_entry_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          end_at?: string | null
+          id?: string
+          start_at?: string
+          timesheet_entry_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_breaks_timesheet_entry_id_fkey"
+            columns: ["timesheet_entry_id"]
+            isOneToOne: false
+            referencedRelation: "timesheets_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timesheets: {
         Row: {
           created_at: string

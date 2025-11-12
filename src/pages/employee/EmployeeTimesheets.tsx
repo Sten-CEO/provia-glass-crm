@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Square } from "lucide-react";
+import { Play, Square, Coffee } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -12,9 +12,14 @@ import { useEmployee } from "@/contexts/EmployeeContext";
 export const EmployeeTimesheets = () => {
   const { employeeId, loading: contextLoading } = useEmployee();
   const [isWorking, setIsWorking] = useState(false);
+  const [onBreak, setOnBreak] = useState(false);
   const [currentEntry, setCurrentEntry] = useState<any>(null);
+  const [currentBreak, setCurrentBreak] = useState<any>(null);
   const [entries, setEntries] = useState<any[]>([]);
+  const [breaks, setBreaks] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [breakTime, setBreakTime] = useState(0);
 
   useEffect(() => {
     if (!contextLoading && employeeId) {
@@ -22,11 +27,44 @@ export const EmployeeTimesheets = () => {
     }
   }, [contextLoading, employeeId]);
 
+  // Timer auto pour le temps de travail et les pauses
+  useEffect(() => {
+    let interval: any;
+    if (currentEntry?.start_at && isWorking) {
+      interval = setInterval(() => {
+        const startDateTime = new Date(`${currentEntry.date}T${currentEntry.start_at}`);
+        const now = Date.now();
+        const totalSeconds = Math.floor((now - startDateTime.getTime()) / 1000);
+        
+        // Calculer temps de pause total
+        let totalBreakSeconds = 0;
+        const entryBreaks = breaks[currentEntry.id] || [];
+        entryBreaks.forEach((b: any) => {
+          if (b.end_at) {
+            const start = new Date(`${currentEntry.date}T${b.start_at}`);
+            const end = new Date(`${currentEntry.date}T${b.end_at}`);
+            totalBreakSeconds += Math.floor((end.getTime() - start.getTime()) / 1000);
+          }
+        });
+        
+        // Pause en cours
+        if (currentBreak?.start_at) {
+          const breakStart = new Date(`${currentEntry.date}T${currentBreak.start_at}`);
+          const breakElapsed = Math.floor((now - breakStart.getTime()) / 1000);
+          setBreakTime(breakElapsed);
+          totalBreakSeconds += breakElapsed;
+        }
+        
+        setElapsedTime(totalSeconds - totalBreakSeconds);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [currentEntry, currentBreak, breaks, isWorking]);
+
   const loadTimesheets = async () => {
     if (!employeeId) return;
 
     try {
-      // Load today's entries
       const today = format(new Date(), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("timesheets_entries")
@@ -44,6 +82,26 @@ export const EmployeeTimesheets = () => {
       if (active) {
         setCurrentEntry(active);
         setIsWorking(true);
+        
+        // Load breaks for this entry
+        const { data: breaksData } = await supabase
+          .from("timesheet_breaks")
+          .select("*")
+          .eq("timesheet_entry_id", active.id)
+          .order("created_at", { ascending: true });
+        
+        const breaksMap: Record<string, any[]> = {};
+        if (breaksData) {
+          breaksMap[active.id] = breaksData;
+          
+          // Check if there's an active break
+          const activeBreak = breaksData.find((b: any) => !b.end_at);
+          if (activeBreak) {
+            setCurrentBreak(activeBreak);
+            setOnBreak(true);
+          }
+        }
+        setBreaks(breaksMap);
       }
     } catch (error: any) {
       toast.error("Erreur de chargement");
@@ -51,6 +109,13 @@ export const EmployeeTimesheets = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const startWork = async () => {
@@ -83,8 +148,64 @@ export const EmployeeTimesheets = () => {
     }
   };
 
+  const startBreak = async () => {
+    if (!currentEntry) return;
+
+    try {
+      const now = new Date();
+      const { data, error } = await supabase
+        .from("timesheet_breaks")
+        .insert({
+          timesheet_entry_id: currentEntry.id,
+          start_at: format(now, "HH:mm:ss"),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCurrentBreak(data);
+      setOnBreak(true);
+      toast.success("Pause démarrée");
+      loadTimesheets();
+    } catch (error: any) {
+      toast.error("Erreur lors du démarrage de la pause");
+      console.error(error);
+    }
+  };
+
+  const endBreak = async () => {
+    if (!currentBreak) return;
+
+    try {
+      const now = new Date();
+      const { error } = await supabase
+        .from("timesheet_breaks")
+        .update({
+          end_at: format(now, "HH:mm:ss"),
+        })
+        .eq("id", currentBreak.id);
+
+      if (error) throw error;
+
+      setCurrentBreak(null);
+      setOnBreak(false);
+      setBreakTime(0);
+      toast.success("Pause terminée");
+      loadTimesheets();
+    } catch (error: any) {
+      toast.error("Erreur lors de la fin de pause");
+      console.error(error);
+    }
+  };
+
   const endWork = async () => {
     if (!currentEntry) return;
+
+    // Si une pause est en cours, la terminer d'abord
+    if (currentBreak) {
+      await endBreak();
+    }
 
     try {
       const now = new Date();
@@ -100,6 +221,7 @@ export const EmployeeTimesheets = () => {
 
       setCurrentEntry(null);
       setIsWorking(false);
+      setElapsedTime(0);
       toast.success("Pointage terminé");
       loadTimesheets();
     } catch (error: any) {
@@ -138,21 +260,57 @@ export const EmployeeTimesheets = () => {
             <>
               <div className="flex items-center justify-center gap-2">
                 <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse" />
-                <p className="text-lg font-semibold">En cours</p>
+                <p className="text-lg font-semibold">{onBreak ? "En pause" : "En cours"}</p>
               </div>
+              
+              <div className="space-y-2">
+                <div className="text-2xl font-bold">{formatTime(elapsedTime)}</div>
+                <p className="text-sm text-muted-foreground">Temps travaillé</p>
+                {onBreak && (
+                  <>
+                    <div className="text-lg font-semibold text-orange-500">{formatTime(breakTime)}</div>
+                    <p className="text-sm text-muted-foreground">Temps de pause</p>
+                  </>
+                )}
+              </div>
+
               {currentEntry?.start_at && (
                 <p className="text-muted-foreground">
                   Démarré à {currentEntry.start_at.substring(0, 5)}
                 </p>
               )}
-              <Button
-                onClick={endWork}
-                size="lg"
-                className="w-full bg-red-600 hover:bg-red-700"
-              >
-                <Square className="h-5 w-5 mr-2" />
-                Terminer la journée
-              </Button>
+
+              <div className="space-y-2">
+                {!onBreak ? (
+                  <Button
+                    onClick={startBreak}
+                    size="lg"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Coffee className="h-5 w-5 mr-2" />
+                    Faire une pause
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={endBreak}
+                    size="lg"
+                    className="w-full bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Fin de ma pause
+                  </Button>
+                )}
+
+                <Button
+                  onClick={endWork}
+                  size="lg"
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  <Square className="h-5 w-5 mr-2" />
+                  Terminer la journée
+                </Button>
+              </div>
             </>
           )}
         </div>

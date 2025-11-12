@@ -88,22 +88,34 @@ export const SignatureCanvas = ({
         canvas.toBlob((blob) => resolve(blob!), "image/png");
       });
 
-      // Upload vers Supabase Storage
-      const fileName = `${jobId}/${employeeId}/signature-${Date.now()}.png`;
-      const filePath = `job-signatures/${fileName}`;
+      // Générer un nom de fichier unique
+      const timestamp = Date.now();
+      const fileName = `signature-${timestamp}.png`;
+      const filePath = `signatures/${jobId}/${fileName}`;
 
+      // Upload vers Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("job-signatures")
-        .upload(filePath, blob);
+        .upload(filePath, blob, {
+          contentType: "image/png",
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
 
       // Obtenir l'URL publique
       const { data: urlData } = supabase.storage
         .from("job-signatures")
         .getPublicUrl(filePath);
 
-      // Enregistrer dans job_signatures
+      if (!urlData?.publicUrl) {
+        throw new Error("Failed to get public URL");
+      }
+
+      // Enregistrer dans job_signatures avec toutes les métadonnées
       const { error: dbError } = await supabase
         .from("job_signatures")
         .insert({
@@ -112,9 +124,28 @@ export const SignatureCanvas = ({
           signer_name: signerName,
           signer_email: signerEmail || null,
           image_url: urlData.publicUrl,
+          signed_at: new Date().toISOString(),
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Database error:", dbError);
+        throw dbError;
+      }
+
+      // Mettre à jour l'intervention avec les infos de signature pour le rapport
+      const { error: jobUpdateError } = await supabase
+        .from("jobs")
+        .update({
+          signature_name: signerName,
+          signature_image: urlData.publicUrl,
+          signature_date: new Date().toISOString(),
+        })
+        .eq("id", jobId);
+
+      if (jobUpdateError) {
+        console.error("Job update error:", jobUpdateError);
+        // Ne pas bloquer si cette mise à jour échoue
+      }
 
       toast.success("Signature enregistrée avec succès");
       onSignatureSaved();
@@ -123,7 +154,7 @@ export const SignatureCanvas = ({
       setSignerEmail("");
     } catch (error: any) {
       console.error("Signature save error:", error);
-      toast.error("Erreur lors de l'enregistrement de la signature");
+      toast.error(`Erreur: ${error.message || "Impossible d'enregistrer la signature"}`);
     } finally {
       setSaving(false);
     }

@@ -12,6 +12,7 @@ export const EmployeeTabBar = () => {
       label: "Dashboard",
       icon: Home,
       path: "/employee",
+      exactMatch: true,
     },
     {
       id: "jobs",
@@ -50,7 +51,9 @@ export const EmployeeTabBar = () => {
       <div className="grid grid-cols-6 gap-1 px-2 py-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = location.pathname.startsWith(tab.path);
+          const isActive = tab.exactMatch 
+            ? location.pathname === tab.path
+            : location.pathname.startsWith(tab.path) && location.pathname !== "/employee";
 
           return (
             <button

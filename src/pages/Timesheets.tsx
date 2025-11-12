@@ -81,6 +81,7 @@ const Timesheets = () => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [displayPanelOpen, setDisplayPanelOpen] = useState(false);
+  const [breaksData, setBreaksData] = useState<Record<string, any[]>>({});
 
   const {
     selectedIds,
@@ -98,9 +99,11 @@ const Timesheets = () => {
     { key: "client", label: "Client" },
     { key: "job", label: "Intervention" },
     { key: "start_end", label: "Horaires" },
-    { key: "hours", label: "Heures" },
+    { key: "hours", label: "Heures totales" },
+    { key: "breaks", label: "Pauses" },
+    { key: "net_hours", label: "Heures nettes" },
     { key: "overtime", label: "H. Supp." },
-    { key: "break", label: "Pause" },
+    { key: "break", label: "Pause (min)" },
     { key: "travel", label: "Trajet" },
     { key: "rate", label: "Taux" },
     { key: "cost", label: "Coût" },
@@ -145,7 +148,29 @@ const Timesheets = () => {
       supabase.from("jobs").select("id, titre, client_id"),
     ]);
 
-    if (entriesRes.data) setEntries(entriesRes.data as unknown as TimesheetEntry[]);
+    if (entriesRes.data) {
+      setEntries(entriesRes.data as unknown as TimesheetEntry[]);
+      
+      // Load breaks for all entries
+      const entryIds = entriesRes.data.map((e: any) => e.id);
+      if (entryIds.length > 0) {
+        const { data: breaks } = await supabase
+          .from("timesheet_breaks")
+          .select("*")
+          .in("timesheet_entry_id", entryIds);
+        
+        if (breaks) {
+          const breaksMap: Record<string, any[]> = {};
+          breaks.forEach((b: any) => {
+            if (!breaksMap[b.timesheet_entry_id]) {
+              breaksMap[b.timesheet_entry_id] = [];
+            }
+            breaksMap[b.timesheet_entry_id].push(b);
+          });
+          setBreaksData(breaksMap);
+        }
+      }
+    }
     if (employeesRes.data) {
       setEmployees(employeesRes.data as unknown as Employee[]);
       if (employeesRes.data.length > 0) {
@@ -525,7 +550,9 @@ const Timesheets = () => {
               {isColumnVisible("client") && <TableHead>Client</TableHead>}
               {isColumnVisible("job") && <TableHead>Intervention</TableHead>}
               {isColumnVisible("start_end") && <TableHead>Horaires</TableHead>}
-              {isColumnVisible("hours") && <TableHead>Heures</TableHead>}
+              {isColumnVisible("hours") && <TableHead>Heures totales</TableHead>}
+              {isColumnVisible("breaks") && <TableHead>Pauses</TableHead>}
+              {isColumnVisible("net_hours") && <TableHead>Heures nettes</TableHead>}
               {isColumnVisible("overtime") && <TableHead>H. Supp.</TableHead>}
               {isColumnVisible("break") && <TableHead>Pause</TableHead>}
               {isColumnVisible("travel") && <TableHead>Trajet</TableHead>}
@@ -543,6 +570,11 @@ const Timesheets = () => {
               const emp = employees.find((e) => e.id === entry.employee_id);
               const client = clients.find((c) => c.id === entry.client_id);
               const job = jobs.find((j) => j.id === entry.job_id);
+              const entryBreaks = breaksData[entry.id] || [];
+              const totalBreakMinutes = entryBreaks.reduce((sum: number, b: any) => {
+                return sum + (b.duration_minutes || 0);
+              }, 0);
+              const netHours = entry.hours - (totalBreakMinutes / 60);
 
               return (
                 <TableRow key={entry.id}>
@@ -566,6 +598,25 @@ const Timesheets = () => {
                     </TableCell>
                   )}
                   {isColumnVisible("hours") && <TableCell>{entry.hours.toFixed(2)}h</TableCell>}
+                  {isColumnVisible("breaks") && (
+                    <TableCell className="text-orange-600">
+                      {entryBreaks.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">{entryBreaks.length} pause(s)</span>
+                          <span className="text-xs text-muted-foreground">
+                            {totalBreakMinutes} min total
+                          </span>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                  )}
+                  {isColumnVisible("net_hours") && (
+                    <TableCell className="font-semibold text-green-600">
+                      {netHours.toFixed(2)}h
+                    </TableCell>
+                  )}
                   {isColumnVisible("overtime") && (
                     <TableCell className="text-orange-500">
                       {entry.overtime_hours ? `+${entry.overtime_hours.toFixed(2)}h` : "-"}
