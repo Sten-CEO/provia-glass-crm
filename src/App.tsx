@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { initializeInventoryEventHandlers } from "./lib/inventoryEventHandlers";
 import Login from "./pages/auth/Login";
-import AppShell from "./components/layout/AppShell";
+import AdminLayout from "./components/layout/AppShell";
 import { EmployeeLayout } from "./components/employee/EmployeeLayout";
 import { EmployeeLogin } from "./pages/employee/EmployeeLogin";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
@@ -80,7 +80,7 @@ const App = () => {
           </Route>
           
           {/* Admin CRM Routes */}
-          <Route element={<AppShell />}>
+          <Route element={<AdminLayout />}>
             <Route path="/tableau-de-bord" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />

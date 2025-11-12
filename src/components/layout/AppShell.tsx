@@ -4,13 +4,13 @@ import Navbar from "./Navbar";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { AuthGuard } from "./AuthGuard";
 
-const AppShell = () => {
-  const { isCollapsed, toggleCollapsed } = useSidebarCollapsed();
+const AdminLayout = () => {
+  const { toggleCollapsed } = useSidebarCollapsed();
 
   return (
     <AuthGuard>
       <div className="min-h-screen flex w-full">
-        <Sidebar isOpen={!isCollapsed} />
+        <Sidebar isOpen={true} data-testid="admin-sidebar" />
         
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar onMenuClick={toggleCollapsed} />
@@ -24,4 +24,4 @@ const AppShell = () => {
   );
 };
 
-export default AppShell;
+export default AdminLayout;
