@@ -8,8 +8,14 @@ export const EmployeeTabBar = () => {
 
   const tabs = [
     {
+      id: "dashboard",
+      label: "Accueil",
+      icon: ClipboardList,
+      path: "/employee",
+    },
+    {
       id: "interventions",
-      label: "Interventions",
+      label: "Jobs",
       icon: ClipboardList,
       path: "/employee/interventions",
     },

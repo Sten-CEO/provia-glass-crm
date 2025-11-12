@@ -223,6 +223,41 @@ export type Database = {
           },
         ]
       }
+      devices_push_tokens: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_push_tokens_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devis: {
         Row: {
           accepted_at: string | null
@@ -866,6 +901,7 @@ export type Database = {
           id: string
           intervention_id: string
           metadata: Json | null
+          photo_type: string | null
         }
         Insert: {
           category?: string | null
@@ -878,6 +914,7 @@ export type Database = {
           id?: string
           intervention_id: string
           metadata?: Json | null
+          photo_type?: string | null
         }
         Update: {
           category?: string | null
@@ -890,6 +927,7 @@ export type Database = {
           id?: string
           intervention_id?: string
           metadata?: Json | null
+          photo_type?: string | null
         }
         Relationships: [
           {
@@ -1218,6 +1256,54 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_signatures: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          image_url: string
+          job_id: string
+          signed_at: string
+          signer_email: string | null
+          signer_name: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          image_url: string
+          job_id: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          image_url?: string
+          job_id?: string
+          signed_at?: string
+          signer_email?: string | null
+          signer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_signatures_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_signatures_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]

@@ -5,13 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Play, Pause, CheckCircle, Camera, FileSignature, MapPin, Navigation, Clock, Package } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Play, Pause, CheckCircle, Camera, FileSignature, MapPin, Navigation, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { JobPhotoCapture } from "@/components/employee/JobPhotoCapture";
+import { SignatureCanvas } from "@/components/employee/SignatureCanvas";
 
 export const EmployeeInterventionDetail = () => {
   const { id } = useParams();
@@ -24,6 +22,8 @@ export const EmployeeInterventionDetail = () => {
   const [activeJobTimesheet, setActiveJobTimesheet] = useState<any>(null);
   const [consumables, setConsumables] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [signatures, setSignatures] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -83,6 +83,23 @@ export const EmployeeInterventionDetail = () => {
       setConsumables(cons || []);
       setServices(serv || []);
 
+      // Charger les photos
+      const { data: photosData } = await supabase
+        .from("intervention_files")
+        .select("*")
+        .eq("intervention_id", id)
+        .eq("category", "photo");
+
+      setPhotos(photosData || []);
+
+      // Charger les signatures
+      const { data: signaturesData } = await supabase
+        .from("job_signatures")
+        .select("*")
+        .eq("job_id", id);
+
+      setSignatures(signaturesData || []);
+
     } catch (error: any) {
       toast.error("Erreur de chargement");
       console.error(error);
@@ -102,10 +119,9 @@ export const EmployeeInterventionDetail = () => {
         .insert({
           employee_id: employeeId,
           job_id: id,
-          date: format(new Date(), "yyyy-MM-dd"),
-          start_at: format(new Date(), "HH:mm:ss"),
+          start_at: new Date().toISOString(),
           timesheet_type: "job",
-          status: "draft"
+          status: "draft",
         });
 
       if (tsError) throw tsError;
@@ -120,9 +136,9 @@ export const EmployeeInterventionDetail = () => {
 
       toast.success("Intervention démarrée");
       loadData();
-    } catch (error) {
+    } catch (error: any) {
+      toast.error("Erreur de démarrage");
       console.error(error);
-      toast.error("Erreur lors du démarrage");
     } finally {
       setUpdating(false);
     }
@@ -136,8 +152,8 @@ export const EmployeeInterventionDetail = () => {
       const { error } = await supabase
         .from("timesheets_entries")
         .update({
-          end_at: format(new Date(), "HH:mm:ss"),
-          status: "submitted"
+          end_at: new Date().toISOString(),
+          status: "submitted",
         })
         .eq("id", activeJobTimesheet.id);
 
@@ -152,55 +168,52 @@ export const EmployeeInterventionDetail = () => {
 
       toast.success("Intervention mise en pause");
       loadData();
-    } catch (error) {
+    } catch (error: any) {
+      toast.error("Erreur de pause");
       console.error(error);
-      toast.error("Erreur");
     } finally {
       setUpdating(false);
     }
   };
 
   const completeJob = async () => {
-    if (!activeJobTimesheet) return;
     setUpdating(true);
 
     try {
-      // Terminer le timesheet
-      const { error: tsError } = await supabase
-        .from("timesheets_entries")
-        .update({
-          end_at: format(new Date(), "HH:mm:ss"),
-          status: "submitted"
-        })
-        .eq("id", activeJobTimesheet.id);
+      // Terminer le timesheet si actif
+      if (activeJobTimesheet) {
+        const { error: tsError } = await supabase
+          .from("timesheets_entries")
+          .update({
+            end_at: new Date().toISOString(),
+            status: "submitted",
+          })
+          .eq("id", activeJobTimesheet.id);
 
-      if (tsError) throw tsError;
+        if (tsError) throw tsError;
+      }
 
-      // Marquer l'intervention comme terminée
+      // Mettre à jour le statut de l'intervention
       const { error: jobError } = await supabase
         .from("jobs")
-        .update({ 
-          statut: "Terminée",
-          completed_at: new Date().toISOString()
-        })
+        .update({ statut: "Terminée" })
         .eq("id", id);
 
       if (jobError) throw jobError;
 
-      // TODO: Décrémenter les consommables et libérer les matériaux (via edge function)
-      
       toast.success("Intervention terminée");
       loadData();
-    } catch (error) {
+    } catch (error: any) {
+      toast.error("Erreur de finalisation");
       console.error(error);
-      toast.error("Erreur");
     } finally {
       setUpdating(false);
     }
   };
 
   const saveNotes = async () => {
-    setUpdating(true);
+    if (!id) return;
+
     try {
       const { error } = await supabase
         .from("jobs")
@@ -212,24 +225,26 @@ export const EmployeeInterventionDetail = () => {
     } catch (error: any) {
       toast.error("Erreur d'enregistrement");
       console.error(error);
-    } finally {
-      setUpdating(false);
     }
   };
 
-  const openGPS = (app: "waze" | "google") => {
+  const openGPS = () => {
     if (!intervention?.adresse) {
-      toast.error("Pas d'adresse disponible");
+      toast.error("Adresse non disponible");
       return;
     }
-
-    const address = encodeURIComponent(intervention.adresse);
     
-    if (app === "waze") {
-      window.open(`https://waze.com/ul?q=${address}`, "_blank");
-    } else {
-      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, "_blank");
-    }
+    const address = encodeURIComponent(intervention.adresse);
+    const wazeUrl = `https://waze.com/ul?q=${address}`;
+    window.open(wazeUrl, "_blank");
+  };
+
+  const handlePhotoUploaded = () => {
+    loadData();
+  };
+
+  const handleSignatureSaved = () => {
+    loadData();
   };
 
   if (loading) {
@@ -242,194 +257,247 @@ export const EmployeeInterventionDetail = () => {
 
   if (!intervention) {
     return (
-      <div className="container max-w-2xl mx-auto px-4 py-6">
-        <Card className="p-8 text-center text-muted-foreground">
-          Intervention introuvable
-        </Card>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Intervention introuvable</div>
       </div>
     );
   }
 
-  const canStart = intervention.statut === "À faire" && !activeJobTimesheet;
-  const canPause = intervention.statut === "En cours" && activeJobTimesheet;
-  const canComplete = intervention.statut === "En cours" && activeJobTimesheet;
-
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6 space-y-4">
-      {/* En-tête intervention */}
+      {/* En-tête */}
       <Card className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">{intervention.titre}</h2>
-            <p className="text-muted-foreground">{intervention.client_nom}</p>
+            <h2 className="text-2xl font-bold mb-1">{intervention.titre}</h2>
+            <p className="text-sm text-muted-foreground">{intervention.client_nom}</p>
           </div>
-          <Badge className={
-            intervention.statut === "À faire" ? "bg-blue-100 text-blue-800" :
-            intervention.statut === "En cours" ? "bg-yellow-100 text-yellow-800" :
-            "bg-green-100 text-green-800"
-          }>
+          <Badge 
+            className={
+              intervention.statut === "En cours" ? "bg-yellow-500" :
+              intervention.statut === "Terminée" ? "bg-green-500" :
+              "bg-blue-500"
+            }
+          >
             {intervention.statut}
           </Badge>
         </div>
 
-        {intervention.date && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Clock className="h-4 w-4" />
-            <span>
-              {format(new Date(intervention.date), "EEEE d MMMM yyyy", { locale: fr })}
-              {intervention.heure_debut && ` à ${intervention.heure_debut}`}
-            </span>
-          </div>
-        )}
-
-        {intervention.adresse && (
-          <div className="p-3 bg-muted/50 rounded-lg mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-4 w-4" />
-              <p className="text-sm font-medium">Adresse</p>
+        {/* Info clés */}
+        <div className="space-y-3">
+          {intervention.date && (
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>{intervention.date} {intervention.heure_debut && `à ${intervention.heure_debut}`}</span>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">{intervention.adresse}</p>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
-                onClick={() => openGPS("waze")}
-              >
-                <Navigation className="h-4 w-4 mr-2" />
-                Waze
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
-                onClick={() => openGPS("google")}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Google Maps
-              </Button>
+          )}
+          
+          {intervention.adresse && (
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="line-clamp-2">{intervention.adresse}</p>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 mt-1"
+                  onClick={openGPS}
+                >
+                  <Navigation className="h-3 w-3 mr-1" />
+                  Ouvrir dans Waze
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {intervention.description && (
-          <div className="mb-4">
-            <p className="text-sm font-medium mb-1">Description</p>
-            <p className="text-sm text-muted-foreground">{intervention.description}</p>
-          </div>
-        )}
+          {intervention.description && (
+            <p className="text-sm text-muted-foreground border-t pt-3">
+              {intervention.description}
+            </p>
+          )}
+        </div>
+      </Card>
 
-        {/* Actions principales */}
-        <div className="flex flex-wrap gap-2">
-          {canStart && (
+      {/* Actions principales */}
+      <Card className="p-4">
+        <div className="flex gap-2">
+          {!activeJobTimesheet && intervention.statut !== "Terminée" && (
             <Button
               onClick={startJob}
               disabled={updating}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1"
             >
-              <Play className="h-4 w-4 mr-2" />
+              <Play className="mr-2 h-4 w-4" />
               Démarrer
             </Button>
           )}
 
-          {canPause && (
+          {activeJobTimesheet && (
             <Button
               onClick={pauseJob}
               disabled={updating}
               variant="outline"
               className="flex-1"
             >
-              <Pause className="h-4 w-4 mr-2" />
+              <Pause className="mr-2 h-4 w-4" />
               Pause
             </Button>
           )}
 
-          {canComplete && (
+          {intervention.statut !== "Terminée" && (
             <Button
               onClick={completeJob}
               disabled={updating}
-              className="flex-1 bg-primary"
+              variant="default"
+              className="flex-1"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircle className="mr-2 h-4 w-4" />
               Terminer
             </Button>
           )}
         </div>
       </Card>
 
-      {/* Consommables et matériaux */}
-      {(consumables.length > 0 || services.length > 0) && (
-        <Card className="p-6">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Éléments de l'intervention
-          </h3>
+      {/* Tabs avec photos et signature */}
+      <Tabs defaultValue="info" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="info">Infos</TabsTrigger>
+          <TabsTrigger value="photos">
+            <Camera className="h-4 w-4 mr-1" />
+            Photos ({photos.length})
+          </TabsTrigger>
+          <TabsTrigger value="signature">
+            <FileSignature className="h-4 w-4 mr-1" />
+            Signature
+          </TabsTrigger>
+        </TabsList>
 
+        <TabsContent value="info" className="space-y-4">
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Notes et observations</h3>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Saisir vos observations..."
+              className="min-h-[100px]"
+            />
+            <Button onClick={saveNotes} className="mt-2">
+              Enregistrer les notes
+            </Button>
+          </Card>
+
+          {/* Consommables et services */}
           {consumables.length > 0 && (
-            <>
-              <p className="text-sm font-medium mb-2">Consommables/Matériaux</p>
-              <div className="space-y-2 mb-4">
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Consommables</h4>
+              <div className="space-y-2">
                 {consumables.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
+                  <div key={item.id} className="flex justify-between text-sm">
                     <span>{item.product_name}</span>
-                    <span className="text-muted-foreground">
-                      {item.quantity} {item.unit}
-                    </span>
+                    <span className="text-muted-foreground">x{item.quantity}</span>
                   </div>
                 ))}
               </div>
-            </>
+            </Card>
           )}
 
           {services.length > 0 && (
-            <>
-              <p className="text-sm font-medium mb-2">Services</p>
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Services</h4>
               <div className="space-y-2">
-                {services.map((service) => (
-                  <div key={service.id} className="flex justify-between text-sm p-2 bg-muted/50 rounded">
-                    <span>{service.description}</span>
-                    <span className="text-muted-foreground">
-                      {service.quantity} {service.unit}
-                    </span>
+                {services.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.description}</span>
+                    <span className="text-muted-foreground">{item.quantity} {item.unit}</span>
                   </div>
                 ))}
               </div>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="photos" className="space-y-4">
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold mb-2">Photos avant intervention</h3>
+              {employeeId && (
+                <JobPhotoCapture
+                  jobId={id!}
+                  employeeId={employeeId}
+                  photoType="before"
+                  onPhotoUploaded={handlePhotoUploaded}
+                />
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-2">Photos après intervention</h3>
+              {employeeId && (
+                <JobPhotoCapture
+                  jobId={id!}
+                  employeeId={employeeId}
+                  photoType="after"
+                  onPhotoUploaded={handlePhotoUploaded}
+                />
+              )}
+            </div>
+
+            {/* Liste des photos */}
+            {photos.length > 0 && (
+              <Card className="p-4">
+                <h4 className="font-semibold mb-3">Photos enregistrées</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative">
+                      <img
+                        src={photo.file_url}
+                        alt={photo.file_name}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <Badge
+                        className="absolute top-2 left-2"
+                        variant={photo.photo_type === "before" ? "secondary" : "default"}
+                      >
+                        {photo.photo_type === "before" ? "Avant" : "Après"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="signature" className="space-y-4">
+          {signatures.length > 0 ? (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-2">Signature enregistrée</h3>
+              <div className="space-y-2">
+                <img
+                  src={signatures[0].image_url}
+                  alt="Signature client"
+                  className="w-full border rounded-lg bg-white"
+                />
+                <div className="text-sm text-muted-foreground">
+                  <p>Signé par: {signatures[0].signer_name}</p>
+                  <p>Date: {new Date(signatures[0].signed_at).toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <>
+              <h3 className="font-semibold mb-2">Signature client</h3>
+              {employeeId && (
+                <SignatureCanvas
+                  jobId={id!}
+                  employeeId={employeeId}
+                  onSignatureSaved={handleSignatureSaved}
+                />
+              )}
             </>
           )}
-        </Card>
-      )}
-
-      {/* Notes */}
-      <Card className="p-6">
-        <h3 className="font-semibold mb-3">Notes d'intervention</h3>
-        <Textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Ajoutez vos observations..."
-          className="mb-3 min-h-32"
-        />
-        <Button onClick={saveNotes} disabled={updating} className="w-full">
-          Enregistrer les notes
-        </Button>
-      </Card>
-
-      {/* Actions supplémentaires */}
-      <Card className="p-6">
-        <h3 className="font-semibold mb-3">Actions</h3>
-        <div className="space-y-2">
-          <Button variant="outline" className="w-full justify-start">
-            <Camera className="h-4 w-4 mr-2" />
-            Prendre des photos
-            <Badge variant="secondary" className="ml-auto">Bientôt</Badge>
-          </Button>
-          <Button variant="outline" className="w-full justify-start">
-            <FileSignature className="h-4 w-4 mr-2" />
-            Signature client
-            <Badge variant="secondary" className="ml-auto">Bientôt</Badge>
-          </Button>
-        </div>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

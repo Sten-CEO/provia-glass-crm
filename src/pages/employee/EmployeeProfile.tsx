@@ -1,16 +1,30 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Mail } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { LogOut, User, Mail, Phone, Camera } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+
+interface EmployeeProfile {
+  id: string;
+  nom: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  user_id: string;
+}
 
 export const EmployeeProfile = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [employee, setEmployee] = useState<any>(null);
+  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -18,23 +32,23 @@ export const EmployeeProfile = () => {
 
   const loadProfile = async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
         navigate("/employee/login");
         return;
       }
 
-      setUser(authUser);
-
-      // Load employee info using user_id
-      const { data: empData } = await supabase
+      const { data: employee, error } = await supabase
         .from("equipe")
         .select("*")
-        .eq("user_id", authUser.id)
+        .eq("user_id", user.id)
         .single();
 
-      setEmployee(empData);
+      if (error) throw error;
+      setProfile(employee);
     } catch (error: any) {
+      toast.error("Erreur de chargement du profil");
       console.error(error);
     } finally {
       setLoading(false);
@@ -42,12 +56,25 @@ export const EmployeeProfile = () => {
   };
 
   const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success("Déconnexion réussie");
+    navigate("/employee/login");
+  };
+
+  const handleUpdatePhone = async () => {
+    if (!profile) return;
+
     try {
-      await supabase.auth.signOut();
-      navigate("/employee/login");
-      toast.success("Déconnexion réussie");
+      const { error } = await supabase
+        .from("equipe")
+        .update({ phone: profile.phone })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+      toast.success("Téléphone mis à jour");
     } catch (error: any) {
-      toast.error("Erreur de déconnexion");
+      toast.error("Erreur de mise à jour");
+      console.error(error);
     }
   };
 
@@ -59,56 +86,116 @@ export const EmployeeProfile = () => {
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Profil introuvable</div>
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6 space-y-4">
-      <h2 className="text-xl font-semibold mb-4">Profil</h2>
-
+      {/* Header avec Avatar */}
       <Card className="p-6">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-lg">
-                {employee?.nom || "Employé"}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {employee?.role || "Technicien"}
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                {profile.nom.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
           </div>
-
-          <div className="pt-4 border-t space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>{user?.email}</span>
-            </div>
+          <div>
+            <h2 className="text-2xl font-bold">{profile.nom}</h2>
+            <p className="text-sm text-muted-foreground capitalize">{profile.role}</p>
           </div>
         </div>
       </Card>
 
-      <Card className="p-6">
-        <h3 className="font-semibold mb-3">Statistiques</h3>
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <p className="text-2xl font-bold text-primary">-</p>
-            <p className="text-sm text-muted-foreground">Interventions</p>
-          </div>
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <p className="text-2xl font-bold text-primary">-</p>
-            <p className="text-sm text-muted-foreground">Heures ce mois</p>
+      {/* Informations personnelles */}
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold mb-4">Informations personnelles</h3>
+        
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Nom complet
+          </Label>
+          <Input value={profile.nom} disabled className="bg-muted" />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Email
+          </Label>
+          <Input value={profile.email} disabled className="bg-muted" />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            Téléphone
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              value={profile.phone || ""}
+              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+              placeholder="+33 6 12 34 56 78"
+            />
+            <Button onClick={handleUpdatePhone}>Enregistrer</Button>
           </div>
         </div>
       </Card>
 
+      {/* Préférences */}
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold mb-4">Préférences</h3>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">Notifications push</p>
+            <p className="text-sm text-muted-foreground">
+              Recevoir des alertes pour les nouvelles interventions
+            </p>
+          </div>
+          <Switch
+            checked={notificationsEnabled}
+            onCheckedChange={setNotificationsEnabled}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">Mode sombre</p>
+            <p className="text-sm text-muted-foreground">
+              Activer le thème sombre
+            </p>
+          </div>
+          <Switch
+            checked={darkMode}
+            onCheckedChange={setDarkMode}
+          />
+        </div>
+      </Card>
+
+      {/* Déconnexion */}
       <Button
+        variant="destructive"
+        className="w-full"
         onClick={handleLogout}
-        variant="outline"
-        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
       >
-        <LogOut className="h-4 w-4 mr-2" />
-        Déconnexion
+        <LogOut className="mr-2 h-4 w-4" />
+        Se déconnecter
       </Button>
     </div>
   );
