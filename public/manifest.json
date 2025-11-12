@@ -1,0 +1,49 @@
+{
+  "name": "Provia Base – Employés",
+  "short_name": "Provia",
+  "description": "Application mobile pour les techniciens Provia Base",
+  "start_url": "/employee",
+  "display": "standalone",
+  "background_color": "#FACC15",
+  "theme_color": "#FACC15",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "540x720",
+      "type": "image/jpeg",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Mes interventions",
+      "short_name": "Jobs",
+      "description": "Voir mes interventions du jour",
+      "url": "/employee/interventions",
+      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pointage",
+      "short_name": "Temps",
+      "description": "Gérer mon temps de travail",
+      "url": "/employee/timesheets",
+      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -9,8 +9,11 @@ import Login from "./pages/auth/Login";
 import AppShell from "./components/layout/AppShell";
 import { EmployeeLayout } from "./components/employee/EmployeeLayout";
 import { EmployeeLogin } from "./pages/employee/EmployeeLogin";
+import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeInterventions } from "./pages/employee/EmployeeInterventions";
 import { EmployeeInterventionDetail } from "./pages/employee/EmployeeInterventionDetail";
+import { EmployeePlanning } from "./pages/employee/EmployeePlanning";
+import { EmployeeFiles } from "./pages/employee/EmployeeFiles";
 import { EmployeeTimesheets } from "./pages/employee/EmployeeTimesheets";
 import { EmployeeProfile } from "./pages/employee/EmployeeProfile";
 import Dashboard from "./pages/Dashboard";
@@ -67,8 +70,11 @@ const App = () => {
           {/* Employee PWA Routes */}
           <Route path="/employee/login" element={<EmployeeLogin />} />
           <Route element={<EmployeeLayout />}>
+            <Route path="/employee" element={<EmployeeDashboard />} />
             <Route path="/employee/interventions" element={<EmployeeInterventions />} />
             <Route path="/employee/interventions/:id" element={<EmployeeInterventionDetail />} />
+            <Route path="/employee/planning" element={<EmployeePlanning />} />
+            <Route path="/employee/files" element={<EmployeeFiles />} />
             <Route path="/employee/timesheets" element={<EmployeeTimesheets />} />
             <Route path="/employee/profile" element={<EmployeeProfile />} />
           </Route>

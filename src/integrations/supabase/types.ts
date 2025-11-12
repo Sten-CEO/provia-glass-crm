@@ -858,34 +858,47 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string | null
+          employee_id: string | null
           file_name: string
           file_size: number | null
           file_type: string | null
           file_url: string
           id: string
           intervention_id: string
+          metadata: Json | null
         }
         Insert: {
           category?: string | null
           created_at?: string | null
+          employee_id?: string | null
           file_name: string
           file_size?: number | null
           file_type?: string | null
           file_url: string
           id?: string
           intervention_id: string
+          metadata?: Json | null
         }
         Update: {
           category?: string | null
           created_at?: string | null
+          employee_id?: string | null
           file_name?: string
           file_size?: number | null
           file_type?: string | null
           file_url?: string
           id?: string
           intervention_id?: string
+          metadata?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "intervention_files_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "intervention_files_intervention_id_fkey"
             columns: ["intervention_id"]
@@ -1391,6 +1404,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          message: string | null
+          payload: Json | null
+          read_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          read_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          message?: string | null
+          payload?: Json | null
+          read_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       paiements: {
         Row: {
           created_at: string
@@ -1780,6 +1834,7 @@ export type Database = {
           start_at: string | null
           status: Database["public"]["Enums"]["timesheet_status"]
           submitted_at: string | null
+          timesheet_type: string | null
           travel_minutes: number | null
           updated_at: string
         }
@@ -1809,6 +1864,7 @@ export type Database = {
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
           submitted_at?: string | null
+          timesheet_type?: string | null
           travel_minutes?: number | null
           updated_at?: string
         }
@@ -1838,6 +1894,7 @@ export type Database = {
           start_at?: string | null
           status?: Database["public"]["Enums"]["timesheet_status"]
           submitted_at?: string | null
+          timesheet_type?: string | null
           travel_minutes?: number | null
           updated_at?: string
         }
