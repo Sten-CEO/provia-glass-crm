@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { ClipboardList, Clock, User } from "lucide-react";
+import { Home, Briefcase, Calendar, Clock, HelpCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const EmployeeTabBar = () => {
@@ -9,21 +9,33 @@ export const EmployeeTabBar = () => {
   const tabs = [
     {
       id: "dashboard",
-      label: "Accueil",
-      icon: ClipboardList,
+      label: "Dashboard",
+      icon: Home,
       path: "/employee",
     },
     {
-      id: "interventions",
+      id: "jobs",
       label: "Jobs",
-      icon: ClipboardList,
-      path: "/employee/interventions",
+      icon: Briefcase,
+      path: "/employee/jobs",
+    },
+    {
+      id: "planning",
+      label: "Planning",
+      icon: Calendar,
+      path: "/employee/planning",
     },
     {
       id: "timesheets",
       label: "Pointage",
       icon: Clock,
       path: "/employee/timesheets",
+    },
+    {
+      id: "support",
+      label: "Support",
+      icon: HelpCircle,
+      path: "/employee/support",
     },
     {
       id: "profile",
@@ -35,7 +47,7 @@ export const EmployeeTabBar = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 glass-card border-t border-border/40 safe-area-bottom">
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="grid grid-cols-6 gap-1 px-2 py-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location.pathname.startsWith(tab.path);
@@ -45,14 +57,14 @@ export const EmployeeTabBar = () => {
               key={tab.id}
               onClick={() => navigate(tab.path)}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all",
+                "flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all",
                 isActive
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
             </button>
           );
         })}
