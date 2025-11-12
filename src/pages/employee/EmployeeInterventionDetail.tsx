@@ -27,6 +27,30 @@ export const EmployeeInterventionDetail = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Setup realtime for this specific intervention
+    const channel = supabase
+      .channel(`job-detail-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'jobs',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          console.log('Job detail updated:', payload);
+          loadData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Job detail realtime status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   const loadData = async () => {

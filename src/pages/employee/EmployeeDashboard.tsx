@@ -51,8 +51,10 @@ export const EmployeeDashboard = () => {
   }, [contextLoading, employeeId]);
 
   const setupRealtimeSubscriptions = () => {
+    if (!employeeId) return;
+
     const channel = supabase
-      .channel('employee-dashboard')
+      .channel('employee-dashboard-changes')
       .on(
         'postgres_changes',
         {
@@ -61,7 +63,8 @@ export const EmployeeDashboard = () => {
           table: 'intervention_assignments',
           filter: `employee_id=eq.${employeeId}`
         },
-        () => {
+        (payload) => {
+          console.log('Assignment changed:', payload);
           loadDashboardData();
         }
       )
@@ -72,11 +75,27 @@ export const EmployeeDashboard = () => {
           schema: 'public',
           table: 'jobs'
         },
-        () => {
+        (payload) => {
+          console.log('Job changed:', payload);
           loadDashboardData();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'timesheets_entries',
+          filter: `employee_id=eq.${employeeId}`
+        },
+        (payload) => {
+          console.log('Timesheet changed:', payload);
+          loadDashboardData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
