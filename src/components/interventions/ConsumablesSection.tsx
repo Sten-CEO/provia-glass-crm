@@ -137,7 +137,6 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       product_name: item.name,
       unit: "unité",
       location: item.location || "",
-      item_type: itemCategory, // Store category for later processing
     };
 
     const { error } = await supabase
