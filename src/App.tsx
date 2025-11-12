@@ -10,7 +10,7 @@ import AdminLayout from "./components/layout/AppShell";
 import { EmployeeLayout } from "./components/employee/EmployeeLayout";
 import { EmployeeLogin } from "./pages/employee/EmployeeLogin";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
-import { EmployeeInterventions } from "./pages/employee/EmployeeInterventions";
+import { EmployeeJobs } from "./pages/employee/EmployeeJobs";
 import { EmployeeInterventionDetail } from "./pages/employee/EmployeeInterventionDetail";
 import { EmployeePlanning } from "./pages/employee/EmployeePlanning";
 import { EmployeeTimesheets } from "./pages/employee/EmployeeTimesheets";
@@ -71,7 +71,7 @@ const App = () => {
           <Route path="/employee/login" element={<EmployeeLogin />} />
           <Route element={<EmployeeLayout />}>
             <Route path="/employee" element={<EmployeeDashboard />} />
-            <Route path="/employee/jobs" element={<EmployeeInterventions />} />
+            <Route path="/employee/jobs" element={<EmployeeJobs />} />
             <Route path="/employee/jobs/:id" element={<EmployeeInterventionDetail />} />
             <Route path="/employee/planning" element={<EmployeePlanning />} />
             <Route path="/employee/files" element={<EmployeeFiles />} />

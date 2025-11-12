@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Play, Pause, Square, Bell, MapPin } from "lucide-react";
+import { Calendar, Clock, Play, Square, Bell, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { format, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useEmployee } from "@/contexts/EmployeeContext";
 
 interface Intervention {
   id: string;
@@ -35,55 +36,80 @@ interface Notification {
 
 export const EmployeeDashboard = () => {
   const navigate = useNavigate();
+  const { employeeId, employeeName, loading: contextLoading } = useEmployee();
   const [todayJobs, setTodayJobs] = useState<Intervention[]>([]);
   const [activeTimesheet, setActiveTimesheet] = useState<DayTimesheet | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [employeeId, setEmployeeId] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [firstName, setFirstName] = useState("");
+  const firstName = employeeName.split(" ")[0] || "Employé";
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!contextLoading && employeeId) {
+      loadDashboardData();
+      setupRealtimeSubscriptions();
+    }
+  }, [contextLoading, employeeId]);
+
+  const setupRealtimeSubscriptions = () => {
+    const channel = supabase
+      .channel('employee-dashboard')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'intervention_assignments',
+          filter: `employee_id=eq.${employeeId}`
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs'
+        },
+        () => {
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const loadDashboardData = async () => {
+    if (!employeeId) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/employee/login");
-        return;
-      }
+      // Charger les interventions du jour via la vue
+      const { data: jobs } = await supabase
+        .from("v_employee_jobs")
+        .select("*");
 
-      const { data: employee } = await supabase
-        .from("equipe")
-        .select("id, nom")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!employee) return;
-
-      setEmployeeId(employee.id);
-      setFirstName(employee.nom.split(" ")[0]);
-
-      // Charger les interventions du jour
-      const { data: assignments } = await supabase
-        .from("intervention_assignments")
-        .select(`
-          intervention_id,
-          jobs (*)
-        `)
-        .eq("employee_id", employee.id);
-
-      const jobs = assignments?.map((a: any) => a.jobs).filter((j) => 
+      const todayJobs = jobs?.filter((j) => 
         j && isToday(new Date(j.date))
       ) || [];
-      setTodayJobs(jobs);
+      setTodayJobs(todayJobs.map(j => ({
+        id: j.id,
+        titre: j.title,
+        client_nom: j.client_name,
+        adresse: j.address,
+        date: j.date,
+        heure_debut: j.start_time,
+        statut: j.status
+      })));
 
       // Charger le timesheet actif du jour
       const { data: timesheet } = await supabase
         .from("timesheets_entries")
         .select("*")
-        .eq("employee_id", employee.id)
+        .eq("employee_id", employeeId)
         .eq("timesheet_type", "day")
         .eq("date", format(new Date(), "yyyy-MM-dd"))
         .is("end_at", null)
@@ -95,7 +121,7 @@ export const EmployeeDashboard = () => {
       const { data: notifs } = await supabase
         .from("notifications")
         .select("*")
-        .eq("employee_id", employee.id)
+        .eq("employee_id", employeeId)
         .is("read_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -249,7 +275,7 @@ export const EmployeeDashboard = () => {
               <Card
                 key={job.id}
                 className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/employee/interventions/${job.id}`)}
+                onClick={() => navigate(`/employee/jobs/${job.id}`)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-semibold">{job.titre}</h3>
@@ -288,11 +314,11 @@ export const EmployeeDashboard = () => {
         <Button 
           variant="outline" 
           className="h-20"
-          onClick={() => navigate("/employee/interventions")}
+          onClick={() => navigate("/employee/jobs")}
         >
           <div className="text-center">
             <Calendar className="h-6 w-6 mx-auto mb-1" />
-            <div className="text-sm">Toutes les interventions</div>
+            <div className="text-sm">Tous les jobs</div>
           </div>
         </Button>
         <Button 

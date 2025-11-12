@@ -3,32 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, Square } from "lucide-react";
+import { Play, Square } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useEmployee } from "@/contexts/EmployeeContext";
 
 export const EmployeeTimesheets = () => {
+  const { employeeId, loading: contextLoading } = useEmployee();
   const [isWorking, setIsWorking] = useState(false);
   const [currentEntry, setCurrentEntry] = useState<any>(null);
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTimesheets();
-  }, []);
+    if (!contextLoading && employeeId) {
+      loadTimesheets();
+    }
+  }, [contextLoading, employeeId]);
 
   const loadTimesheets = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!employeeId) return;
 
+    try {
       // Load today's entries
       const today = format(new Date(), "yyyy-MM-dd");
       const { data, error } = await supabase
         .from("timesheets_entries")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", employeeId)
         .eq("date", today)
         .order("created_at", { ascending: false });
 
@@ -51,18 +54,19 @@ export const EmployeeTimesheets = () => {
   };
 
   const startWork = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!employeeId) return;
 
+    try {
       const now = new Date();
       const { data, error } = await supabase
         .from("timesheets_entries")
         .insert({
-          employee_id: user.id,
+          employee_id: employeeId,
           date: format(now, "yyyy-MM-dd"),
           start_at: format(now, "HH:mm:ss"),
+          timesheet_type: "day",
           status: "draft",
+          hours: 0
         })
         .select()
         .single();
@@ -104,7 +108,7 @@ export const EmployeeTimesheets = () => {
     }
   };
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Chargement...</div>
