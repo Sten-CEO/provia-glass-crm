@@ -6,64 +6,88 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { format, addDays, startOfWeek, endOfWeek, isToday, isSameDay } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, isToday, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useEmployee } from "@/contexts/EmployeeContext";
 
-interface Intervention {
+interface Job {
   id: string;
-  titre: string;
-  client_nom: string;
-  adresse: string;
+  title: string;
+  client_name: string;
+  address: string;
   date: string;
-  heure_debut: string;
-  heure_fin: string;
-  statut: string;
+  start_time: string;
+  end_time: string;
+  status: string;
 }
 
 export const EmployeePlanning = () => {
   const navigate = useNavigate();
-  const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const { employeeId, loading: contextLoading } = useEmployee();
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { locale: fr }));
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPlanning();
-  }, [currentWeekStart]);
+    if (!contextLoading && employeeId) {
+      loadPlanning();
+      setupRealtimeSubscriptions();
+    }
+  }, [currentWeekStart, contextLoading, employeeId]);
+
+  const setupRealtimeSubscriptions = () => {
+    const channel = supabase
+      .channel('employee-planning')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'intervention_assignments',
+          filter: `employee_id=eq.${employeeId}`
+        },
+        () => {
+          loadPlanning();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jobs'
+        },
+        () => {
+          loadPlanning();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const loadPlanning = async () => {
+    if (!employeeId) return;
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/employee/login");
-        return;
-      }
-
-      const { data: employee } = await supabase
-        .from("equipe")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!employee) return;
-
       const weekEnd = endOfWeek(currentWeekStart, { locale: fr });
 
-      const { data: assignments } = await supabase
-        .from("intervention_assignments")
-        .select(`
-          intervention_id,
-          jobs (*)
-        `)
-        .eq("employee_id", employee.id);
+      const { data, error } = await supabase
+        .from("v_employee_jobs")
+        .select("*");
 
-      const jobs = assignments?.map((a: any) => a.jobs).filter((j) => {
+      if (error) throw error;
+
+      const weekJobs = data?.filter((j) => {
         if (!j) return false;
-        const jobDate = new Date(j.date);
+        const jobDate = parseISO(j.date);
         return jobDate >= currentWeekStart && jobDate <= weekEnd;
       }) || [];
 
-      setInterventions(jobs);
+      setJobs(weekJobs);
 
     } catch (error) {
       console.error(error);
@@ -82,8 +106,8 @@ export const EmployeePlanning = () => {
   };
 
   const getJobsForDate = (date: Date) => {
-    return interventions.filter((job) => 
-      isSameDay(new Date(job.date), date)
+    return jobs.filter((job) => 
+      isSameDay(parseISO(job.date), date)
     );
   };
 
@@ -109,7 +133,7 @@ export const EmployeePlanning = () => {
     }
   };
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Chargement...</div>
@@ -195,34 +219,34 @@ export const EmployeePlanning = () => {
               <Card
                 key={job.id}
                 className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/employee/interventions/${job.id}`)}
+                onClick={() => navigate(`/employee/jobs/${job.id}`)}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-semibold">{job.titre}</h4>
-                  <Badge className={getStatusColor(job.statut)}>
-                    {job.statut}
+                  <h4 className="font-semibold">{job.title}</h4>
+                  <Badge className={getStatusColor(job.status)}>
+                    {job.status}
                   </Badge>
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-3">
-                  {job.client_nom}
+                  {job.client_name}
                 </p>
 
                 <div className="space-y-2 text-sm">
-                  {job.heure_debut && (
+                  {job.start_time && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
                       <span>
-                        {job.heure_debut}
-                        {job.heure_fin && ` - ${job.heure_fin}`}
+                        {job.start_time}
+                        {job.end_time && ` - ${job.end_time}`}
                       </span>
                     </div>
                   )}
 
-                  {job.adresse && (
+                  {job.address && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="h-4 w-4" />
-                      <span className="line-clamp-1">{job.adresse}</span>
+                      <span className="line-clamp-1">{job.address}</span>
                     </div>
                   )}
                 </div>
