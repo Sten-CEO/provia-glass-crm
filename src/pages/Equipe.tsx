@@ -42,6 +42,7 @@ interface TeamMember {
   user_id?: string | null;
   status?: string | null;
   phone?: string | null;
+  app_access_status?: 'none' | 'active' | 'suspended';
   access_controls: {
     devis?: boolean;
     planning?: boolean;
@@ -328,11 +329,12 @@ const Equipe = () => {
                   <td className="p-4 text-muted-foreground">{member.email}</td>
                   <td className="p-4">
                     {member.user_id ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        Actif
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        <Smartphone className="h-3 w-3 mr-1" />
+                        {member.app_access_status === 'suspended' ? 'Suspendu' : 'Actif'}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-gray-50 text-gray-500">
+                      <Badge variant="outline" className="bg-muted text-muted-foreground">
                         Aucun
                       </Badge>
                     )}

@@ -538,6 +538,7 @@ export type Database = {
       equipe: {
         Row: {
           access_controls: Json | null
+          app_access_status: string | null
           competences: string[] | null
           created_at: string
           email: string
@@ -553,6 +554,7 @@ export type Database = {
         }
         Insert: {
           access_controls?: Json | null
+          app_access_status?: string | null
           competences?: string[] | null
           created_at?: string
           email: string
@@ -568,6 +570,7 @@ export type Database = {
         }
         Update: {
           access_controls?: Json | null
+          app_access_status?: string | null
           competences?: string[] | null
           created_at?: string
           email?: string

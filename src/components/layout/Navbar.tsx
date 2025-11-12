@@ -1,6 +1,9 @@
 import { Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import logo from "@/assets/logo.jpg";
 
 interface NavbarProps {
@@ -9,9 +12,27 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
   const navigate = useNavigate();
+  const [userEmail, setUserEmail] = useState<string>("");
 
-  const handleLogout = () => {
-    navigate("/auth/login");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast.success("Déconnexion réussie");
+      navigate("/auth/login");
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
   return (
@@ -34,7 +55,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground hidden sm:inline">
-          Bienvenue
+          Bienvenue {userEmail && `- ${userEmail}`}
         </span>
         <Button
           variant="outline"

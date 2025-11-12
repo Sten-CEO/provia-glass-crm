@@ -71,15 +71,15 @@ serve(async (req) => {
 
     console.log('User created:', newUser.user.id);
 
-    // Lier l'utilisateur à l'employé dans la table equipe
-    const { error: updateError } = await supabaseAdmin
-      .from('equipe')
-      .update({ 
-        user_id: newUser.user.id,
-        phone: phone || null,
-        status: 'active'
-      })
-      .eq('id', employeeId);
+      const { error: updateError } = await supabaseAdmin
+        .from('equipe')
+        .update({ 
+          user_id: newUser.user.id,
+          phone: phone || null,
+          status: 'active',
+          app_access_status: 'active'
+        })
+        .eq('id', employeeId);
 
     if (updateError) {
       console.error('Error updating equipe:', updateError);

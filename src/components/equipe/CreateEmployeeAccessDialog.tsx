@@ -50,10 +50,16 @@ export const CreateEmployeeAccessDialog = ({
       const password = method === "password" ? generatePassword() : undefined;
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) {
-        console.error("Session error:", sessionError);
-        throw new Error("Non authentifié - veuillez vous reconnecter");
+      
+      if (sessionError || !session) {
+        toast.error("Session expirée. Veuillez vous reconnecter.");
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 2000);
+        return;
       }
+
+      console.log("Creating employee access with session:", session.user.id);
 
       const response = await supabase.functions.invoke("create-employee-account", {
         headers: {
@@ -70,8 +76,20 @@ export const CreateEmployeeAccessDialog = ({
         },
       });
 
+      console.log("Response from edge function:", response);
+
       if (response.error) {
-        throw response.error;
+        console.error("Edge function error:", response.error);
+        
+        if (response.error.message?.includes('Unauthorized') || 
+            response.error.message?.includes('Insufficient permissions')) {
+          toast.error("Vous n'avez pas les permissions nécessaires");
+        } else if (response.error.message?.includes('already registered')) {
+          toast.error("Cet email est déjà utilisé");
+        } else {
+          toast.error(response.error.message || "Erreur lors de la création de l'accès");
+        }
+        return;
       }
 
       if (method === "password" && password) {
@@ -84,7 +102,7 @@ export const CreateEmployeeAccessDialog = ({
       }
     } catch (error: any) {
       console.error("Error creating access:", error);
-      toast.error(error.message || "Erreur lors de la création de l'accès");
+      toast.error("Erreur lors de la création de l'accès");
     } finally {
       setLoading(false);
     }
