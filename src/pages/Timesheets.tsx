@@ -436,7 +436,7 @@ const Timesheets = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
-                {employees.map((e) => (
+                {employees.filter((e) => e.id && e.id.trim() !== "").map((e) => (
                   <SelectItem key={e.id} value={e.id}>
                     {e.nom}
                   </SelectItem>
@@ -484,7 +484,7 @@ const Timesheets = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
-                {clients.map((c) => (
+                {clients.filter((c) => c.id && c.id.trim() !== "").map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.nom}
                   </SelectItem>
