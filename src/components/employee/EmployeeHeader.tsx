@@ -9,13 +9,14 @@ export const EmployeeHeader = () => {
   const showBackButton = location.pathname !== "/employee" && location.pathname !== "/employee/interventions";
 
   const getTitle = () => {
-    if (location.pathname === "/employee") return "Tableau de bord";
+    if (location.pathname === "/employee") return "Dashboard";
     if (location.pathname.includes("/interventions/")) return "Intervention";
     if (location.pathname.includes("/interventions")) return "Mes interventions";
     if (location.pathname.includes("/planning")) return "Planning";
     if (location.pathname.includes("/files")) return "Fichiers";
     if (location.pathname.includes("/timesheets")) return "Pointage";
     if (location.pathname.includes("/profile")) return "Profil";
+    if (location.pathname.includes("/support")) return "Support";
     return "Provia Base";
   };
 

@@ -79,29 +79,41 @@ export const EmployeeJobs = () => {
     if (!employeeId) return;
 
     try {
-      // Charger les interventions assignées à cet employé
+      // 1) Affectations formelles
       const { data: assignments } = await supabase
         .from("intervention_assignments")
         .select("intervention_id")
         .eq("employee_id", employeeId);
 
-      if (!assignments || assignments.length === 0) {
-        setJobs([]);
-        return;
+      let jobsRaw: any[] = [];
+
+      if (assignments && assignments.length > 0) {
+        const interventionIds = assignments.map(a => a.intervention_id);
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .in("id", interventionIds)
+          .order("date", { ascending: false });
+        if (error) throw error;
+        jobsRaw = data || [];
+      } else {
+        // 2) Fallback sur assigned_employee_ids et employe_id
+        const { data: byArray } = await supabase
+          .from("jobs")
+          .select("*")
+          .contains("assigned_employee_ids", [employeeId]);
+
+        const { data: byLegacy } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("employe_id", employeeId);
+
+        const merged = [...(byArray || []), ...(byLegacy || [])];
+        const map = new Map(merged.map(j => [j.id, j]));
+        jobsRaw = Array.from(map.values());
       }
 
-      const interventionIds = assignments.map(a => a.intervention_id);
-
-      // Charger les détails des interventions
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .in("id", interventionIds)
-        .order("date", { ascending: false });
-
-      if (error) throw error;
-
-      setJobs(data?.map(j => ({
+      const mapped = jobsRaw.map(j => ({
         id: j.id,
         title: j.titre,
         client_name: j.client_nom,
@@ -110,7 +122,9 @@ export const EmployeeJobs = () => {
         start_time: j.heure_debut || "",
         status: j.statut,
         description: j.description || ""
-      })) || []);
+      }));
+
+      setJobs(mapped);
     } catch (error: any) {
       toast.error("Erreur de chargement des jobs");
       console.error(error);

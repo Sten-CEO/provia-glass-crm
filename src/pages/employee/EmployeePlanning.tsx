@@ -81,30 +81,41 @@ export const EmployeePlanning = () => {
     try {
       const weekEnd = endOfWeek(currentWeekStart, { locale: fr });
 
-      // Charger les interventions assignées à cet employé
+      // 1) Affectations formelles
       const { data: assignments } = await supabase
         .from("intervention_assignments")
         .select("intervention_id")
         .eq("employee_id", employeeId);
 
-      if (!assignments || assignments.length === 0) {
-        setJobs([]);
-        setLoading(false);
-        return;
+      let jobsRaw: any[] = [];
+
+      if (assignments && assignments.length > 0) {
+        const interventionIds = assignments.map(a => a.intervention_id);
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .in("id", interventionIds);
+        if (error) throw error;
+        jobsRaw = data || [];
+      } else {
+        // 2) Fallback sur assigned_employee_ids et employe_id
+        const { data: byArray } = await supabase
+          .from("jobs")
+          .select("*")
+          .contains("assigned_employee_ids", [employeeId]);
+
+        const { data: byLegacy } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("employe_id", employeeId);
+
+        const merged = [...(byArray || []), ...(byLegacy || [])];
+        const map = new Map(merged.map(j => [j.id, j]));
+        jobsRaw = Array.from(map.values());
       }
 
-      const interventionIds = assignments.map(a => a.intervention_id);
-
-      // Charger les détails des interventions
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .in("id", interventionIds);
-
-      if (error) throw error;
-
-      // Filtrer pour la semaine en cours
-      const weekJobs = data?.filter((j) => {
+      // Filtrer pour la semaine en cours et mapper
+      const weekJobs = jobsRaw.filter((j) => {
         if (!j) return false;
         const jobDate = parseISO(j.date);
         return jobDate >= currentWeekStart && jobDate <= weekEnd;
@@ -117,7 +128,7 @@ export const EmployeePlanning = () => {
         start_time: j.heure_debut || "",
         end_time: j.heure_fin || "",
         status: j.statut
-      })) || [];
+      }));
 
       setJobs(weekJobs);
 
