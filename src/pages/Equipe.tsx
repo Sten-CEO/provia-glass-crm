@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CreateEmployeeAccessDialog } from "@/components/equipe/CreateEmployeeAccessDialog";
 
 interface TeamMember {
   id: string;
@@ -38,6 +39,9 @@ interface TeamMember {
   email: string;
   competences: string[];
   note: string | null;
+  user_id?: string | null;
+  status?: string | null;
+  phone?: string | null;
   access_controls: {
     devis?: boolean;
     planning?: boolean;
@@ -56,6 +60,8 @@ const Equipe = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<TeamMember | null>(null);
   const [newMember, setNewMember] = useState({
     nom: "",
     role: "Membre" as const,
@@ -301,6 +307,7 @@ const Equipe = () => {
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Nom</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Rôle</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Email</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Accès App</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
               </tr>
             </thead>
@@ -313,7 +320,32 @@ const Equipe = () => {
                   </td>
                   <td className="p-4 text-muted-foreground">{member.email}</td>
                   <td className="p-4">
+                    {member.user_id ? (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Actif
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-gray-50 text-gray-500">
+                        Aucun
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="p-4">
                     <div className="flex gap-2">
+                      {!member.user_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary"
+                          onClick={() => {
+                            setSelectedEmployee(member);
+                            setAccessDialogOpen(true);
+                          }}
+                        >
+                          <Smartphone className="h-4 w-4 mr-1" />
+                          Créer accès
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -447,6 +479,16 @@ const Equipe = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Employee Access Dialog */}
+      {selectedEmployee && (
+        <CreateEmployeeAccessDialog
+          open={accessDialogOpen}
+          onOpenChange={setAccessDialogOpen}
+          employee={selectedEmployee}
+          onSuccess={loadTeam}
+        />
+      )}
     </div>
   );
 };

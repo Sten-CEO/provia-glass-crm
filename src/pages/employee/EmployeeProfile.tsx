@@ -26,11 +26,11 @@ export const EmployeeProfile = () => {
 
       setUser(authUser);
 
-      // Load employee info
+      // Load employee info using user_id
       const { data: empData } = await supabase
         .from("equipe")
         .select("*")
-        .eq("id", authUser.id)
+        .eq("user_id", authUser.id)
         .single();
 
       setEmployee(empData);

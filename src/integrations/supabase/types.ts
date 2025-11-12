@@ -546,7 +546,10 @@ export type Database = {
           is_manager: boolean | null
           nom: string
           note: string | null
+          phone: string | null
           role: string
+          status: string | null
+          user_id: string | null
         }
         Insert: {
           access_controls?: Json | null
@@ -558,7 +561,10 @@ export type Database = {
           is_manager?: boolean | null
           nom: string
           note?: string | null
+          phone?: string | null
           role?: string
+          status?: string | null
+          user_id?: string | null
         }
         Update: {
           access_controls?: Json | null
@@ -570,7 +576,10 @@ export type Database = {
           is_manager?: boolean | null
           nom?: string
           note?: string | null
+          phone?: string | null
           role?: string
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -695,6 +704,42 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "doc_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intervention_assignments: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          id: string
+          intervention_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          intervention_id: string
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          intervention_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_assignments_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1871,6 +1916,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1887,9 +1953,17 @@ export type Database = {
       generate_intervention_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_quote_number: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_manager: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "manager" | "employee"
       timesheet_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -2018,6 +2092,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "manager", "employee"],
       timesheet_status: ["draft", "submitted", "approved", "rejected"],
     },
   },

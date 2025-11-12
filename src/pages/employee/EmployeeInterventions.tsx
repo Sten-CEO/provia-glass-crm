@@ -35,15 +35,31 @@ export const EmployeeInterventions = () => {
         return;
       }
 
-      // Load interventions assigned to this user
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .contains("assigned_employee_ids", [user.id])
-        .order("date", { ascending: true });
+      // Récupérer l'ID de l'employé depuis la table equipe
+      const { data: employee } = await supabase
+        .from("equipe")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
 
-      if (error) throw error;
-      setInterventions(data || []);
+      if (!employee) {
+        toast.error("Profil employé introuvable");
+        return;
+      }
+
+      // Charger les interventions assignées via la table intervention_assignments
+      const { data: assignments, error: assignError } = await supabase
+        .from("intervention_assignments")
+        .select(`
+          intervention_id,
+          jobs (*)
+        `)
+        .eq("employee_id", employee.id);
+
+      if (assignError) throw assignError;
+
+      const interventions = assignments?.map((a: any) => a.jobs).filter(Boolean) || [];
+      setInterventions(interventions);
     } catch (error: any) {
       toast.error("Erreur de chargement des interventions");
       console.error(error);
