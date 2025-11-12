@@ -13,9 +13,10 @@ import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeInterventions } from "./pages/employee/EmployeeInterventions";
 import { EmployeeInterventionDetail } from "./pages/employee/EmployeeInterventionDetail";
 import { EmployeePlanning } from "./pages/employee/EmployeePlanning";
-import { EmployeeFiles } from "./pages/employee/EmployeeFiles";
 import { EmployeeTimesheets } from "./pages/employee/EmployeeTimesheets";
+import { EmployeeSupport } from "./pages/employee/EmployeeSupport";
 import { EmployeeProfile } from "./pages/employee/EmployeeProfile";
+import { EmployeeFiles } from "./pages/employee/EmployeeFiles";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
@@ -46,7 +47,6 @@ import InventaireItemDetail from "./pages/inventaire/InventaireItemDetail";
 import InventaireMouvements from "./pages/inventaire/InventaireMouvements";
 import InventaireAchats from "./pages/inventaire/InventaireAchats";
 import AchatEditor from "./pages/inventaire/AchatEditor";
-import { SupportBubble } from "./components/support/SupportBubble";
 
 const queryClient = new QueryClient();
 
@@ -71,11 +71,12 @@ const App = () => {
           <Route path="/employee/login" element={<EmployeeLogin />} />
           <Route element={<EmployeeLayout />}>
             <Route path="/employee" element={<EmployeeDashboard />} />
-            <Route path="/employee/interventions" element={<EmployeeInterventions />} />
-            <Route path="/employee/interventions/:id" element={<EmployeeInterventionDetail />} />
+            <Route path="/employee/jobs" element={<EmployeeInterventions />} />
+            <Route path="/employee/jobs/:id" element={<EmployeeInterventionDetail />} />
             <Route path="/employee/planning" element={<EmployeePlanning />} />
             <Route path="/employee/files" element={<EmployeeFiles />} />
             <Route path="/employee/timesheets" element={<EmployeeTimesheets />} />
+            <Route path="/employee/support" element={<EmployeeSupport />} />
             <Route path="/employee/profile" element={<EmployeeProfile />} />
           </Route>
           
@@ -127,7 +128,6 @@ const App = () => {
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <SupportBubble />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
