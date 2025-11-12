@@ -106,32 +106,44 @@ export const EmployeeDashboard = () => {
     if (!employeeId) return;
 
     try {
-      // Charger les interventions assignées à cet employé
-      const { data: assignments } = await supabase
+      // 1) Récupère les affectations formelles
+      const { data: assignments, error: assignError } = await supabase
         .from("intervention_assignments")
         .select("intervention_id")
         .eq("employee_id", employeeId);
 
-      if (!assignments || assignments.length === 0) {
-        setTodayJobs([]);
-        setLoading(false);
-        return;
+      if (assignError) console.warn(assignError);
+
+      let jobs: any[] = [];
+
+      if (assignments && assignments.length > 0) {
+        const interventionIds = assignments.map(a => a.intervention_id);
+        const { data, error } = await supabase
+          .from("jobs")
+          .select("*")
+          .in("id", interventionIds);
+        if (error) throw error;
+        jobs = data || [];
+      } else {
+        // 2) Fallback: utilise les champs du job si la table d'affectation est vide
+        const { data: jobsByArray } = await supabase
+          .from("jobs")
+          .select("*")
+          .contains("assigned_employee_ids", [employeeId]);
+
+        const { data: jobsByLegacy } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("employe_id", employeeId);
+
+        const merged = [...(jobsByArray || []), ...(jobsByLegacy || [])];
+        // déduplique par id
+        const map = new Map(merged.map(j => [j.id, j]));
+        jobs = Array.from(map.values());
       }
 
-      const interventionIds = assignments.map(a => a.intervention_id);
-
-      // Charger les détails des interventions
-      const { data: jobs, error: jobsError } = await supabase
-        .from("jobs")
-        .select("*")
-        .in("id", interventionIds);
-
-      if (jobsError) throw jobsError;
-
       // Filtrer pour aujourd'hui uniquement
-      const todayJobs = jobs?.filter((j) => 
-        j && isToday(new Date(j.date))
-      ) || [];
+      const todayJobs = jobs.filter((j) => j && isToday(new Date(j.date)));
       
       setTodayJobs(todayJobs.map(j => ({
         id: j.id,
