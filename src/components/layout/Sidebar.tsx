@@ -52,7 +52,7 @@ const navSections = [
           { label: "Historique & rapport", path: "/interventions/history" },
         ]
       },
-      { title: "Timesheets", icon: Clock, path: "/timesheets" },
+      { title: "Pointage", icon: Clock, path: "/timesheets" },
     ],
   },
   {
