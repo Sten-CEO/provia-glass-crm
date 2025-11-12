@@ -314,7 +314,14 @@ const Equipe = () => {
             <tbody>
               {team.map((member) => (
                 <tr key={member.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
-                  <td className="p-4 font-medium">{member.nom}</td>
+                  <td className="p-4 font-medium">
+                    <button 
+                      onClick={() => window.location.href = `/equipe/${member.id}`}
+                      className="text-primary hover:underline cursor-pointer"
+                    >
+                      {member.nom}
+                    </button>
+                  </td>
                   <td className="p-4">
                     <Badge className={getRoleColor(member.role)}>{member.role}</Badge>
                   </td>

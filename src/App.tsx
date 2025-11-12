@@ -26,6 +26,7 @@ import InterventionDetail from "./pages/InterventionDetail";
 import InterventionEditor from "./pages/InterventionEditor";
 import InterventionsHistory from "./pages/InterventionsHistory";
 import Equipe from "./pages/Equipe";
+import EmployeeDetail from "./pages/EmployeeDetail";
 import Timesheets from "./pages/Timesheets";
 import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
@@ -110,6 +111,7 @@ const App = () => {
             <Route path="/inventaire/achats/:id" element={<AchatEditor />} />
             
             <Route path="/equipe" element={<Equipe />} />
+            <Route path="/equipe/:id" element={<EmployeeDetail />} />
             <Route path="/timesheets" element={<Timesheets />} />
             <Route path="/paiements" element={<Paiements />} />
             <Route path="/parametres" element={<Parametres />} />

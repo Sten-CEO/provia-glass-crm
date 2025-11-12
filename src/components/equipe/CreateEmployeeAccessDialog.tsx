@@ -49,12 +49,16 @@ export const CreateEmployeeAccessDialog = ({
     try {
       const password = method === "password" ? generatePassword() : undefined;
       
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Non authentifié");
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.access_token) {
+        console.error("Session error:", sessionError);
+        throw new Error("Non authentifié - veuillez vous reconnecter");
       }
 
       const response = await supabase.functions.invoke("create-employee-account", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
           employeeId: employee.id,
           email: formData.email,
