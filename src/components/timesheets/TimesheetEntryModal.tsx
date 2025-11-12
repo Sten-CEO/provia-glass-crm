@@ -71,9 +71,9 @@ export const TimesheetEntryModal = ({ open, onOpenChange, entry, onSaved }: Time
       supabase.from("jobs").select("id, titre, client_id"),
     ]);
 
-    if (empRes.data) setEmployees(empRes.data);
-    if (clientsRes.data) setClients(clientsRes.data);
-    if (jobsRes.data) setJobs(jobsRes.data);
+    if (empRes.data) setEmployees(empRes.data.filter((e) => e.id && e.id.trim() !== ""));
+    if (clientsRes.data) setClients(clientsRes.data.filter((c) => c.id && c.id.trim() !== ""));
+    if (jobsRes.data) setJobs(jobsRes.data.filter((j) => j.id && j.id.trim() !== ""));
   };
 
   const calculateHours = () => {
@@ -224,13 +224,13 @@ export const TimesheetEntryModal = ({ open, onOpenChange, entry, onSaved }: Time
           {/* Job */}
           <div>
             <Label>Intervention</Label>
-            <Select value={formData.job_id} onValueChange={(v) => setFormData({ ...formData, job_id: v })}>
+            <Select value={formData.job_id || "none"} onValueChange={(v) => setFormData({ ...formData, job_id: v === "none" ? "" : v })}>
               <SelectTrigger>
                 <SelectValue placeholder="Aucune (temps administratif)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Aucune</SelectItem>
-                {jobs.map((j) => (
+                <SelectItem value="none">Aucune</SelectItem>
+                {jobs.filter((j) => j.id && j.id.trim() !== "").map((j) => (
                   <SelectItem key={j.id} value={j.id}>
                     {j.titre}
                   </SelectItem>
@@ -242,13 +242,13 @@ export const TimesheetEntryModal = ({ open, onOpenChange, entry, onSaved }: Time
           {/* Client */}
           <div>
             <Label>Client</Label>
-            <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v })}>
+            <Select value={formData.client_id || "auto"} onValueChange={(v) => setFormData({ ...formData, client_id: v === "auto" ? "" : v })}>
               <SelectTrigger>
                 <SelectValue placeholder="Auto depuis intervention" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Auto</SelectItem>
-                {clients.map((c) => (
+                <SelectItem value="auto">Auto</SelectItem>
+                {clients.filter((c) => c.id && c.id.trim() !== "").map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.nom}
                   </SelectItem>
