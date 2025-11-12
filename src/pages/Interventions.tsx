@@ -187,6 +187,8 @@ const Interventions = () => {
               <SelectItem value="En cours">En cours</SelectItem>
               <SelectItem value="Terminée">Terminée</SelectItem>
               <SelectItem value="Annulée">Annulée</SelectItem>
+              <SelectItem value="Reportée">Reportée</SelectItem>
+              <SelectItem value="Échouée">Échouée</SelectItem>
             </SelectContent>
           </Select>
         </div>

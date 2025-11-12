@@ -11,6 +11,7 @@ interface AlertsData {
   upcomingDeadlines: number;
   quotesToSchedule: number;
   upcomingJobs7d: number;
+  failedOrPostponed: number;
 }
 
 export const AlertsStrip = () => {
@@ -21,6 +22,7 @@ export const AlertsStrip = () => {
     upcomingDeadlines: 0,
     quotesToSchedule: 0,
     upcomingJobs7d: 0,
+    failedOrPostponed: 0,
   });
 
   const loadAlerts = async () => {
@@ -88,12 +90,19 @@ export const AlertsStrip = () => {
       quotesToSchedule = acceptedQuotes.filter(q => !linkedQuoteIds.has(q.id)).length;
     }
 
+    // 5. Failed or Postponed interventions
+    const { data: failedOrPostponedData } = await supabase
+      .from("jobs")
+      .select("id")
+      .or(`statut.eq.Échouée,statut.eq.Reportée`);
+
     setAlerts({
       unpaidInvoices: { count: unpaidInvoicesData?.length || 0, total: unpaidTotal },
       overdueQuotes: overdueQuotesData?.length || 0,
       upcomingDeadlines: upcomingTotal,
       quotesToSchedule,
       upcomingJobs7d,
+      failedOrPostponed: failedOrPostponedData?.length || 0,
     });
   };
 
@@ -166,6 +175,14 @@ export const AlertsStrip = () => {
         // Could open modal, for now navigate to planning
         navigate("/planning");
       },
+    },
+    {
+      label: "Échouées / Reportées",
+      count: alerts.failedOrPostponed,
+      detail: null,
+      icon: AlertCircle,
+      color: alerts.failedOrPostponed > 0 ? "red" : "gray",
+      onClick: () => navigate("/interventions?filter=failed_postponed"),
     },
   ];
 
