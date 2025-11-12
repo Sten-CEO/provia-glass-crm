@@ -113,15 +113,18 @@ export const EmployeeInterventionDetail = () => {
     setUpdating(true);
 
     try {
+      const now = new Date();
       // Créer le timesheet job
       const { error: tsError } = await supabase
         .from("timesheets_entries")
         .insert({
           employee_id: employeeId,
           job_id: id,
-          start_at: new Date().toISOString(),
+          date: now.toISOString().split('T')[0], // Format YYYY-MM-DD requis
+          start_at: now.toISOString(),
           timesheet_type: "job",
           status: "draft",
+          hours: 0,
         });
 
       if (tsError) throw tsError;
