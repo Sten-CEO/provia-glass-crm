@@ -21,6 +21,7 @@ import { FilesSection } from "@/components/interventions/FilesSection";
 import { NotesSignatureSection } from "@/components/interventions/NotesSignatureSection";
 import { InvoiceSection } from "@/components/interventions/InvoiceSection";
 import { RecurrenceDialog } from "@/components/interventions/RecurrenceDialog";
+import { ChecklistSection } from "@/components/interventions/ChecklistSection";
 import { DisplayOptionsPanel } from "@/components/common/DisplayOptionsPanel";
 import { useDisplaySettings } from "@/hooks/useDisplaySettings";
 
@@ -89,6 +90,7 @@ export default function InterventionEditor() {
       heure_fin: "17:00",
       duration_estimated: 480, // 8 heures
       statut: "À planifier",
+      checklist: [],
       type: "Maintenance",
       priority: "normale",
       description: "",
@@ -398,6 +400,7 @@ export default function InterventionEditor() {
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="bg-muted/40 p-1">
             <TabsTrigger value="general">Informations générales</TabsTrigger>
+            <TabsTrigger value="checklist">Checklist</TabsTrigger>
             <TabsTrigger value="consumables">Consommables / Matériaux</TabsTrigger>
             <TabsTrigger value="services">Services / Prestations</TabsTrigger>
             <TabsTrigger value="timesheets">Temps passé</TabsTrigger>
@@ -408,6 +411,14 @@ export default function InterventionEditor() {
 
           <TabsContent value="general">
             <GeneralInfoSection intervention={intervention} onChange={setIntervention} />
+          </TabsContent>
+
+          <TabsContent value="checklist">
+            <ChecklistSection 
+              interventionId={id}
+              checklist={intervention.checklist || []}
+              onChange={(checklist) => setIntervention({ ...intervention, checklist })}
+            />
           </TabsContent>
 
           <TabsContent value="consumables">

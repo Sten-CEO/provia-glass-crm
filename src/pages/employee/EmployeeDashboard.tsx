@@ -121,7 +121,8 @@ export const EmployeeDashboard = () => {
         const { data, error } = await supabase
           .from("jobs")
           .select("*")
-          .in("id", interventionIds);
+          .in("id", interventionIds)
+          .not("statut", "in", '("Brouillon","À planifier")');
         if (error) throw error;
         jobs = data || [];
       } else {
@@ -129,12 +130,14 @@ export const EmployeeDashboard = () => {
         const { data: jobsByArray } = await supabase
           .from("jobs")
           .select("*")
-          .contains("assigned_employee_ids", [employeeId]);
+          .contains("assigned_employee_ids", [employeeId])
+          .not("statut", "in", '("Brouillon","À planifier")');
 
         const { data: jobsByLegacy } = await supabase
           .from("jobs")
           .select("*")
-          .eq("employe_id", employeeId);
+          .eq("employe_id", employeeId)
+          .not("statut", "in", '("Brouillon","À planifier")');
 
         const merged = [...(jobsByArray || []), ...(jobsByLegacy || [])];
         // déduplique par id

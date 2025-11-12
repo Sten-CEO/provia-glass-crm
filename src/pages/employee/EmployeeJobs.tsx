@@ -93,6 +93,7 @@ export const EmployeeJobs = () => {
           .from("jobs")
           .select("*")
           .in("id", interventionIds)
+          .not("statut", "in", '("Brouillon","À planifier")')
           .order("date", { ascending: false });
         if (error) throw error;
         jobsRaw = data || [];
@@ -101,12 +102,14 @@ export const EmployeeJobs = () => {
         const { data: byArray } = await supabase
           .from("jobs")
           .select("*")
-          .contains("assigned_employee_ids", [employeeId]);
+          .contains("assigned_employee_ids", [employeeId])
+          .not("statut", "in", '("Brouillon","À planifier")');
 
         const { data: byLegacy } = await supabase
           .from("jobs")
           .select("*")
-          .eq("employe_id", employeeId);
+          .eq("employe_id", employeeId)
+          .not("statut", "in", '("Brouillon","À planifier")');
 
         const merged = [...(byArray || []), ...(byLegacy || [])];
         const map = new Map(merged.map(j => [j.id, j]));

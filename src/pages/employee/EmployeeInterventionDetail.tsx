@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, CheckCircle, Camera, FileSignature, MapPin, Navigation, Clock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Play, CheckCircle, Camera, FileSignature, MapPin, Navigation, Clock, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { JobPhotoCapture } from "@/components/employee/JobPhotoCapture";
 import { SignatureCanvas } from "@/components/employee/SignatureCanvas";
+import { CompletionResultDialog } from "@/components/employee/CompletionResultDialog";
 
 export const EmployeeInterventionDetail = () => {
   const { id } = useParams();
@@ -24,11 +26,13 @@ export const EmployeeInterventionDetail = () => {
   const [services, setServices] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
   const [signatures, setSignatures] = useState<any[]>([]);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [checklist, setChecklist] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
     
-    // Setup realtime for this specific intervention
     const channel = supabase
       .channel(`job-detail-${id}`)
       .on(
@@ -44,14 +48,32 @@ export const EmployeeInterventionDetail = () => {
           loadData();
         }
       )
-      .subscribe((status) => {
-        console.log('Job detail realtime status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [id]);
+
+  // Timer auto
+  useEffect(() => {
+    let interval: any;
+    if (activeJobTimesheet?.start_at) {
+      interval = setInterval(() => {
+        const start = new Date(activeJobTimesheet.start_at).getTime();
+        const now = Date.now();
+        setElapsedTime(Math.floor((now - start) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeJobTimesheet]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const loadData = async () => {
     try {
@@ -70,7 +92,6 @@ export const EmployeeInterventionDetail = () => {
       if (!employee) return;
       setEmployeeId(employee.id);
 
-      // Charger l'intervention
       const { data: job, error } = await supabase
         .from("jobs")
         .select("*")
@@ -80,8 +101,8 @@ export const EmployeeInterventionDetail = () => {
       if (error) throw error;
       setIntervention(job);
       setNotes(job.notes || "");
+      setChecklist(Array.isArray(job.checklist) ? job.checklist : []);
 
-      // Charger le timesheet actif pour ce job
       const { data: timesheet } = await supabase
         .from("timesheets_entries")
         .select("*")
@@ -93,7 +114,6 @@ export const EmployeeInterventionDetail = () => {
 
       setActiveJobTimesheet(timesheet);
 
-      // Charger les consommables et services
       const { data: cons } = await supabase
         .from("intervention_consumables")
         .select("*")
@@ -107,7 +127,6 @@ export const EmployeeInterventionDetail = () => {
       setConsumables(cons || []);
       setServices(serv || []);
 
-      // Charger les photos
       const { data: photosData } = await supabase
         .from("intervention_files")
         .select("*")
@@ -116,7 +135,6 @@ export const EmployeeInterventionDetail = () => {
 
       setPhotos(photosData || []);
 
-      // Charger les signatures
       const { data: signaturesData } = await supabase
         .from("job_signatures")
         .select("*")
@@ -138,13 +156,12 @@ export const EmployeeInterventionDetail = () => {
 
     try {
       const now = new Date();
-      // Créer le timesheet job
       const { error: tsError } = await supabase
         .from("timesheets_entries")
         .insert({
           employee_id: employeeId,
           job_id: id,
-          date: now.toISOString().split('T')[0], // Format YYYY-MM-DD requis
+          date: now.toISOString().split('T')[0],
           start_at: now.toISOString(),
           timesheet_type: "job",
           status: "draft",
@@ -153,7 +170,6 @@ export const EmployeeInterventionDetail = () => {
 
       if (tsError) throw tsError;
 
-      // Mettre à jour le statut de l'intervention
       const { error: jobError } = await supabase
         .from("jobs")
         .update({ statut: "En cours" })
@@ -161,7 +177,7 @@ export const EmployeeInterventionDetail = () => {
 
       if (jobError) throw jobError;
 
-      toast.success("Intervention démarrée");
+      toast.success("Intervention démarrée - chronomètre lancé");
       loadData();
     } catch (error: any) {
       toast.error("Erreur de démarrage");
@@ -171,43 +187,15 @@ export const EmployeeInterventionDetail = () => {
     }
   };
 
-  const pauseJob = async () => {
-    if (!activeJobTimesheet) return;
-    setUpdating(true);
-
-    try {
-      const { error } = await supabase
-        .from("timesheets_entries")
-        .update({
-          end_at: new Date().toISOString(),
-          status: "submitted",
-        })
-        .eq("id", activeJobTimesheet.id);
-
-      if (error) throw error;
-
-      const { error: jobError } = await supabase
-        .from("jobs")
-        .update({ statut: "À faire" })
-        .eq("id", id);
-
-      if (jobError) throw jobError;
-
-      toast.success("Intervention mise en pause");
-      loadData();
-    } catch (error: any) {
-      toast.error("Erreur de pause");
-      console.error(error);
-    } finally {
-      setUpdating(false);
-    }
+  const completeJob = () => {
+    setShowResultDialog(true);
   };
 
-  const completeJob = async () => {
+  const handleCompletionResult = async (result: "Terminée" | "Échouée" | "Reportée") => {
     setUpdating(true);
+    setShowResultDialog(false);
 
     try {
-      // Terminer le timesheet si actif
       if (activeJobTimesheet) {
         const { error: tsError } = await supabase
           .from("timesheets_entries")
@@ -220,15 +208,14 @@ export const EmployeeInterventionDetail = () => {
         if (tsError) throw tsError;
       }
 
-      // Mettre à jour le statut de l'intervention
       const { error: jobError } = await supabase
         .from("jobs")
-        .update({ statut: "Terminée" })
+        .update({ statut: result })
         .eq("id", id);
 
       if (jobError) throw jobError;
 
-      toast.success("Intervention terminée");
+      toast.success(`Intervention ${result.toLowerCase()}`);
       loadData();
     } catch (error: any) {
       toast.error("Erreur de finalisation");
@@ -266,12 +253,24 @@ export const EmployeeInterventionDetail = () => {
     window.open(wazeUrl, "_blank");
   };
 
-  const handlePhotoUploaded = () => {
-    loadData();
-  };
+  const toggleChecklistItem = async (itemId: string) => {
+    const updated = checklist.map(item =>
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    );
+    setChecklist(updated);
 
-  const handleSignatureSaved = () => {
-    loadData();
+    try {
+      const { error } = await supabase
+        .from("jobs")
+        .update({ checklist: updated as any })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Checklist mise à jour");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur de mise à jour");
+    }
   };
 
   if (loading) {
@@ -292,7 +291,6 @@ export const EmployeeInterventionDetail = () => {
 
   return (
     <div className="container max-w-2xl mx-auto px-4 py-6 space-y-4">
-      {/* En-tête */}
       <Card className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -303,6 +301,8 @@ export const EmployeeInterventionDetail = () => {
             className={
               intervention.statut === "En cours" ? "bg-yellow-500" :
               intervention.statut === "Terminée" ? "bg-green-500" :
+              intervention.statut === "Échouée" ? "bg-red-500" :
+              intervention.statut === "Reportée" ? "bg-orange-500" :
               "bg-blue-500"
             }
           >
@@ -310,7 +310,6 @@ export const EmployeeInterventionDetail = () => {
           </Badge>
         </div>
 
-        {/* Info clés */}
         <div className="space-y-3">
           {intervention.date && (
             <div className="flex items-center gap-2 text-sm">
@@ -345,33 +344,31 @@ export const EmployeeInterventionDetail = () => {
         </div>
       </Card>
 
-      {/* Actions principales */}
+      {/* Actions & Timer */}
       <Card className="p-4">
+        {activeJobTimesheet && (
+          <div className="mb-4 p-3 bg-primary/10 rounded-lg text-center">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-1">
+              <Timer className="h-4 w-4" />
+              <span>Temps écoulé</span>
+            </div>
+            <div className="text-3xl font-mono font-bold">{formatTime(elapsedTime)}</div>
+          </div>
+        )}
+
         <div className="flex gap-2">
-          {!activeJobTimesheet && intervention.statut !== "Terminée" && (
+          {!activeJobTimesheet && intervention.statut !== "Terminée" && intervention.statut !== "Échouée" && intervention.statut !== "Reportée" && (
             <Button
               onClick={startJob}
               disabled={updating}
               className="flex-1"
             >
               <Play className="mr-2 h-4 w-4" />
-              Démarrer
+              Je commence l'intervention
             </Button>
           )}
 
           {activeJobTimesheet && (
-            <Button
-              onClick={pauseJob}
-              disabled={updating}
-              variant="outline"
-              className="flex-1"
-            >
-              <Pause className="mr-2 h-4 w-4" />
-              Pause
-            </Button>
-          )}
-
-          {intervention.statut !== "Terminée" && (
             <Button
               onClick={completeJob}
               disabled={updating}
@@ -379,13 +376,12 @@ export const EmployeeInterventionDetail = () => {
               className="flex-1"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
-              Terminer
+              Fin de l'intervention
             </Button>
           )}
         </div>
       </Card>
 
-      {/* Tabs avec photos et signature */}
       <Tabs defaultValue="info" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="info">Infos</TabsTrigger>
@@ -400,6 +396,60 @@ export const EmployeeInterventionDetail = () => {
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
+          {/* Checklist */}
+          {checklist.length > 0 && (
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Checklist</h4>
+              <div className="space-y-2">
+                {checklist.map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-3 p-2 border rounded">
+                    <Checkbox
+                      checked={item.completed}
+                      onCheckedChange={() => toggleChecklistItem(item.id)}
+                    />
+                    <span className={item.completed ? "line-through text-muted-foreground" : ""}>
+                      {item.label}
+                    </span>
+                    {item.required && (
+                      <Badge variant="destructive" className="ml-auto text-xs">Obligatoire</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Consommables */}
+          {consumables.length > 0 && (
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Consommables prévus</h4>
+              <div className="space-y-2">
+                {consumables.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm border-b pb-1">
+                    <span>{item.product_name}</span>
+                    <span className="text-muted-foreground">Quantité: {item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Matériaux */}
+          {services.length > 0 && (
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Services / Matériels</h4>
+              <div className="space-y-2">
+                {services.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm border-b pb-1">
+                    <span>{item.description}</span>
+                    <span className="text-muted-foreground">{item.quantity} {item.unit}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Notes */}
           <Card className="p-6">
             <h3 className="font-semibold mb-4">Notes et observations</h3>
             <Textarea
@@ -412,35 +462,6 @@ export const EmployeeInterventionDetail = () => {
               Enregistrer les notes
             </Button>
           </Card>
-
-          {/* Consommables et services */}
-          {consumables.length > 0 && (
-            <Card className="p-4">
-              <h4 className="font-semibold mb-3">Consommables</h4>
-              <div className="space-y-2">
-                {consumables.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>{item.product_name}</span>
-                    <span className="text-muted-foreground">x{item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {services.length > 0 && (
-            <Card className="p-4">
-              <h4 className="font-semibold mb-3">Services</h4>
-              <div className="space-y-2">
-                {services.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>{item.description}</span>
-                    <span className="text-muted-foreground">{item.quantity} {item.unit}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="photos" className="space-y-4">
@@ -452,7 +473,7 @@ export const EmployeeInterventionDetail = () => {
                   jobId={id!}
                   employeeId={employeeId}
                   photoType="before"
-                  onPhotoUploaded={handlePhotoUploaded}
+                  onPhotoUploaded={loadData}
                 />
               )}
             </div>
@@ -464,12 +485,11 @@ export const EmployeeInterventionDetail = () => {
                   jobId={id!}
                   employeeId={employeeId}
                   photoType="after"
-                  onPhotoUploaded={handlePhotoUploaded}
+                  onPhotoUploaded={loadData}
                 />
               )}
             </div>
 
-            {/* Liste des photos */}
             {photos.length > 0 && (
               <Card className="p-4">
                 <h4 className="font-semibold mb-3">Photos enregistrées</h4>
@@ -498,33 +518,32 @@ export const EmployeeInterventionDetail = () => {
         <TabsContent value="signature" className="space-y-4">
           {signatures.length > 0 ? (
             <Card className="p-4">
-              <h3 className="font-semibold mb-2">Signature enregistrée</h3>
-              <div className="space-y-2">
-                <img
-                  src={signatures[0].image_url}
-                  alt="Signature client"
-                  className="w-full border rounded-lg bg-white"
-                />
-                <div className="text-sm text-muted-foreground">
-                  <p>Signé par: {signatures[0].signer_name}</p>
-                  <p>Date: {new Date(signatures[0].signed_at).toLocaleString()}</p>
-                </div>
-              </div>
+              <h4 className="font-semibold mb-3">Signature client</h4>
+              <img
+                src={signatures[0].image_url}
+                alt="Signature"
+                className="w-full border rounded"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Signé par: {signatures[0].signer_name}
+              </p>
             </Card>
           ) : (
-            <>
-              <h3 className="font-semibold mb-2">Signature client</h3>
-              {employeeId && (
-                <SignatureCanvas
-                  jobId={id!}
-                  employeeId={employeeId}
-                  onSignatureSaved={handleSignatureSaved}
-                />
-              )}
-            </>
+            employeeId && (
+              <SignatureCanvas
+                jobId={id!}
+                employeeId={employeeId}
+                onSignatureSaved={loadData}
+              />
+            )
           )}
         </TabsContent>
       </Tabs>
+
+      <CompletionResultDialog
+        open={showResultDialog}
+        onResult={handleCompletionResult}
+      />
     </div>
   );
 };

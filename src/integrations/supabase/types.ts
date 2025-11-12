@@ -780,6 +780,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "intervention_assignments_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       intervention_consumables: {
@@ -843,6 +850,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "intervention_consumables_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "intervention_consumables_inventory_item_id_fkey"
             columns: ["inventory_item_id"]
             isOneToOne: false
@@ -885,6 +899,13 @@ export type Database = {
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_feedback_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -944,6 +965,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "intervention_files_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       intervention_logs: {
@@ -980,6 +1008,13 @@ export type Database = {
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_logs_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1046,6 +1081,13 @@ export type Database = {
             columns: ["intervention_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intervention_services_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -1252,6 +1294,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inventory_reservations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inventory_reservations_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -1304,6 +1353,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_signatures_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1611,6 +1667,13 @@ export type Database = {
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "planning_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       purchase_orders: {
@@ -1782,6 +1845,38 @@ export type Database = {
         }
         Relationships: []
       }
+      support_events: {
+        Row: {
+          created_at: string
+          employee_id: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_messages: {
         Row: {
           category: string | null
@@ -1808,6 +1903,44 @@ export type Database = {
           user_name?: string
         }
         Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          created_at: string
+          description: string
+          employee_id: string
+          id: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          employee_id: string
+          id?: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          employee_id?: string
+          id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       taxes: {
         Row: {
@@ -1889,6 +2022,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -2021,6 +2161,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheets_entries_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "timesheets_entries_rejected_by_fkey"
             columns: ["rejected_by"]
             isOneToOne: false
@@ -2085,7 +2232,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_employee_jobs: {
+        Row: {
+          address: string | null
+          assigned_at: string | null
+          client_name: string | null
+          date: string | null
+          description: string | null
+          employee_id: string | null
+          employee_name: string | null
+          end_time: string | null
+          id: string | null
+          notes: string | null
+          start_time: string | null
+          status: string | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intervention_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bulk_approve_timesheets: {
@@ -2096,6 +2268,7 @@ export type Database = {
         Args: { entry_ids: string[]; manager_id: string; reason: string }
         Returns: undefined
       }
+      finish_job: { Args: { p_job_id: string }; Returns: Json }
       generate_intervention_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_quote_number: { Args: never; Returns: string }
@@ -2107,6 +2280,7 @@ export type Database = {
         Returns: boolean
       }
       is_manager: { Args: { user_id: string }; Returns: boolean }
+      start_job: { Args: { p_job_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
