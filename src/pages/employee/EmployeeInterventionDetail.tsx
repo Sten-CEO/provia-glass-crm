@@ -58,11 +58,12 @@ export const EmployeeInterventionDetail = () => {
   // Timer auto
   useEffect(() => {
     let interval: any;
-    if (activeJobTimesheet?.start_at) {
+    if (activeJobTimesheet?.start_at && activeJobTimesheet?.date) {
       interval = setInterval(() => {
-        const start = new Date(activeJobTimesheet.start_at).getTime();
+        // Combiner date et heure pour avoir un timestamp complet
+        const startDateTime = new Date(`${activeJobTimesheet.date}T${activeJobTimesheet.start_at}`);
         const now = Date.now();
-        setElapsedTime(Math.floor((now - start) / 1000));
+        setElapsedTime(Math.floor((now - startDateTime.getTime()) / 1000));
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -156,13 +157,15 @@ export const EmployeeInterventionDetail = () => {
 
     try {
       const now = new Date();
+      const timeString = now.toTimeString().split(' ')[0]; // Format HH:MM:SS
+      
       const { error: tsError } = await supabase
         .from("timesheets_entries")
         .insert({
           employee_id: employeeId,
           job_id: id,
           date: now.toISOString().split('T')[0],
-          start_at: now.toISOString(),
+          start_at: timeString,
           timesheet_type: "job",
           status: "draft",
           hours: 0,
@@ -197,10 +200,12 @@ export const EmployeeInterventionDetail = () => {
 
     try {
       if (activeJobTimesheet) {
+        const timeString = new Date().toTimeString().split(' ')[0]; // Format HH:MM:SS
+        
         const { error: tsError } = await supabase
           .from("timesheets_entries")
           .update({
-            end_at: new Date().toISOString(),
+            end_at: timeString,
             status: "submitted",
           })
           .eq("id", activeJobTimesheet.id);
