@@ -106,22 +106,41 @@ export const EmployeeDashboard = () => {
     if (!employeeId) return;
 
     try {
-      // Charger les interventions du jour via la vue
-      const { data: jobs } = await supabase
-        .from("v_employee_jobs")
-        .select("*");
+      // Charger les interventions assignées à cet employé
+      const { data: assignments } = await supabase
+        .from("intervention_assignments")
+        .select("intervention_id")
+        .eq("employee_id", employeeId);
 
+      if (!assignments || assignments.length === 0) {
+        setTodayJobs([]);
+        setLoading(false);
+        return;
+      }
+
+      const interventionIds = assignments.map(a => a.intervention_id);
+
+      // Charger les détails des interventions
+      const { data: jobs, error: jobsError } = await supabase
+        .from("jobs")
+        .select("*")
+        .in("id", interventionIds);
+
+      if (jobsError) throw jobsError;
+
+      // Filtrer pour aujourd'hui uniquement
       const todayJobs = jobs?.filter((j) => 
         j && isToday(new Date(j.date))
       ) || [];
+      
       setTodayJobs(todayJobs.map(j => ({
         id: j.id,
-        titre: j.title,
-        client_nom: j.client_name,
-        adresse: j.address,
+        titre: j.titre,
+        client_nom: j.client_nom,
+        adresse: j.adresse,
         date: j.date,
-        heure_debut: j.start_time,
-        statut: j.status
+        heure_debut: j.heure_debut,
+        statut: j.statut
       })));
 
       // Charger le timesheet actif du jour

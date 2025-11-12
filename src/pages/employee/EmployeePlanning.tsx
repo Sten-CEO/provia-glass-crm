@@ -81,17 +81,43 @@ export const EmployeePlanning = () => {
     try {
       const weekEnd = endOfWeek(currentWeekStart, { locale: fr });
 
+      // Charger les interventions assignées à cet employé
+      const { data: assignments } = await supabase
+        .from("intervention_assignments")
+        .select("intervention_id")
+        .eq("employee_id", employeeId);
+
+      if (!assignments || assignments.length === 0) {
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+
+      const interventionIds = assignments.map(a => a.intervention_id);
+
+      // Charger les détails des interventions
       const { data, error } = await supabase
-        .from("v_employee_jobs")
-        .select("*");
+        .from("jobs")
+        .select("*")
+        .in("id", interventionIds);
 
       if (error) throw error;
 
+      // Filtrer pour la semaine en cours
       const weekJobs = data?.filter((j) => {
         if (!j) return false;
         const jobDate = parseISO(j.date);
         return jobDate >= currentWeekStart && jobDate <= weekEnd;
-      }) || [];
+      }).map(j => ({
+        id: j.id,
+        title: j.titre,
+        client_name: j.client_nom,
+        address: j.adresse,
+        date: j.date,
+        start_time: j.heure_debut || "",
+        end_time: j.heure_fin || "",
+        status: j.statut
+      })) || [];
 
       setJobs(weekJobs);
 

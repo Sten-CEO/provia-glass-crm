@@ -79,13 +79,38 @@ export const EmployeeJobs = () => {
     if (!employeeId) return;
 
     try {
+      // Charger les interventions assignées à cet employé
+      const { data: assignments } = await supabase
+        .from("intervention_assignments")
+        .select("intervention_id")
+        .eq("employee_id", employeeId);
+
+      if (!assignments || assignments.length === 0) {
+        setJobs([]);
+        return;
+      }
+
+      const interventionIds = assignments.map(a => a.intervention_id);
+
+      // Charger les détails des interventions
       const { data, error } = await supabase
-        .from("v_employee_jobs")
-        .select("*");
+        .from("jobs")
+        .select("*")
+        .in("id", interventionIds)
+        .order("date", { ascending: false });
 
       if (error) throw error;
 
-      setJobs(data || []);
+      setJobs(data?.map(j => ({
+        id: j.id,
+        title: j.titre,
+        client_name: j.client_nom,
+        address: j.adresse,
+        date: j.date,
+        start_time: j.heure_debut || "",
+        status: j.statut,
+        description: j.description || ""
+      })) || []);
     } catch (error: any) {
       toast.error("Erreur de chargement des jobs");
       console.error(error);
