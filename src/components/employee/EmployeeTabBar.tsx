@@ -9,7 +9,7 @@ export const EmployeeTabBar = () => {
   const tabs = [
     {
       id: "dashboard",
-      label: "Dashboard",
+      label: "Accueil",
       icon: Home,
       path: "/employee",
     },

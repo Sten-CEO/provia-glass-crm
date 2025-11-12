@@ -37,8 +37,10 @@ export const EmployeePlanning = () => {
   }, [currentWeekStart, contextLoading, employeeId]);
 
   const setupRealtimeSubscriptions = () => {
+    if (!employeeId) return;
+
     const channel = supabase
-      .channel('employee-planning')
+      .channel('employee-planning-changes')
       .on(
         'postgres_changes',
         {
@@ -47,7 +49,8 @@ export const EmployeePlanning = () => {
           table: 'intervention_assignments',
           filter: `employee_id=eq.${employeeId}`
         },
-        () => {
+        (payload) => {
+          console.log('Planning assignment changed:', payload);
           loadPlanning();
         }
       )
@@ -58,11 +61,14 @@ export const EmployeePlanning = () => {
           schema: 'public',
           table: 'jobs'
         },
-        () => {
+        (payload) => {
+          console.log('Planning job updated:', payload);
           loadPlanning();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Planning realtime status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
