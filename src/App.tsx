@@ -7,6 +7,12 @@ import { useEffect } from "react";
 import { initializeInventoryEventHandlers } from "./lib/inventoryEventHandlers";
 import Login from "./pages/auth/Login";
 import AppShell from "./components/layout/AppShell";
+import { EmployeeLayout } from "./components/employee/EmployeeLayout";
+import { EmployeeLogin } from "./pages/employee/EmployeeLogin";
+import { EmployeeInterventions } from "./pages/employee/EmployeeInterventions";
+import { EmployeeInterventionDetail } from "./pages/employee/EmployeeInterventionDetail";
+import { EmployeeTimesheets } from "./pages/employee/EmployeeTimesheets";
+import { EmployeeProfile } from "./pages/employee/EmployeeProfile";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
@@ -57,6 +63,16 @@ const App = () => {
           <Route path="/auth/login" element={<Login />} />
           <Route path="/quote/:token" element={<PublicQuoteView />} />
           
+          {/* Employee PWA Routes */}
+          <Route path="/employee/login" element={<EmployeeLogin />} />
+          <Route element={<EmployeeLayout />}>
+            <Route path="/employee/interventions" element={<EmployeeInterventions />} />
+            <Route path="/employee/interventions/:id" element={<EmployeeInterventionDetail />} />
+            <Route path="/employee/timesheets" element={<EmployeeTimesheets />} />
+            <Route path="/employee/profile" element={<EmployeeProfile />} />
+          </Route>
+          
+          {/* Admin CRM Routes */}
           <Route element={<AppShell />}>
             <Route path="/tableau-de-bord" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
