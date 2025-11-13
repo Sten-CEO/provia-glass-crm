@@ -170,12 +170,11 @@ export const EmployeeDashboard = () => {
 
       setActiveTimesheet(timesheet);
 
-      // Charger les notifications non lues
+      // Charger les notifications non lues (simplified)
       const { data: notifs } = await supabase
         .from("notifications")
         .select("*")
-        .eq("employee_id", employeeId)
-        .is("read_at", null)
+        .eq("read", false)
         .order("created_at", { ascending: false })
         .limit(5);
 

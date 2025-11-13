@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus, MapPin, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface AgendaEvent {
   id: string;
@@ -22,6 +23,7 @@ interface AgendaEvent {
 export default function Agenda() {
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [view, setView] = useState<'day' | 'week'>('day');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadEvents();
@@ -106,7 +108,11 @@ export default function Agenda() {
 
       <div className="grid gap-4">
         {events.map((event) => (
-          <Card key={event.id} className="p-4">
+          <Card 
+            key={event.id} 
+            className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => navigate(`/agenda/${event.id}`)}
+          >
             <div className="flex items-start gap-4">
               <div className={`w-1 h-full rounded ${getEventTypeColor(event.type)}`} />
               <div className="flex-1">

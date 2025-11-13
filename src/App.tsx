@@ -50,8 +50,10 @@ import AchatEditor from "./pages/inventaire/AchatEditor";
 import Employes from "./pages/pointage/Employes";
 import EmployeePointageDetail from "./pages/pointage/EmployeeDetail";
 import Agenda from "./pages/Agenda";
+import AgendaDetail from "./pages/AgendaDetail";
 import CADetail from "./pages/dashboard/CADetail";
 import Profil from "./pages/Profil";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -129,8 +131,10 @@ const App = () => {
           <Route path="/pointage/employes/:id" element={<EmployeePointageDetail />} />
           <Route path="/paiements" element={<Paiements />} />
           <Route path="/agenda" element={<Agenda />} />
+          <Route path="/agenda/:id" element={<AgendaDetail />} />
           <Route path="/dashboard/ca" element={<CADetail />} />
           <Route path="/profil" element={<Profil />} />
+          <Route path="/notifications" element={<Notifications />} />
             <Route path="/parametres" element={<Parametres />} />
             <Route path="/support" element={<Support />} />
           </Route>
