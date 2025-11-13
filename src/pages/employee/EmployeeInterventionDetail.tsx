@@ -29,6 +29,8 @@ export const EmployeeInterventionDetail = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [checklist, setChecklist] = useState<any[]>([]);
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -142,6 +144,36 @@ export const EmployeeInterventionDetail = () => {
         .eq("job_id", id);
 
       setSignatures(signaturesData || []);
+
+      // Charger les devis liés à cette intervention
+      const { data: quotesData } = await supabase
+        .from("devis")
+        .select("*")
+        .eq("converted_to_job_id", id)
+        .order("created_at", { ascending: false });
+
+      setQuotes(quotesData || []);
+
+      // Charger les 5 derniers paiements du client
+      if (job.client_id) {
+        const { data: clientInvoices } = await supabase
+          .from("factures")
+          .select("numero")
+          .eq("client_id", job.client_id);
+
+        if (clientInvoices && clientInvoices.length > 0) {
+          const invoiceNumbers = clientInvoices.map(inv => inv.numero);
+          
+          const { data: paymentsData } = await supabase
+            .from("paiements")
+            .select("*")
+            .in("facture_numero", invoiceNumbers)
+            .order("date_paiement", { ascending: false })
+            .limit(5);
+
+          setRecentPayments(paymentsData || []);
+        }
+      }
 
     } catch (error: any) {
       toast.error("Erreur de chargement");
@@ -388,7 +420,7 @@ export const EmployeeInterventionDetail = () => {
       </Card>
 
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="info">Infos</TabsTrigger>
           <TabsTrigger value="photos">
             <Camera className="h-4 w-4 mr-1" />
@@ -398,6 +430,8 @@ export const EmployeeInterventionDetail = () => {
             <FileSignature className="h-4 w-4 mr-1" />
             Signature
           </TabsTrigger>
+          <TabsTrigger value="quotes">Devis</TabsTrigger>
+          <TabsTrigger value="payments">Paiements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -542,6 +576,87 @@ export const EmployeeInterventionDetail = () => {
               />
             )
           )}
+        </TabsContent>
+
+        <TabsContent value="quotes" className="space-y-4">
+          <Card className="p-4">
+            <h4 className="font-semibold mb-3">Devis liés à cette intervention</h4>
+            {quotes.length > 0 ? (
+              <div className="space-y-3">
+                {quotes.map((quote) => (
+                  <div key={quote.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{quote.numero}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {quote.title || "Sans titre"}
+                        </p>
+                      </div>
+                      <Badge
+                        className={
+                          quote.statut === "Accepté" || quote.statut === "Signé"
+                            ? "bg-green-500"
+                            : quote.statut === "Envoyé"
+                            ? "bg-blue-500"
+                            : "bg-gray-500"
+                        }
+                      >
+                        {quote.statut}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Montant: {quote.total_ttc}€
+                      </span>
+                      {quote.pdf_url && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(quote.pdf_url, "_blank")}
+                        >
+                          Voir PDF
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun devis lié à cette intervention
+              </p>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <Card className="p-4">
+            <h4 className="font-semibold mb-3">Paiements récents du client</h4>
+            {recentPayments.length > 0 ? (
+              <div className="space-y-2">
+                {recentPayments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between border-b pb-2 last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{payment.facture_numero}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(payment.date_paiement).toLocaleDateString("fr-FR")} · {payment.methode}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                      {payment.montant}€
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun paiement récent pour ce client
+              </p>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
 

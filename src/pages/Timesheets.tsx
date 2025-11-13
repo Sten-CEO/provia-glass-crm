@@ -520,7 +520,7 @@ const Timesheets = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/30 rounded-lg">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
           <div className="text-center">
             <div className="text-2xl font-bold text-foreground">{filteredEntries.length}</div>
             <div className="text-xs text-muted-foreground uppercase tracking-wide">Entrées</div>
@@ -532,16 +532,6 @@ const Timesheets = () => {
           <div className="text-center">
             <div className="text-2xl font-bold text-foreground">{billableHours.toFixed(1)}h</div>
             <div className="text-xs text-muted-foreground uppercase tracking-wide">Facturables</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-success">
-              {filteredEntries.reduce((sum, e) => sum + (e.overtime_hours || 0), 0).toFixed(1)}h
-            </div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Heures supp.</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">{totalCost.toFixed(2)}€</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Coût total</div>
           </div>
         </div>
       </div>
