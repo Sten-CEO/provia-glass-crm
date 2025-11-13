@@ -206,18 +206,18 @@ export function InterventionReportTab({ job, onUpdate }: InterventionReportTabPr
           <div className="space-y-2">
             <Label>Nom du signataire</Label>
             <Input 
-              value={job.signature_name || ""} 
+              value={job.signature_signer || ""} 
               readOnly
               placeholder="Pas encore de signature"
             />
           </div>
 
-          {job.signature_date && (
+          {job.signed_at && (
             <div className="space-y-2">
               <Label>Date de signature</Label>
               <Input 
                 type="text"
-                value={new Date(job.signature_date).toLocaleString("fr-FR")} 
+                value={new Date(job.signed_at).toLocaleString("fr-FR")} 
                 readOnly
               />
             </div>
