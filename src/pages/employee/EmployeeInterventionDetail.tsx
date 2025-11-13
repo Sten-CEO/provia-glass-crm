@@ -146,13 +146,39 @@ export const EmployeeInterventionDetail = () => {
       setSignatures(signaturesData || []);
 
       // Charger les devis liés à cette intervention
-      const { data: quotesData } = await supabase
+      let allQuotes: any[] = [];
+
+      // Cas 1: Devis directement lié via jobs.quote_id
+      if (job.quote_id) {
+        const { data: linkedQuote } = await supabase
+          .from("devis")
+          .select("*")
+          .eq("id", job.quote_id)
+          .single();
+        
+        if (linkedQuote) {
+          allQuotes.push(linkedQuote);
+        }
+      }
+
+      // Cas 2: Devis convertis en cette intervention via converted_to_job_id
+      const { data: convertedQuotes } = await supabase
         .from("devis")
         .select("*")
         .eq("converted_to_job_id", id)
         .order("created_at", { ascending: false });
 
-      setQuotes(quotesData || []);
+      if (convertedQuotes) {
+        // Éviter les doublons si le devis est présent dans les deux cas
+        const existingIds = new Set(allQuotes.map(q => q.id));
+        convertedQuotes.forEach(q => {
+          if (!existingIds.has(q.id)) {
+            allQuotes.push(q);
+          }
+        });
+      }
+
+      setQuotes(allQuotes);
 
       // Charger les 5 derniers paiements du client
       if (job.client_id) {
