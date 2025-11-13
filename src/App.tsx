@@ -51,6 +51,7 @@ import Employes from "./pages/pointage/Employes";
 import EmployeePointageDetail from "./pages/pointage/EmployeeDetail";
 import Agenda from "./pages/Agenda";
 import CADetail from "./pages/dashboard/CADetail";
+import Profil from "./pages/Profil";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,7 @@ const App = () => {
           <Route path="/paiements" element={<Paiements />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/dashboard/ca" element={<CADetail />} />
+          <Route path="/profil" element={<Profil />} />
             <Route path="/parametres" element={<Parametres />} />
             <Route path="/support" element={<Support />} />
           </Route>
