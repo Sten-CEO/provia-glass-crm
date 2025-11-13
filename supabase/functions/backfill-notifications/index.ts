@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
           message: `Le devis ${quote.numero} pour ${quote.client_nom} a été accepté`,
           link: `/devis/${quote.id}`,
           created_at: quote.accepted_at || quote.signature_date,
-          read: true, // Mark historical as read
+          read_at: new Date().toISOString(), // Mark historical as read
         });
       }
       console.log(`Created ${acceptedQuotes.length} quote_signed notifications`);
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
           message: `La facture ${invoice.numero} pour ${invoice.client_nom} est prête à être envoyée`,
           link: `/factures/${invoice.id}`,
           created_at: invoice.created_at,
-          read: true,
+          read_at: new Date().toISOString(),
         });
       }
       console.log(`Created ${invoicesToSend.length} invoice_to_send notifications`);
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
           message: `La facture ${invoice.numero} pour ${invoice.client_nom} est en retard`,
           link: `/factures/${invoice.id}`,
           created_at: invoice.due_date,
-          read: true,
+          read_at: new Date().toISOString(),
         });
       }
       console.log(`Created ${overdueInvoices.length} invoice_overdue notifications`);
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
             message: `Rappel: ${event.title} demain à ${eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
             link: `/agenda/${event.id}`,
             created_at: reminderJ1.toISOString(),
-            read: false,
+            read_at: null,
           });
         }
 
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
             message: `Dans 15 minutes: ${event.title}`,
             link: `/agenda/${event.id}`,
             created_at: reminder15min.toISOString(),
-            read: false,
+            read_at: null,
           });
         }
       }

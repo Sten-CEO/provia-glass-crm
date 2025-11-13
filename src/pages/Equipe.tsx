@@ -35,7 +35,7 @@ import { CreateEmployeeAccessDialog } from "@/components/equipe/CreateEmployeeAc
 interface TeamMember {
   id: string;
   nom: string;
-  role: "Owner" | "Admin" | "Membre";
+  role: "Owner" | "Admin" | "Employé terrain";
   email: string;
   competences: string[];
   note: string | null;
@@ -65,7 +65,7 @@ const Equipe = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<TeamMember | null>(null);
   const [newMember, setNewMember] = useState({
     nom: "",
-    role: "Membre" as const,
+    role: "Employé terrain" as const,
     email: "",
     competences: [] as string[],
     note: "",
@@ -135,7 +135,7 @@ const Equipe = () => {
     toast.success("Membre invité avec succès");
     setNewMember({
       nom: "",
-      role: "Membre",
+      role: "Employé terrain",
       email: "",
       competences: [],
       note: "",
@@ -199,7 +199,7 @@ const Equipe = () => {
         return "bg-primary/20 text-foreground";
       case "Admin":
         return "bg-secondary/20 text-foreground";
-      case "Membre":
+      case "Employé terrain":
         return "bg-muted text-muted-foreground";
     }
   };

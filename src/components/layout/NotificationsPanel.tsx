@@ -76,13 +76,15 @@ export const NotificationsPanel = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    if (notification.payload?.link) {
-      navigate(notification.payload.link);
+    const link = (notification as any).link || notification.payload?.link;
+    if (link) {
+      navigate(link);
       setIsOpen(false);
     }
   };
 
-  const getNotificationBadgeColor = (type: string) => {
+  const getNotificationBadgeColor = (notification: Notification) => {
+    const type = (notification as any).kind || notification.type;
     switch (type) {
       case 'quote_signed': return 'bg-green-500';
       case 'invoice_due': return 'bg-orange-500';
@@ -154,7 +156,20 @@ export const NotificationsPanel = () => {
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${getNotificationBadgeColor(notification.type)}`} />
+                        <div className={`w-2 h-2 rounded-full mt-2 ${(() => {
+                          const type = (notification as any).kind || notification.type;
+                          switch (type) {
+                            case 'quote_signed': return 'bg-green-500';
+                            case 'invoice_due': return 'bg-orange-500';
+                            case 'invoice_overdue': return 'bg-red-500';
+                            case 'invoice_to_send': return 'bg-yellow-500';
+                            case 'job_assigned': return 'bg-blue-500';
+                            case 'schedule_change': return 'bg-purple-500';
+                            case 'timesheet_alert': return 'bg-amber-500';
+                            case 'agenda_reminder': return 'bg-cyan-500';
+                            default: return 'bg-gray-500';
+                          }
+                        })()}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h4 className="font-medium text-sm">{notification.title}</h4>
