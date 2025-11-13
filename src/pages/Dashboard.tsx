@@ -13,6 +13,7 @@ import { RevenueModule } from "@/components/dashboard/RevenueModule";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 import { StockAlertsCard } from "@/components/dashboard/StockAlertsCard";
 import { ToPlanCard } from "@/components/dashboard/ToPlanCard";
+import { InvoicingAlertsCard } from "@/components/dashboard/InvoicingAlertsCard";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -96,7 +97,10 @@ const Dashboard = () => {
       <RevenueModule />
       <AlertsStrip />
       <ToPlanCard />
-      <StockAlertsCard />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StockAlertsCard />
+        <InvoicingAlertsCard />
+      </div>
       
       <div className="flex items-center justify-between">
         <div>

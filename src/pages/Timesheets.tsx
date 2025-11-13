@@ -113,6 +113,13 @@ const Timesheets = () => {
     { key: "status", label: "Statut" },
   ];
 
+  const statusLabels: Record<string, string> = {
+    draft: "Brouillon",
+    submitted: "À valider",
+    approved: "Validé",
+    rejected: "Rejeté",
+  };
+
   const {
     settings,
     loading: settingsLoading,
@@ -374,10 +381,14 @@ const Timesheets = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    if (status === "approved") return <Badge className="bg-green-500">Approuvée</Badge>;
-    if (status === "submitted") return <Badge className="bg-blue-500">Soumise</Badge>;
-    if (status === "rejected") return <Badge className="bg-red-500">Rejetée</Badge>;
-    return <Badge variant="outline">Brouillon</Badge>;
+    const statusClass = {
+      approved: "bg-green-500",
+      submitted: "bg-yellow-500",
+      rejected: "bg-red-500",
+      draft: "bg-gray-500"
+    }[status] || "bg-gray-500";
+
+    return <Badge className={statusClass}>{statusLabels[status] || status}</Badge>;
   };
 
   const getBillingStatusBadge = (status: string) => {

@@ -91,60 +91,50 @@ export const SignatureCanvas = ({
       // Générer un nom de fichier unique
       const timestamp = Date.now();
       const fileName = `signature-${timestamp}.png`;
-      const filePath = `signatures/${jobId}/${fileName}`;
+      const filePath = `${jobId}/${fileName}`;
 
-      // Upload vers Supabase Storage
+      // Upload vers Supabase Storage bucket "signatures"
       const { error: uploadError } = await supabase.storage
-        .from("job-signatures")
+        .from("signatures")
         .upload(filePath, blob, {
           contentType: "image/png",
-          upsert: false
+          cacheControl: "3600",
         });
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      // Obtenir l'URL publique
-      const { data: urlData } = supabase.storage
-        .from("job-signatures")
+      // Récupérer l'URL publique
+      const { data: { publicUrl } } = supabase.storage
+        .from("signatures")
         .getPublicUrl(filePath);
 
-      if (!urlData?.publicUrl) {
-        throw new Error("Failed to get public URL");
-      }
+      // Enregistrer dans jobs (intervention) avec la nouvelle colonne signature_url
+      const { error: jobError } = await supabase
+        .from("jobs")
+        .update({
+          signature_url: publicUrl,
+          signature_signer: signerName,
+          signed_at: new Date().toISOString(),
+        })
+        .eq("id", jobId);
 
-      // Enregistrer dans job_signatures avec toutes les métadonnées
-      const { error: dbError } = await supabase
+      if (jobError) throw jobError;
+
+      // Optionnel: Enregistrer aussi dans job_signatures pour historique détaillé
+      const { error: sigError } = await supabase
         .from("job_signatures")
         .insert({
           job_id: jobId,
           employee_id: employeeId,
           signer_name: signerName,
           signer_email: signerEmail || null,
-          image_url: urlData.publicUrl,
+          image_url: publicUrl,
           signed_at: new Date().toISOString(),
         });
 
-      if (dbError) {
-        console.error("Database error:", dbError);
-        throw dbError;
-      }
-
-      // Mettre à jour l'intervention avec les infos de signature pour le rapport
-      const { error: jobUpdateError } = await supabase
-        .from("jobs")
-        .update({
-          signature_name: signerName,
-          signature_image: urlData.publicUrl,
-          signature_date: new Date().toISOString(),
-        })
-        .eq("id", jobId);
-
-      if (jobUpdateError) {
-        console.error("Job update error:", jobUpdateError);
-        // Ne pas bloquer si cette mise à jour échoue
+      if (sigError) {
+        console.error("Warning: job_signatures insert failed:", sigError);
+        // Ne pas bloquer si cette table secondaire échoue
       }
 
       toast.success("Signature enregistrée avec succès");

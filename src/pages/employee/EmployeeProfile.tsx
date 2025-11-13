@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, User, Mail, Phone, Camera } from "lucide-react";
+import { LogOut, User, Mail, Phone, Camera, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface EmployeeProfile {
@@ -25,6 +26,7 @@ export const EmployeeProfile = () => {
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [lang, setLang] = useState("fr");
 
   useEffect(() => {
     loadProfile();
@@ -47,6 +49,7 @@ export const EmployeeProfile = () => {
 
       if (error) throw error;
       setProfile(employee);
+      setLang(employee.lang || "fr");
     } catch (error: any) {
       toast.error("Erreur de chargement du profil");
       console.error(error);
@@ -75,6 +78,25 @@ export const EmployeeProfile = () => {
     } catch (error: any) {
       toast.error("Erreur de mise à jour");
       console.error(error);
+    }
+  };
+
+  const handleLanguageChange = async (newLang: string) => {
+    if (!profile) return;
+
+    try {
+      const { error } = await supabase
+        .from("equipe")
+        .update({ lang: newLang })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      setLang(newLang);
+      toast.success(newLang === "fr" ? "Langue changée en Français" : "Language changed to English");
+    } catch (error) {
+      console.error("Language change error:", error);
+      toast.error("Erreur de mise à jour");
     }
   };
 
@@ -185,6 +207,27 @@ export const EmployeeProfile = () => {
             checked={darkMode}
             onCheckedChange={setDarkMode}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Langue / Language
+          </Label>
+          <Select value={lang} onValueChange={handleLanguageChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fr">Français 🇫🇷</SelectItem>
+              <SelectItem value="en">English 🇬🇧</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {lang === "fr" 
+              ? "Changera l'interface après rechargement" 
+              : "Will change the interface after reload"}
+          </p>
         </div>
       </Card>
 

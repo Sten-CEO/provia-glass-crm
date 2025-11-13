@@ -49,6 +49,9 @@ interface Intervention {
   scheduled_start?: string;
   scheduled_end?: string;
   checklist?: Array<{ id: string; label: string; done: boolean }>;
+  created_at?: string;
+  scheduled_at?: string;
+  factures?: Array<{ id: string; sent_at: string | null; paid_at: string | null }>;
 }
 
 const Interventions = () => {
@@ -64,7 +67,10 @@ const Interventions = () => {
   const loadInterventions = async () => {
     const { data, error } = await supabase
       .from("jobs")
-      .select("*")
+      .select(`
+        *,
+        factures:factures(id, sent_at, paid_at)
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -141,6 +147,29 @@ const Interventions = () => {
     return "—";
   };
 
+  const getBillingStatus = (intervention: Intervention): "À facturer" | "Facture envoyée" | "Facture payée" => {
+    if (!intervention.factures || intervention.factures.length === 0) {
+      return "À facturer";
+    }
+    const invoice = intervention.factures[0];
+    if (invoice.paid_at) return "Facture payée";
+    if (invoice.sent_at) return "Facture envoyée";
+    return "À facturer";
+  };
+
+  const getBillingBadgeClass = (status: string) => {
+    switch (status) {
+      case "À facturer":
+        return "bg-orange-100 text-orange-700";
+      case "Facture envoyée":
+        return "bg-blue-100 text-blue-700";
+      case "Facture payée":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
   const filteredInterventions = interventions.filter(intervention => {
     const matchesSearch = search === "" || 
       intervention.titre.toLowerCase().includes(search.toLowerCase()) ||
@@ -205,6 +234,9 @@ const Interventions = () => {
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Adresse</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Assignés</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Créneau</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Date création</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Date intervention</th>
+                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Reste à faire</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Progression</th>
                 <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
               </tr>
@@ -243,6 +275,25 @@ const Interventions = () => {
                     ) : "—"}
                   </td>
                   <td className="p-4 text-muted-foreground text-xs">{formatCreneau(intervention)}</td>
+                  <td className="p-4 text-muted-foreground text-xs">
+                    {intervention.created_at 
+                      ? new Date(intervention.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })
+                      : "—"}
+                  </td>
+                  <td className="p-4 text-muted-foreground text-xs">
+                    {intervention.scheduled_at 
+                      ? new Date(intervention.scheduled_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })
+                      : intervention.date || "—"}
+                  </td>
+                  <td className="p-4">
+                    {intervention.statut === "Terminée" ? (
+                      <Badge className={getBillingBadgeClass(getBillingStatus(intervention))}>
+                        {getBillingStatus(intervention)}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="p-4">
                     {intervention.checklist && intervention.checklist.length > 0 ? (
                       <div className="flex items-center gap-2">

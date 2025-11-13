@@ -223,17 +223,17 @@ export function InterventionReportTab({ job, onUpdate }: InterventionReportTabPr
             </div>
           )}
 
-          {job.signature_image ? (
+          {job.signature_url ? (
             <div className="space-y-2">
               <Label>Signature</Label>
               <div className="border rounded-lg p-4 bg-background">
-                <img src={job.signature_image} alt="Signature" className="max-h-32 mx-auto" />
+                <img src={job.signature_url} alt="Signature" className="max-h-32 mx-auto" />
               </div>
             </div>
           ) : (
             <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-              <p>⚠️ Signature disponible via l'application mobile Provia BASE</p>
-              <p className="text-sm mt-2">(bientôt disponible)</p>
+              <p>⚠️ Pas encore de signature</p>
+              <p className="text-sm mt-2">Signature collectée via l'app mobile employé</p>
             </div>
           )}
         </CardContent>

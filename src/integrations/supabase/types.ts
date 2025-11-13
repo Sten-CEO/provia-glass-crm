@@ -580,6 +580,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           is_manager: boolean | null
+          lang: string | null
           nom: string
           note: string | null
           phone: string | null
@@ -596,6 +597,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_manager?: boolean | null
+          lang?: string | null
           nom: string
           note?: string | null
           phone?: string | null
@@ -612,6 +614,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_manager?: boolean | null
+          lang?: string | null
           nom?: string
           note?: string | null
           phone?: string | null
@@ -636,15 +639,18 @@ export type Database = {
           facturx_profile: string | null
           facturx_xml_url: string | null
           id: string
+          intervention_id: string | null
           invoice_type: string | null
           issue_date: string | null
           lignes: Json | null
           montant: string
           notes_legal: string | null
           numero: string
+          paid_at: string | null
           payment_terms: string | null
           pdf_url: string | null
           remise: number | null
+          sent_at: string | null
           shipping_address: Json | null
           source_quote_id: string | null
           statut: string
@@ -667,15 +673,18 @@ export type Database = {
           facturx_profile?: string | null
           facturx_xml_url?: string | null
           id?: string
+          intervention_id?: string | null
           invoice_type?: string | null
           issue_date?: string | null
           lignes?: Json | null
           montant: string
           notes_legal?: string | null
           numero: string
+          paid_at?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
+          sent_at?: string | null
           shipping_address?: Json | null
           source_quote_id?: string | null
           statut?: string
@@ -698,15 +707,18 @@ export type Database = {
           facturx_profile?: string | null
           facturx_xml_url?: string | null
           id?: string
+          intervention_id?: string | null
           invoice_type?: string | null
           issue_date?: string | null
           lignes?: Json | null
           montant?: string
           notes_legal?: string | null
           numero?: string
+          paid_at?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           remise?: number | null
+          sent_at?: string | null
           shipping_address?: Json | null
           source_quote_id?: string | null
           statut?: string
@@ -728,6 +740,20 @@ export type Database = {
             columns: ["converted_from_quote_id"]
             isOneToOne: false
             referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factures_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factures_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -1397,11 +1423,15 @@ export type Database = {
           planning_event_id: string | null
           priority: string | null
           quote_id: string | null
+          scheduled_at: string | null
           scheduled_end: string | null
           scheduled_start: string | null
           signature_date: string | null
           signature_image: string | null
           signature_name: string | null
+          signature_signer: string | null
+          signature_url: string | null
+          signed_at: string | null
           statut: string
           time_entries: Json | null
           titre: string
@@ -1440,11 +1470,15 @@ export type Database = {
           planning_event_id?: string | null
           priority?: string | null
           quote_id?: string | null
+          scheduled_at?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           signature_date?: string | null
           signature_image?: string | null
           signature_name?: string | null
+          signature_signer?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
           statut?: string
           time_entries?: Json | null
           titre: string
@@ -1483,11 +1517,15 @@ export type Database = {
           planning_event_id?: string | null
           priority?: string | null
           quote_id?: string | null
+          scheduled_at?: string | null
           scheduled_end?: string | null
           scheduled_start?: string | null
           signature_date?: string | null
           signature_image?: string | null
           signature_name?: string | null
+          signature_signer?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
           statut?: string
           time_entries?: Json | null
           titre?: string
@@ -2310,6 +2348,10 @@ export type Database = {
       generate_intervention_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
       generate_quote_number: { Args: never; Returns: string }
+      get_intervention_billing_status: {
+        Args: { p_job_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
