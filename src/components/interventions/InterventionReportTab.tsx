@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { FileDown, Save } from "lucide-react";
+import { FileDown, Save, FileSignature } from "lucide-react";
 
 interface InterventionReportTabProps {
   job: any;
@@ -35,6 +35,7 @@ export function InterventionReportTab({ job, onUpdate }: InterventionReportTabPr
     signature_obtained: false,
   });
   const [saving, setSaving] = useState(false);
+  const [signature, setSignature] = useState<any>(null);
 
   useEffect(() => {
     // Load existing report data from job
@@ -49,7 +50,24 @@ export function InterventionReportTab({ job, onUpdate }: InterventionReportTabPr
         setReportData({ ...reportData, actions_performed: job.client_notes });
       }
     }
+
+    // Load signature from job_signatures table
+    loadSignature();
   }, [job.id]);
+
+  const loadSignature = async () => {
+    const { data } = await supabase
+      .from('job_signatures')
+      .select('*')
+      .eq('job_id', job.id)
+      .order('signed_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data) {
+      setSignature(data);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -203,37 +221,39 @@ export function InterventionReportTab({ job, onUpdate }: InterventionReportTabPr
           <CardTitle>Signature client</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Nom du signataire</Label>
-            <Input 
-              value={job.signature_signer || ""} 
-              readOnly
-              placeholder="Pas encore de signature"
-            />
-          </div>
-
-          {job.signed_at && (
-            <div className="space-y-2">
-              <Label>Date de signature</Label>
-              <Input 
-                type="text"
-                value={new Date(job.signed_at).toLocaleString("fr-FR")} 
-                readOnly
-              />
-            </div>
-          )}
-
-          {job.signature_url ? (
-            <div className="space-y-2">
-              <Label>Signature</Label>
-              <div className="border rounded-lg p-4 bg-background">
-                <img src={job.signature_url} alt="Signature" className="max-h-32 mx-auto" />
+          {signature ? (
+            <>
+              <div className="space-y-2">
+                <Label>Nom du signataire</Label>
+                <Input 
+                  value={signature.signer_name || ""} 
+                  readOnly
+                  className="bg-muted"
+                />
               </div>
-            </div>
+
+              <div className="space-y-2">
+                <Label>Date de signature</Label>
+                <Input 
+                  type="text"
+                  value={new Date(signature.signed_at).toLocaleString("fr-FR")} 
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Signature</Label>
+                <div className="border rounded-lg p-4 bg-background">
+                  <img src={signature.image_url} alt="Signature client" className="max-h-32 mx-auto" />
+                </div>
+              </div>
+            </>
           ) : (
             <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-              <p>⚠️ Pas encore de signature</p>
-              <p className="text-sm mt-2">Signature collectée via l'app mobile employé</p>
+              <FileSignature className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p className="font-medium">Aucune signature collectée</p>
+              <p className="text-sm mt-2">La signature sera visible ici une fois collectée via l'app mobile employé</p>
             </div>
           )}
         </CardContent>
