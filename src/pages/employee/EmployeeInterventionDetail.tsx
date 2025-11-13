@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Play, CheckCircle, Camera, FileSignature, MapPin, Navigation, Clock, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { JobPhotoCapture } from "@/components/employee/JobPhotoCapture";
@@ -610,41 +611,139 @@ export const EmployeeInterventionDetail = () => {
             {quotes.length > 0 ? (
               <div className="space-y-3">
                 {quotes.map((quote) => (
-                  <div key={quote.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{quote.numero}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {quote.title || "Sans titre"}
-                        </p>
+                  <Dialog key={quote.id}>
+                    <DialogTrigger asChild>
+                      <div className="border rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{quote.numero}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {quote.title || "Sans titre"}
+                            </p>
+                          </div>
+                          <Badge
+                            className={
+                              quote.statut === "Accepté" || quote.statut === "Signé"
+                                ? "bg-green-500"
+                                : quote.statut === "Envoyé"
+                                ? "bg-blue-500"
+                                : "bg-gray-500"
+                            }
+                          >
+                            {quote.statut}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Montant: {quote.total_ttc?.toFixed(2) || '0.00'}€
+                          </span>
+                          <span className="text-xs text-primary">Cliquer pour voir le détail</span>
+                        </div>
                       </div>
-                      <Badge
-                        className={
-                          quote.statut === "Accepté" || quote.statut === "Signé"
-                            ? "bg-green-500"
-                            : quote.statut === "Envoyé"
-                            ? "bg-blue-500"
-                            : "bg-gray-500"
-                        }
-                      >
-                        {quote.statut}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Montant: {quote.total_ttc}€
-                      </span>
-                      {quote.pdf_url && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(quote.pdf_url, "_blank")}
-                        >
-                          Voir PDF
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Détail du devis {quote.numero}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Client</p>
+                            <p className="font-medium">{quote.client_nom}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Statut</p>
+                            <Badge>{quote.statut}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Date d'émission</p>
+                            <p className="font-medium">{quote.issued_at || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Date d'expiration</p>
+                            <p className="font-medium">{quote.expiry_date || '-'}</p>
+                          </div>
+                        </div>
+
+                        {quote.title && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">Titre</p>
+                            <p className="font-medium">{quote.title}</p>
+                          </div>
+                        )}
+
+                        {quote.message_client && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">Message client</p>
+                            <p className="text-sm">{quote.message_client}</p>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="font-semibold mb-2">Lignes du devis</h4>
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full text-sm">
+                              <thead className="bg-muted">
+                                <tr>
+                                  <th className="text-left p-2">Désignation</th>
+                                  <th className="text-right p-2">Qté</th>
+                                  <th className="text-right p-2">Prix HT</th>
+                                  <th className="text-right p-2">Total HT</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Array.isArray(quote.lignes) && quote.lignes.map((ligne: any, idx: number) => (
+                                  <tr key={idx} className="border-t">
+                                    <td className="p-2">
+                                      <p className="font-medium">{ligne.name || ligne.description}</p>
+                                      {ligne.description && ligne.name && (
+                                        <p className="text-xs text-muted-foreground">{ligne.description}</p>
+                                      )}
+                                    </td>
+                                    <td className="text-right p-2">{ligne.qty || ligne.quantity || 0}</td>
+                                    <td className="text-right p-2">{(ligne.unit_price_ht || 0).toFixed(2)}€</td>
+                                    <td className="text-right p-2 font-medium">
+                                      {((ligne.qty || ligne.quantity || 0) * (ligne.unit_price_ht || 0)).toFixed(2)}€
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-4 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Total HT</span>
+                            <span className="font-medium">{quote.total_ht?.toFixed(2) || '0.00'}€</span>
+                          </div>
+                          {quote.remise > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Remise</span>
+                              <span className="font-medium text-orange-600">-{quote.remise?.toFixed(2)}€</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">TVA</span>
+                            <span className="font-medium">{((quote.total_ttc || 0) - (quote.total_ht || 0)).toFixed(2)}€</span>
+                          </div>
+                          <div className="flex justify-between text-lg font-bold border-t pt-2">
+                            <span>Total TTC</span>
+                            <span>{quote.total_ttc?.toFixed(2) || '0.00'}€</span>
+                          </div>
+                        </div>
+
+                        {quote.pdf_url && (
+                          <Button
+                            className="w-full"
+                            onClick={() => window.open(quote.pdf_url, "_blank")}
+                          >
+                            Ouvrir le PDF complet
+                          </Button>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 ))}
               </div>
             ) : (
