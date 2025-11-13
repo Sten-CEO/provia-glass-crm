@@ -115,7 +115,7 @@ const Timesheets = () => {
 
   const statusLabels: Record<string, string> = {
     draft: "Brouillon",
-    submitted: "À valider",
+    submitted: "Enregistrée",
     approved: "Validé",
     rejected: "Rejeté",
   };
@@ -205,7 +205,7 @@ const Timesheets = () => {
       return;
     }
 
-    toast.success(`${selectedCount} entrée(s) soumise(s)`);
+    toast.success(`${selectedCount} entrée(s) enregistrée(s)`);
     clearSelection();
     loadData();
   };
