@@ -151,14 +151,22 @@ export function FilesSection({ interventionId }: FilesSectionProps) {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.file_url;
-                            link.download = file.file_name;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            toast.success("Téléchargement démarré");
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(file.file_url);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = file.file_name;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(url);
+                              toast.success("Téléchargement démarré");
+                            } catch (error) {
+                              toast.error("Erreur lors du téléchargement");
+                            }
                           }}
                           className="flex-1"
                         >
