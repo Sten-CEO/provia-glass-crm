@@ -24,25 +24,37 @@ export function InvoicingAlertsCard() {
   }, []);
 
   const loadStats = async () => {
-    // Interventions terminées sans facture = À facturer
-    const { data: jobsData } = await supabase
+    // Interventions terminées sans facture liée = À facturer
+    const { data: completedJobs } = await supabase
       .from("jobs")
-      .select("id, factures:factures(id)")
+      .select("id")
       .eq("statut", "Terminée");
 
-    const toInvoice = jobsData?.filter(
-      (job: any) => !job.factures || job.factures.length === 0
-    ).length || 0;
+    if (!completedJobs) {
+      setToInvoiceCount(0);
+      setAwaitingPaymentCount(0);
+      return;
+    }
+
+    const jobIds = completedJobs.map(j => j.id);
+
+    // Récupérer les factures liées à ces interventions
+    const { data: linkedInvoices } = await supabase
+      .from("factures")
+      .select("id, intervention_id, sent_at, paid_at")
+      .in("intervention_id", jobIds);
+
+    // Interventions terminées sans facture = À facturer
+    const linkedJobIds = new Set(linkedInvoices?.map(inv => inv.intervention_id) || []);
+    const toInvoice = completedJobs.filter(job => !linkedJobIds.has(job.id)).length;
 
     // Factures envoyées mais non payées = En attente paiement
-    const { data: invoicesData } = await supabase
-      .from("factures")
-      .select("id")
-      .not("sent_at", "is", null)
-      .is("paid_at", null);
+    const awaitingPayment = linkedInvoices?.filter(
+      inv => inv.sent_at !== null && inv.paid_at === null
+    ).length || 0;
 
     setToInvoiceCount(toInvoice);
-    setAwaitingPaymentCount(invoicesData?.length || 0);
+    setAwaitingPaymentCount(awaitingPayment);
   };
 
   return (
