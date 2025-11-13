@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Image, Trash2 } from "lucide-react";
+import { Upload, FileText, Image, Trash2, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface FilesSectionProps {
   interventionId: string | undefined;
@@ -108,30 +109,77 @@ export function FilesSection({ interventionId }: FilesSectionProps) {
           </p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {files.map((file) => (
-              <div key={file.id} className="relative border rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex flex-col items-center gap-2">
-                  {file.file_type?.startsWith("image/") ? (
-                    <Image className="h-12 w-12 text-primary" />
-                  ) : (
-                    <FileText className="h-12 w-12 text-primary" />
-                  )}
-                  <p className="text-sm font-medium text-center line-clamp-2">{file.file_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.file_size / 1024).toFixed(1)} KB
-                  </p>
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    onClick={() => deleteFile(file.id)}
-                    className="w-full mt-2"
-                  >
-                    <Trash2 className="h-3 w-3 mr-2" />
-                    Supprimer
-                  </Button>
+            {files.map((file) => {
+              const isImage = file.file_type?.startsWith("image/") || file.category === "photo";
+              const photoTypeLabel = file.photo_type === "before" ? "Photo avant" : 
+                                     file.photo_type === "after" ? "Photo après" : null;
+              
+              return (
+                <div key={file.id} className="relative border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="flex flex-col">
+                    {/* Image preview or icon */}
+                    <div className="relative w-full h-48 bg-muted flex items-center justify-center">
+                      {isImage ? (
+                        <>
+                          <img 
+                            src={file.file_url} 
+                            alt={file.file_name}
+                            className="w-full h-full object-cover cursor-pointer"
+                            onClick={() => window.open(file.file_url, '_blank')}
+                          />
+                          {photoTypeLabel && (
+                            <Badge 
+                              className="absolute top-2 left-2 bg-primary text-primary-foreground"
+                            >
+                              {photoTypeLabel}
+                            </Badge>
+                          )}
+                        </>
+                      ) : (
+                        <FileText className="h-12 w-12 text-primary" />
+                      )}
+                    </div>
+                    
+                    {/* File info and actions */}
+                    <div className="p-3 space-y-2">
+                      <p className="text-sm font-medium text-center line-clamp-2">{file.file_name}</p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {(file.file_size / 1024).toFixed(1)} KB
+                      </p>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = file.file_url;
+                            link.download = file.file_name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            toast.success("Téléchargement démarré");
+                          }}
+                          className="flex-1"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Télécharger
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => deleteFile(file.id)}
+                          className="flex-1"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Supprimer
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
