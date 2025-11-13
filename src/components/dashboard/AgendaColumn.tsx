@@ -39,16 +39,16 @@ export const AgendaColumn = () => {
     const nextWeek = addDays(now, 7);
 
     const { data } = await supabase
-      .from('agenda_events')
+      .from('agenda_events' as any)
       .select('*')
       .gte('start_at', now.toISOString())
       .lte('start_at', nextWeek.toISOString())
       .order('start_at');
 
     if (data) {
-      setTodayEvents(data.filter(e => isToday(new Date(e.start_at))));
-      setTomorrowEvents(data.filter(e => isTomorrow(new Date(e.start_at))));
-      setUpcomingEvents(data.filter(e => !isToday(new Date(e.start_at)) && !isTomorrow(new Date(e.start_at))));
+      setTodayEvents(data.filter((e: any) => isToday(new Date(e.start_at))));
+      setTomorrowEvents(data.filter((e: any) => isTomorrow(new Date(e.start_at))));
+      setUpcomingEvents(data.filter((e: any) => !isToday(new Date(e.start_at)) && !isTomorrow(new Date(e.start_at))));
     }
   };
 

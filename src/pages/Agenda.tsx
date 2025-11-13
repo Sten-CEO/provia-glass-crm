@@ -44,12 +44,12 @@ export default function Agenda() {
 
   const loadEvents = async () => {
     const { data } = await supabase
-      .from('agenda_events')
+      .from('agenda_events' as any)
       .select('*')
       .order('start_at', { ascending: true });
 
     if (data) {
-      setEvents(data);
+      setEvents(data as any);
     }
   };
 

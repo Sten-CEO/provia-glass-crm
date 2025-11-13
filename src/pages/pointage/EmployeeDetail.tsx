@@ -67,14 +67,14 @@ export default function EmployeeDetail() {
 
   const loadEvents = async () => {
     const { data } = await supabase
-      .from('timesheets_events')
+      .from('timesheets_events' as any)
       .select('*')
       .eq('employee_id', id)
       .order('at', { ascending: false })
       .limit(50);
 
     if (data) {
-      setEvents(data);
+      setEvents(data as any);
     }
   };
 

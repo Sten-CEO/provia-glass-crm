@@ -146,34 +146,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </div>
 
       <div className="p-4 space-y-1 overflow-y-auto flex-1">
-        {/* Create Button */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className={cn("w-full mb-4", isCollapsed ? "px-0" : "gap-2")}>
-              <Plus className="h-4 w-4" />
-              {!isCollapsed && "Créer"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem onClick={() => navigate("/clients")}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Nouveau Client
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/devis/new")}>
-              <FileTextIcon className="h-4 w-4 mr-2" />
-              Nouveau Devis
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/interventions")}>
-              <BriefcaseIcon className="h-4 w-4 mr-2" />
-              Nouvelle Intervention
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/factures")}>
-              <ReceiptIcon className="h-4 w-4 mr-2" />
-              Nouvelle Facture
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Navigation Sections */}
         {navSections.map((section, idx) => (
           <div key={section.label}>

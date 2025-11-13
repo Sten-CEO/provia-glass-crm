@@ -22,7 +22,7 @@ export const AgendaWidget = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const { data } = await supabase
-      .from('agenda_events')
+      .from('agenda_events' as any)
       .select('*')
       .gte('start_at', today.toISOString())
       .lte('start_at', tomorrow.toISOString())
