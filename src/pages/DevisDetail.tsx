@@ -183,7 +183,7 @@ const DevisDetail = () => {
 
   const handleCreateJob = async () => {
     await handleSave();
-    navigate(`/interventions/new?quoteId=${id}`);
+    navigate(`/interventions/nouvelle?quoteId=${id}`);
   };
 
   if (!devis) return <div className="p-6">Chargement...</div>;

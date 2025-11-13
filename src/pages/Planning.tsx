@@ -293,7 +293,7 @@ const Planning = () => {
           droppable={true}
           dateClick={handleDateClick}
           eventDrop={handleEventDrop}
-          eventClick={(info) => navigate(`/interventions/${info.event.id}`)}
+          eventClick={(info) => navigate(`/interventions/${info.event.id}/report`)}
           height="auto"
           locale="fr"
           slotMinTime="07:00:00"
