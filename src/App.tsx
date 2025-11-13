@@ -47,6 +47,10 @@ import InventaireItemDetail from "./pages/inventaire/InventaireItemDetail";
 import InventaireMouvements from "./pages/inventaire/InventaireMouvements";
 import InventaireAchats from "./pages/inventaire/InventaireAchats";
 import AchatEditor from "./pages/inventaire/AchatEditor";
+import Employes from "./pages/pointage/Employes";
+import EmployeePointageDetail from "./pages/pointage/EmployeeDetail";
+import Agenda from "./pages/Agenda";
+import CADetail from "./pages/dashboard/CADetail";
 
 const queryClient = new QueryClient();
 
@@ -119,8 +123,12 @@ const App = () => {
             
             <Route path="/equipe" element={<Equipe />} />
             <Route path="/equipe/:id" element={<EmployeeDetail />} />
-            <Route path="/timesheets" element={<Timesheets />} />
-            <Route path="/paiements" element={<Paiements />} />
+          <Route path="/timesheets" element={<Timesheets />} />
+          <Route path="/pointage/employes" element={<Employes />} />
+          <Route path="/pointage/employes/:id" element={<EmployeePointageDetail />} />
+          <Route path="/paiements" element={<Paiements />} />
+          <Route path="/agenda" element={<Agenda />} />
+          <Route path="/dashboard/ca" element={<CADetail />} />
             <Route path="/parametres" element={<Parametres />} />
             <Route path="/support" element={<Support />} />
           </Route>

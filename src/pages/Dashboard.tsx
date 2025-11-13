@@ -14,6 +14,7 @@ import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 import { StockAlertsCard } from "@/components/dashboard/StockAlertsCard";
 import { ToPlanCard } from "@/components/dashboard/ToPlanCard";
 import { InvoicingAlertsCard } from "@/components/dashboard/InvoicingAlertsCard";
+import { AgendaWidget } from "@/components/dashboard/AgendaWidget";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -94,12 +95,24 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-3xl font-bold">Tableau de bord</h1>
+        <Button variant="outline" onClick={() => navigate('/dashboard/ca')}>
+          Vue précise CA
+        </Button>
+      </div>
+
       <RevenueModule />
       <AlertsStrip />
-      <ToPlanCard />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <ToPlanCard />
         <StockAlertsCard />
         <InvoicingAlertsCard />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AgendaWidget />
       </div>
       
       <div className="flex items-center justify-between">
