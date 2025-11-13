@@ -184,7 +184,7 @@ export const AlertsStrip = () => {
       color: alerts.failedOrPostponed > 0 ? "red" : "gray",
       onClick: () => navigate("/interventions?filter=failed_postponed"),
     },
-  ];
+  ].filter(chip => chip.count > 0); // Ne montrer que les alertes avec count > 0
 
   return (
     <div className="glass-card p-4 mb-6">

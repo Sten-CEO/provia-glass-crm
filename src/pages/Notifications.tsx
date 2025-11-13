@@ -16,7 +16,7 @@ interface Notification {
   title: string;
   message: string;
   link: string | null;
-  read: boolean;
+  read_at: string | null;
 }
 
 export default function Notifications() {
@@ -73,7 +73,7 @@ export default function Notifications() {
   const markAsRead = async (id: string) => {
     await supabase
       .from('notifications')
-      .update({ read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('id', id);
     
     loadNotifications();
@@ -82,8 +82,8 @@ export default function Notifications() {
   const markAllAsRead = async () => {
     await supabase
       .from('notifications')
-      .update({ read: true })
-      .eq('read', false);
+      .update({ read_at: new Date().toISOString() })
+      .is('read_at', null);
     
     loadNotifications();
   };
@@ -116,7 +116,7 @@ export default function Notifications() {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read_at).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -158,20 +158,20 @@ export default function Notifications() {
                 <Card
                   key={notification.id}
                   className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                    !notification.read ? 'border-l-4 border-l-primary bg-muted/30' : ''
+                    !notification.read_at ? 'border-l-4 border-l-primary bg-muted/30' : ''
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className={`text-base ${!notification.read ? 'font-semibold' : 'font-medium'}`}>
+                        <h3 className={`text-base ${!notification.read_at ? 'font-semibold' : 'font-medium'}`}>
                           {notification.title}
                         </h3>
                         <Badge className={getNotificationBadgeColor(notification.kind)}>
                           {notification.kind.replace('_', ' ')}
                         </Badge>
-                        {!notification.read && (
+                        {!notification.read_at && (
                           <Badge variant="default" className="ml-auto">Nouveau</Badge>
                         )}
                       </div>
