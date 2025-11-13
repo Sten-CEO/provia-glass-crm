@@ -64,9 +64,16 @@ const FactureDetail = () => {
   };
 
   const calculateTotals = () => {
-    const totalHT = lignes.reduce((sum, ligne) => sum + ligne.total, 0);
-    const remise = facture?.remise || 0;
-    const totalApresRemise = totalHT - remise;
+    const totalHT = lignes.reduce((sum, ligne) => {
+      const qty = Number(ligne.quantite ?? 0);
+      const price = Number(ligne.prix_unitaire ?? 0);
+      const lineTotal = typeof ligne.total === 'number' && Number.isFinite(ligne.total)
+        ? ligne.total
+        : qty * price;
+      return sum + (Number.isFinite(lineTotal) ? lineTotal : 0);
+    }, 0);
+    const remise = Number(facture?.remise ?? 0);
+    const totalApresRemise = Math.max(0, totalHT - remise);
     const totalTTC = totalApresRemise * 1.2;
     return { totalHT, totalApresRemise, totalTTC };
   };
@@ -205,7 +212,7 @@ const FactureDetail = () => {
                   onChange={(e) => updateLigne(index, "prix_unitaire", Number(e.target.value))}
                   className="col-span-2 glass-card"
                 />
-                <div className="col-span-2 font-semibold">{ligne.total.toFixed(2)} €</div>
+                <div className="col-span-2 font-semibold">{(typeof ligne.total === 'number' && Number.isFinite(ligne.total) ? ligne.total : (Number(ligne.quantite ?? 0) * Number(ligne.prix_unitaire ?? 0))).toFixed(2)} €</div>
                 <Button onClick={() => removeLigne(index)} variant="ghost" size="icon" className="col-span-1">
                   <Trash2 className="h-4 w-4" />
                 </Button>
