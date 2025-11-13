@@ -33,13 +33,13 @@ export const AlertsConfigModal = ({ open, onOpenChange }: AlertsConfigModalProps
     if (!user) return;
 
     const { data } = await supabase
-      .from('dashboard_prefs')
+      .from('dashboard_prefs' as any)
       .select('alerts_enabled')
       .eq('user_id', user.id)
       .single();
 
-    if (data?.alerts_enabled) {
-      setConfig(data.alerts_enabled as any);
+    if ((data as any)?.alerts_enabled) {
+      setConfig((data as any).alerts_enabled);
     }
   };
 
@@ -49,11 +49,11 @@ export const AlertsConfigModal = ({ open, onOpenChange }: AlertsConfigModalProps
     if (!user) return;
 
     const { error } = await supabase
-      .from('dashboard_prefs')
+      .from('dashboard_prefs' as any)
       .upsert({
         user_id: user.id,
         alerts_enabled: config,
-      }, {
+      } as any, {
         onConflict: 'user_id'
       });
 

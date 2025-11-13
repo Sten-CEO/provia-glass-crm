@@ -33,21 +33,6 @@ const Dashboard = () => {
           <Button variant="outline" onClick={() => navigate('/dashboard/ca')}>
             Vue précise CA
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                Créer
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => navigate("/clients")}>Créer un client</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/devis")}>Créer un devis</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/interventions")}>Créer une intervention</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/factures")}>Créer une facture</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/agenda")}>Créer un rendez-vous</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
