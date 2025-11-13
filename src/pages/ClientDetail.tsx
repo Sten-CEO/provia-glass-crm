@@ -580,7 +580,7 @@ const ClientDetail = () => {
                 </Button>
                 <Button 
                   size="sm"
-                  onClick={() => navigate(`/interventions/new?client_id=${id}`)}
+                  onClick={() => navigate(`/interventions/nouvelle?client_id=${id}`)}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Ouvrir en version avancée
@@ -595,7 +595,7 @@ const ClientDetail = () => {
               <div className="space-y-2">
                 {jobs.map(j => (
                   <div key={j.id} className="flex justify-between items-center p-3 glass-card rounded hover:bg-muted/30 cursor-pointer"
-                    onClick={() => navigate(`/interventions/${j.id}`)}>
+                    onClick={() => navigate(`/interventions/${j.id}/report`)}>
                     <div>
                       <span className="font-medium">{j.titre}</span>
                       <p className="text-sm text-muted-foreground">{j.date} · {j.employe_nom}</p>

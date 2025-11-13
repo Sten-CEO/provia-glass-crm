@@ -112,7 +112,7 @@ const App = () => {
             
             {/* Legacy routes redirect to new interventions routes */}
             <Route path="/jobs" element={<Navigate to="/interventions" replace />} />
-            <Route path="/jobs/:id" element={<Navigate to="/interventions/:id" replace />} />
+            <Route path="/jobs/:id" element={<Navigate to="/interventions/:id/report" replace />} />
             
             {/* Inventaire routes */}
             <Route path="/inventaire" element={<Navigate to="/inventaire/consommables" replace />} />

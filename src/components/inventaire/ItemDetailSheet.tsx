@@ -149,7 +149,7 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
         navigate(`/devis/${movement.ref_id}`);
         break;
       case "intervention":
-        navigate(`/interventions/${movement.ref_id}`);
+        navigate(`/interventions/${movement.ref_id}/report`);
         break;
       case "achat":
         navigate(`/inventaire/achats/${movement.ref_id}`);

@@ -76,7 +76,10 @@ export const NotificationsPanel = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    const link = (notification as any).link || notification.payload?.link;
+    let link = (notification as any).link || notification.payload?.link;
+    if (link && link.startsWith('/interventions/') && !/\/(report|editer)(\/|$)/.test(link)) {
+      link = `${link}/report`;
+    }
     if (link) {
       navigate(link);
       setIsOpen(false);

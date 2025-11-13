@@ -8,9 +8,9 @@ export const QuickCreateMenu = () => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { icon: FileText, label: "Devis", path: "/devis/nouveau" },
-    { icon: Receipt, label: "Facture", path: "/factures/nouveau" },
-    { icon: Briefcase, label: "Intervention", path: "/interventions/nouveau" },
+    { icon: FileText, label: "Devis", path: "/devis/new" },
+    { icon: Receipt, label: "Facture", path: "/factures/new" },
+    { icon: Briefcase, label: "Intervention", path: "/interventions/nouvelle" },
     { icon: Users, label: "Client", path: "/clients" },
     { icon: Package, label: "Produit", path: "/inventaire" },
     { icon: TrendingDown, label: "Dépense", path: "/parametres" },

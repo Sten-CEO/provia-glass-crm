@@ -102,7 +102,7 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
   const handleOpenAdvanced = () => {
     const routes: Record<string, string> = {
       devis: `/devis/new?client_id=${clientId}`,
-      intervention: `/interventions/new?client_id=${clientId}`,
+      intervention: `/interventions/nouvelle?client_id=${clientId}`,
       facture: `/factures/new?client_id=${clientId}`,
     };
     navigate(routes[type]);
