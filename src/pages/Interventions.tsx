@@ -69,7 +69,7 @@ const Interventions = () => {
       .from("jobs")
       .select(`
         *,
-        factures:factures(id, sent_at, paid_at)
+        factures!factures_intervention_id_fkey(id, sent_at, paid_at)
       `)
       .order("created_at", { ascending: false });
 
