@@ -74,6 +74,15 @@ export const NotificationsPanel = () => {
     toast.success("Toutes les notifications marquées comme lues");
   };
 
+  const deleteNotification = async (id: string) => {
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id);
+    loadNotifications();
+    toast.success("Notification supprimée");
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
     let link = (notification as any).link || notification.payload?.link;
