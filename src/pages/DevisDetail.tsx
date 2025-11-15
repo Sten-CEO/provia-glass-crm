@@ -106,6 +106,19 @@ const DevisDetail = () => {
     if (error) {
       toast.error("Erreur lors de la sauvegarde");
     } else {
+      // Sync inventory planning
+      try {
+        const { syncQuoteInventoryPlanning } = await import("@/lib/quoteInventoryPlanning");
+        await syncQuoteInventoryPlanning(
+          id!,
+          devis.numero,
+          lignes,
+          devis.planned_date
+        );
+      } catch (planningError) {
+        console.error("Error syncing inventory planning:", planningError);
+      }
+      
       toast.success("Devis mis à jour");
       
       // Auto-créer l'intervention si activé et statut devient Accepté/Signé
@@ -177,7 +190,21 @@ const DevisDetail = () => {
       toast.error("Erreur lors de la création de l'intervention");
       console.error(error);
     } else {
-      toast.success(`Intervention créée automatiquement et liée au devis ${devis.numero}`);
+      // Sync consumables and services from quote to intervention
+      if (newJob?.id && id) {
+        try {
+          const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
+          const result = await syncQuoteConsumablesToIntervention(id, newJob.id);
+          toast.success(
+            `Intervention créée avec ${result.consumablesCount} consommables et ${result.servicesCount} services`
+          );
+        } catch (syncError) {
+          console.error("Error syncing quote items:", syncError);
+          toast.warning("Intervention créée mais erreur lors de la copie des articles");
+        }
+      } else {
+        toast.success(`Intervention créée automatiquement et liée au devis ${devis.numero}`);
+      }
       eventBus.emit(EVENTS.DATA_CHANGED, { scope: 'jobs' });
     }
   };
