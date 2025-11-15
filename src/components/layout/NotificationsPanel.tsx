@@ -150,7 +150,7 @@ export const NotificationsPanel = () => {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {notifications.map((notification) => (
+                  {notifications.slice(0, 10).map((notification) => (
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
@@ -194,6 +194,21 @@ export const NotificationsPanel = () => {
                 </div>
               )}
             </ScrollArea>
+
+            {notifications.length > 10 && (
+              <div className="p-4 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/notifications');
+                  }}
+                >
+                  Voir toutes les notifications ({notifications.length})
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}
