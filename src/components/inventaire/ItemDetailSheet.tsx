@@ -62,6 +62,61 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
   useEffect(() => {
     if (open && itemId) {
       loadItemDetails();
+
+      // Realtime subscriptions for inventory updates
+      const itemsChannel = supabase
+        .channel(`inventory_item_${itemId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'inventory_items',
+            filter: `id=eq.${itemId}`
+          },
+          () => {
+            loadItemDetails();
+          }
+        )
+        .subscribe();
+
+      const movementsChannel = supabase
+        .channel(`inventory_movements_${itemId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'inventory_movements',
+            filter: `item_id=eq.${itemId}`
+          },
+          () => {
+            loadItemDetails();
+          }
+        )
+        .subscribe();
+
+      const reservationsChannel = supabase
+        .channel(`inventory_reservations_${itemId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'inventory_reservations',
+            filter: `inventory_item_id=eq.${itemId}`
+          },
+          () => {
+            loadItemDetails();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(itemsChannel);
+        supabase.removeChannel(movementsChannel);
+        supabase.removeChannel(reservationsChannel);
+      };
     }
   }, [open, itemId]);
 
