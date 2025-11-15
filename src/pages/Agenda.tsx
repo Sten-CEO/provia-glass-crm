@@ -7,6 +7,7 @@ import { Calendar, Plus, MapPin, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { NewEventDialog } from "@/components/agenda/NewEventDialog";
 
 interface AgendaEvent {
   id: string;
@@ -99,10 +100,7 @@ export default function Agenda() {
           >
             Semaine
           </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau rendez-vous
-          </Button>
+          <NewEventDialog onEventCreated={loadEvents} />
         </div>
       </div>
 

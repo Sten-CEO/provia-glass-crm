@@ -21,6 +21,8 @@ import {
   Smartphone
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PerformanceDetailTable } from "@/components/employee/PerformanceDetailTable";
 
 interface EmployeeDetails {
   id: string;
@@ -51,9 +53,7 @@ const EmployeeDetail = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<InterventionStat>({ total: 0, completed: 0, in_progress: 0 });
   const [editedEmployee, setEditedEmployee] = useState<Partial<EmployeeDetails>>({});
-  const [activeTab, setActiveTab] = useState<'info' | 'performances'>('info');
   const [performanceData, setPerformanceData] = useState<any>(null);
-  const [interventionDetails, setInterventionDetails] = useState<any[]>([]);
 
   useEffect(() => {
     loadEmployee();
@@ -121,30 +121,6 @@ const EmployeeDetail = () => {
 
     if (perfData) {
       setPerformanceData(perfData);
-    }
-
-    // Charger les détails des interventions
-    const { data: assignments } = await supabase
-      .from("intervention_assignments")
-      .select("intervention_id")
-      .eq("employee_id", id);
-
-    if (assignments && assignments.length > 0) {
-      const interventionIds = assignments.map(a => a.intervention_id);
-      
-      const { data: interventions } = await supabase
-        .from("jobs")
-        .select(`
-          *,
-          clients:client_id(nom),
-          timesheets_entries(start_at, end_at, break_min)
-        `)
-        .in("id", interventionIds)
-        .order('date', { ascending: false });
-
-      if (interventions) {
-        setInterventionDetails(interventions);
-      }
     }
   };
 
@@ -355,29 +331,56 @@ const EmployeeDetail = () => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Stats */}
+            {/* Performances & Skills */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
-                  Performances
+                  Performances & Compétences
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total interventions</span>
-                    <span className="text-2xl font-bold">{stats.total}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Terminées</span>
-                    <Badge variant="default">{stats.completed}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">En cours</span>
-                    <Badge className="bg-warning text-warning-foreground">{stats.in_progress}</Badge>
-                  </div>
-                </div>
+              <CardContent>
+                <Tabs defaultValue="stats" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="stats">Statistiques</TabsTrigger>
+                    <TabsTrigger value="details">Détails des performances</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="stats" className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Total interventions</span>
+                        <span className="text-2xl font-bold">{performanceData?.total_interventions || stats.total}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Terminées</span>
+                        <Badge variant="default">{performanceData?.terminees || stats.completed}</Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">En cours</span>
+                        <Badge className="bg-warning text-warning-foreground">{performanceData?.en_cours || stats.in_progress}</Badge>
+                      </div>
+                      {performanceData && (
+                        <>
+                          <div className="flex justify-between items-center pt-4 border-t">
+                            <span className="text-sm text-muted-foreground">Heures totales</span>
+                            <span className="text-lg font-semibold">
+                              {Math.round(performanceData.duree_totale_h || 0)}h
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Heures facturables</span>
+                            <span className="text-lg font-semibold">
+                              {Math.round(performanceData.heures_facturables || 0)}h
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="details" className="mt-4">
+                    {id && <PerformanceDetailTable employeeId={id} />}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
 
