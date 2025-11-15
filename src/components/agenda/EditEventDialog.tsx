@@ -24,6 +24,7 @@ export const EditEventDialog = ({ eventId, open, onOpenChange, onEventUpdated }:
     location: '',
     description: '',
     type: 'rdv',
+    status: 'à venir',
   });
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export const EditEventDialog = ({ eventId, open, onOpenChange, onEventUpdated }:
         location: data.location || '',
         description: data.description || '',
         type: data.type,
+        status: data.status || 'à venir',
       });
     }
     setLoading(false);
@@ -72,6 +74,7 @@ export const EditEventDialog = ({ eventId, open, onOpenChange, onEventUpdated }:
           location: formData.location || null,
           description: formData.description || null,
           type: formData.type,
+          status: formData.status,
         })
         .eq('id', eventId);
 
@@ -126,19 +129,36 @@ export const EditEventDialog = ({ eventId, open, onOpenChange, onEventUpdated }:
               </div>
             </div>
 
-            <div>
-              <Label>Type</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rdv">Rendez-vous</SelectItem>
-                  <SelectItem value="demo">Démo</SelectItem>
-                  <SelectItem value="appel">Appel</SelectItem>
-                  <SelectItem value="autre">Autre</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Type</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rdv">Rendez-vous</SelectItem>
+                    <SelectItem value="demo">Démo</SelectItem>
+                    <SelectItem value="appel">Appel</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Statut</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="à venir">À venir</SelectItem>
+                    <SelectItem value="terminé">Terminé</SelectItem>
+                    <SelectItem value="reporté">Reporté</SelectItem>
+                    <SelectItem value="annulé">Annulé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
