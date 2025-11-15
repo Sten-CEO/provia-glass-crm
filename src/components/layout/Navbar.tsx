@@ -12,15 +12,23 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
-  const [userEmail, setUserEmail] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>("Entreprise");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email) {
-        setUserEmail(user.email);
-      }
-    });
+    loadCompanyName();
   }, []);
+
+  const loadCompanyName = async () => {
+    const { data } = await supabase
+      .from("company_settings")
+      .select("company_name")
+      .limit(1)
+      .single();
+
+    if (data?.company_name) {
+      setCompanyName(data.company_name);
+    }
+  };
 
   return (
     <nav className="glass-navbar h-16 flex items-center justify-between px-6 sticky top-0 z-40">
@@ -36,14 +44,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
         
         <div className="flex items-center gap-3">
           <img src={logo} alt="Provia Base" className="w-8 h-8 object-contain" />
-          <span className="font-bold uppercase tracking-wide">Entreprise</span>
+          <span className="font-bold uppercase tracking-wide">{companyName}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground hidden sm:inline">
-          {userEmail}
-        </span>
         <NotificationsPanel />
         <QuickCreateMenu />
         <SettingsMenu />

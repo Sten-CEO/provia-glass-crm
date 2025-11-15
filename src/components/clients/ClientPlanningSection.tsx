@@ -44,8 +44,6 @@ export const ClientPlanningSection = ({ clientId }: ClientPlanningSectionProps) 
   }, [clientId]);
 
   const loadEvents = async () => {
-    const now = new Date().toISOString();
-
     const { data: eventClients } = await supabase
       .from('event_clients')
       .select('event_id')
@@ -62,9 +60,7 @@ export const ClientPlanningSection = ({ clientId }: ClientPlanningSectionProps) 
       .from('agenda_events')
       .select('*')
       .in('id', eventIds)
-      .gte('start_at', now)
-      .order('start_at', { ascending: true })
-      .limit(5);
+      .order('start_at', { ascending: false });
 
     if (data) {
       setEvents(data);
