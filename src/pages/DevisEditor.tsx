@@ -49,6 +49,7 @@ import { eventBus, EVENTS } from "@/lib/eventBus";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { InventoryItemSelector } from "@/components/devis/InventoryItemSelector";
+import { ServiceCatalogSelector } from "@/components/devis/ServiceCatalogSelector";
 import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { InterventionInfoBlock } from "@/components/devis/InterventionInfoBlock";
@@ -93,6 +94,7 @@ const DevisEditor = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [serviceCatalogOpen, setServiceCatalogOpen] = useState(false);
   // Templates devis
   const [quoteTemplates, setQuoteTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -1094,23 +1096,33 @@ const DevisEditor = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Lignes du devis</CardTitle>
-                <InventoryItemSelector
-                  onSelect={(item) => {
-                    const newLine: QuoteLine = {
-                      id: crypto.randomUUID(),
-                      name: item.name,
-                      description: "",
-                      qty: 1,
-                      unit: "unité",
-                      unit_price_ht: item.unit_price_ht,
-                      tva_rate: 20,
-                      optional: false,
-                      included: true,
-                      inventory_item_id: item.id,
-                    };
-                    setQuote((q) => ({ ...q, lignes: [...q.lignes, newLine] }));
-                  }}
-                />
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setServiceCatalogOpen(true)}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Depuis le catalogue
+                  </Button>
+                  <InventoryItemSelector
+                    onSelect={(item) => {
+                      const newLine: QuoteLine = {
+                        id: crypto.randomUUID(),
+                        name: item.name,
+                        description: "",
+                        qty: 1,
+                        unit: "unité",
+                        unit_price_ht: item.unit_price_ht,
+                        tva_rate: 20,
+                        optional: false,
+                        included: true,
+                        inventory_item_id: item.id,
+                      };
+                      setQuote((q) => ({ ...q, lignes: [...q.lignes, newLine] }));
+                    }}
+                  />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1593,6 +1605,26 @@ const DevisEditor = () => {
           templateId={selectedTemplateId}
         />
       )}
+
+      {/* Service Catalog Selector */}
+      <ServiceCatalogSelector
+        open={serviceCatalogOpen}
+        onClose={() => setServiceCatalogOpen(false)}
+        onSelect={(service) => {
+          const newLine: QuoteLine = {
+            id: crypto.randomUUID(),
+            name: service.name,
+            description: service.description || "",
+            qty: 1,
+            unit: service.unit,
+            unit_price_ht: service.default_price_ht,
+            tva_rate: service.default_tva_rate,
+            optional: false,
+            included: true,
+          };
+          setQuote((q) => ({ ...q, lignes: [...q.lignes, newLine] }));
+        }}
+      />
     </div>
   );
 };
