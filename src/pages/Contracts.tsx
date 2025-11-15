@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { ClientSelectorDialog } from "@/components/contracts/ClientSelectorDialog";
 
 interface Contract {
   id: string;
@@ -23,6 +24,7 @@ export default function Contracts() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [clientSelectorOpen, setClientSelectorOpen] = useState(false);
 
   useEffect(() => {
     loadContracts();
@@ -102,7 +104,7 @@ export default function Contracts() {
             Gérez tous les contrats de vos clients
           </p>
         </div>
-        <Button onClick={() => navigate("/contracts/new")}>
+        <Button onClick={() => setClientSelectorOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nouveau contrat
         </Button>
@@ -178,6 +180,11 @@ export default function Contracts() {
           <p className="text-muted-foreground">Aucun contrat trouvé</p>
         </div>
       )}
+
+      <ClientSelectorDialog 
+        open={clientSelectorOpen} 
+        onOpenChange={setClientSelectorOpen} 
+      />
     </div>
   );
 }

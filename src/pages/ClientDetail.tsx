@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,8 @@ const subFunctions = [
 const ClientDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
   const [client, setClient] = useState<any>(null);
   const [devis, setDevis] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -285,7 +287,7 @@ const ClientDetail = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="donnees">
+      <Tabs defaultValue={tabFromUrl || "donnees"}>
         <TabsList className="glass-card">
           <TabsTrigger value="donnees">Données</TabsTrigger>
           <TabsTrigger value="devis">Devis</TabsTrigger>
