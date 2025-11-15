@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_events: {
+        Row: {
+          attendees: string[] | null
+          created_at: string
+          description: string | null
+          end_at: string
+          id: string
+          location: string | null
+          start_at: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          attendees?: string[] | null
+          created_at?: string
+          description?: string | null
+          end_at: string
+          id?: string
+          location?: string | null
+          start_at: string
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: string[] | null
+          created_at?: string
+          description?: string | null
+          end_at?: string
+          id?: string
+          location?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           created_at: string
@@ -222,6 +264,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dashboard_prefs: {
+        Row: {
+          alerts_enabled: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alerts_enabled?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alerts_enabled?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       devices_push_tokens: {
         Row: {
@@ -1586,44 +1652,48 @@ export type Database = {
       }
       notifications: {
         Row: {
+          actor_id: string | null
+          company_id: string | null
           created_at: string
-          employee_id: string
           id: string
+          kind: string | null
+          link: string | null
           message: string | null
           payload: Json | null
+          read: boolean | null
           read_at: string | null
           title: string
-          type: string
+          type: string | null
         }
         Insert: {
+          actor_id?: string | null
+          company_id?: string | null
           created_at?: string
-          employee_id: string
           id?: string
+          kind?: string | null
+          link?: string | null
           message?: string | null
           payload?: Json | null
+          read?: boolean | null
           read_at?: string | null
           title: string
-          type: string
+          type?: string | null
         }
         Update: {
+          actor_id?: string | null
+          company_id?: string | null
           created_at?: string
-          employee_id?: string
           id?: string
+          kind?: string | null
+          link?: string | null
           message?: string | null
           payload?: Json | null
+          read?: boolean | null
           read_at?: string | null
           title?: string
-          type?: string
+          type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "equipe"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       paiements: {
         Row: {
@@ -2252,6 +2322,61 @@ export type Database = {
           },
         ]
       }
+      timesheets_events: {
+        Row: {
+          at: string
+          created_at: string
+          duration_minutes: number | null
+          employee_id: string | null
+          id: string
+          job_id: string | null
+          meta: Json | null
+          type: string
+        }
+        Insert: {
+          at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          employee_id?: string | null
+          id?: string
+          job_id?: string | null
+          meta?: Json | null
+          type: string
+        }
+        Update: {
+          at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          employee_id?: string | null
+          id?: string
+          job_id?: string | null
+          meta?: Json | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_events_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "equipe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_display_settings: {
         Row: {
           active_view: string | null
@@ -2343,6 +2468,16 @@ export type Database = {
       bulk_reject_timesheets: {
         Args: { entry_ids: string[]; manager_id: string; reason: string }
         Returns: undefined
+      }
+      create_notification: {
+        Args: {
+          p_actor_id?: string
+          p_kind: string
+          p_link?: string
+          p_message: string
+          p_title: string
+        }
+        Returns: string
       }
       finish_job: { Args: { p_job_id: string }; Returns: Json }
       generate_intervention_number: { Args: never; Returns: string }
