@@ -51,7 +51,6 @@ export default function CADetail() {
   }, [period, viewMode]);
 
   const loadCAData = async () => {
-    // Calculer la plage de dates selon la période
     const now = new Date();
     let startDate: Date;
     
@@ -69,13 +68,26 @@ export default function CADetail() {
         startDate = subMonths(now, 12);
     }
 
-    // Charger les factures
     const dateField = viewMode === 'emis' ? 'issue_date' : 'paid_at';
+    
+    // Charger factures avec interventions pour calculer les coûts
     const { data: invoices } = await supabase
       .from('factures')
-      .select('*, clients:client_id(nom)')
+      .select('*, clients:client_id(nom), jobs!factures_intervention_id_fkey(id)')
       .gte(dateField, startDate.toISOString())
       .order(dateField, { ascending: true });
+
+    // Charger les timesheets pour calculer les coûts de main d'œuvre
+    const { data: timesheets } = await supabase
+      .from('timesheets_entries')
+      .select('*, jobs!timesheets_entries_job_id_fkey(client_id)')
+      .gte('date', startDate.toISOString().split('T')[0]);
+
+    // Charger les consommables utilisés dans les interventions
+    const { data: consumables } = await supabase
+      .from('intervention_consumables')
+      .select('*, jobs!intervention_consumables_intervention_id_fkey(client_id, date)')
+      .gte('jobs.date', startDate.toISOString().split('T')[0]);
 
     if (invoices) {
       // Grouper par mois
@@ -111,7 +123,26 @@ export default function CADetail() {
       }), { ht: 0, ttc: 0 });
       setTotalCA(totals);
 
-      // Grouper par client
+      // Calculer les dépenses par client (timesheets + consommables)
+      const clientCosts = new Map<string, number>();
+      
+      timesheets?.forEach((ts) => {
+        const clientId = (ts.jobs as any)?.client_id;
+        if (clientId) {
+          const cost = ts.cost || 0;
+          clientCosts.set(clientId, (clientCosts.get(clientId) || 0) + cost);
+        }
+      });
+
+      consumables?.forEach((cons) => {
+        const clientId = (cons.jobs as any)?.client_id;
+        if (clientId) {
+          const cost = (cons.quantity || 0) * (cons.unit_price_ht || 0);
+          clientCosts.set(clientId, (clientCosts.get(clientId) || 0) + cost);
+        }
+      });
+
+      // Grouper par client avec calculs de marge
       const clientMap = new Map<string, ClientCA>();
       
       invoices.forEach((invoice) => {
@@ -142,13 +173,19 @@ export default function CADetail() {
         clientMap.set(clientId, existing);
       });
 
+      // Ajouter les dépenses et calculer les marges
+      clientMap.forEach((client, clientId) => {
+        client.expenses = clientCosts.get(clientId) || 0;
+        client.margin = client.ca_ht - client.expenses;
+      });
+
       const clientsArray = Array.from(clientMap.values()).sort((a, b) => b.ca_ttc - a.ca_ttc);
       setClientsData(clientsArray);
     }
   };
 
   const exportToCSV = () => {
-    const headers = ['Client', 'CA HT', 'CA TTC', 'Factures Envoyées', 'Factures Payées', 'À Envoyer', 'Impayés'];
+    const headers = ['Client', 'CA HT', 'CA TTC', 'Factures Envoyées', 'Factures Payées', 'À Envoyer', 'Impayés', 'Dépenses', 'Marge'];
     const rows = clientsData.map(client => [
       client.client_name,
       client.ca_ht.toFixed(2),
@@ -157,6 +194,8 @@ export default function CADetail() {
       client.invoices_paid,
       client.invoices_to_send,
       client.unpaid.toFixed(2),
+      client.expenses.toFixed(2),
+      client.margin.toFixed(2),
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -236,6 +275,8 @@ export default function CADetail() {
               <TableHead>CA TTC</TableHead>
               <TableHead>Factures</TableHead>
               <TableHead>Impayés</TableHead>
+              <TableHead>Dépenses</TableHead>
+              <TableHead>Marge</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -259,6 +300,19 @@ export default function CADetail() {
                 </TableCell>
                 <TableCell className="text-red-600 font-medium">
                   {client.unpaid.toLocaleString()} €
+                </TableCell>
+                <TableCell>{client.expenses.toLocaleString()} €</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {client.margin > 0 ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className={client.margin > 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                      {client.margin.toLocaleString()} €
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
