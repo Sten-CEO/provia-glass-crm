@@ -12,10 +12,26 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
-  const [companyName, setCompanyName] = useState<string>("Entreprise");
+  const [companyName, setCompanyName] = useState<string>("Votre Entreprise");
 
   useEffect(() => {
     loadCompanyName();
+
+    // Écouter les changements en temps réel
+    const channel = supabase
+      .channel('company-settings-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'company_settings'
+      }, () => {
+        loadCompanyName();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadCompanyName = async () => {
