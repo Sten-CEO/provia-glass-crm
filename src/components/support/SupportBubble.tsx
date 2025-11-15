@@ -56,7 +56,7 @@ export const SupportBubble = () => {
       "Factures": "1. Créer une facture\n2. Marquer payée\n3. Télécharger PDF",
       "Jobs/Interventions": "1. Créer un job\n2. Assigner un employé\n3. Voir le calendrier",
       "Planning": "1. Vue calendrier\n2. Déplacer un job\n3. Filtres",
-      "Employés": "1. Inviter un membre\n2. Gérer les accès\n3. Compétences",
+      "Employés": "1. Inviter un employé\n2. Gérer les accès\n3. Compétences",
       "Timesheets": "1. Enregistrer une feuille de temps\n2. Voir l'historique",
       "Paiements": "1. Enregistrer un paiement\n2. Voir les transactions",
       "Paramètres": "1. Mon entreprise\n2. Facturation\n3. Préférences",
