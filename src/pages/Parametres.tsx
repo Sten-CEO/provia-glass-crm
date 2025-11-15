@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,8 +6,75 @@ import { Label } from "@/components/ui/label";
 import Templates from "./parametres/Templates";
 import ServiceCatalog from "./parametres/ServiceCatalog";
 import Taxes from "./parametres/Taxes";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Parametres = () => {
+  const [companyName, setCompanyName] = useState("");
+  const [siret, setSiret] = useState("");
+  const [tva, setTva] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadCompanySettings();
+  }, []);
+
+  const loadCompanySettings = async () => {
+    const { data, error } = await supabase
+      .from("company_settings")
+      .select("*")
+      .limit(1)
+      .single();
+
+    if (data) {
+      setCompanyName(data.company_name || "");
+      setSiret(data.siret || "");
+      setTva(data.tva_intracom || "");
+      setSettingsId(data.id);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    
+    try {
+      if (settingsId) {
+        // Mise à jour
+        const { error } = await supabase
+          .from("company_settings")
+          .update({
+            company_name: companyName,
+            siret: siret,
+            tva_intracom: tva,
+          })
+          .eq("id", settingsId);
+
+        if (error) throw error;
+      } else {
+        // Création
+        const { data, error } = await supabase
+          .from("company_settings")
+          .insert({
+            company_name: companyName,
+            siret: siret,
+            tva_intracom: tva,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) setSettingsId(data.id);
+      }
+
+      toast.success("Paramètres enregistrés avec succès");
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error("Erreur lors de l'enregistrement");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-3xl font-bold uppercase tracking-wide">Paramètres</h1>
@@ -24,18 +92,40 @@ const Parametres = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="nom">Nom de la société</Label>
-              <Input id="nom" placeholder="Entreprise" className="glass-card" />
+              <Input 
+                id="nom" 
+                placeholder="Entreprise" 
+                className="glass-card"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+              />
             </div>
             <div>
               <Label htmlFor="siret">SIRET</Label>
-              <Input id="siret" placeholder="123 456 789 00010" className="glass-card" />
+              <Input 
+                id="siret" 
+                placeholder="123 456 789 00010" 
+                className="glass-card"
+                value={siret}
+                onChange={(e) => setSiret(e.target.value)}
+              />
             </div>
             <div>
               <Label htmlFor="tva">Numéro TVA</Label>
-              <Input id="tva" placeholder="FR12345678901" className="glass-card" />
+              <Input 
+                id="tva" 
+                placeholder="FR12345678901" 
+                className="glass-card"
+                value={tva}
+                onChange={(e) => setTva(e.target.value)}
+              />
             </div>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold">
-              Enregistrer
+            <Button 
+              className="bg-primary hover:bg-primary/90 text-foreground font-semibold"
+              onClick={handleSave}
+              disabled={loading}
+            >
+              {loading ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </div>
         </TabsContent>

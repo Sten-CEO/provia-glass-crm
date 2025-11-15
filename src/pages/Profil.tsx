@@ -11,6 +11,8 @@ import { toast } from "sonner";
 export default function Profil() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +26,60 @@ export default function Profil() {
     if (user) {
       setUser(user);
       setEmail(user.email || "");
+      
+      // Charger le profil
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (profile) {
+        setFirstName(profile.first_name || "");
+        setLastName(profile.last_name || "");
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            first_name: firstName,
+            last_name: lastName,
+          })
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: user.id,
+            first_name: firstName,
+            last_name: lastName,
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success("Profil mis à jour ✅");
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error("Erreur lors de la mise à jour du profil");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,6 +113,10 @@ export default function Profil() {
     return <div>Chargement...</div>;
   }
 
+  const initials = firstName && lastName 
+    ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+    : email.substring(0, 2).toUpperCase();
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
@@ -70,16 +130,58 @@ export default function Profil() {
         <div className="flex items-center gap-4 mb-6">
           <Avatar className="h-20 w-20">
             <AvatarFallback className="text-2xl">
-              {email.substring(0, 2).toUpperCase()}
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="text-xl font-semibold">{email}</h2>
+            <h2 className="text-xl font-semibold">
+              {firstName && lastName ? `${firstName} ${lastName}` : email}
+            </h2>
             <p className="text-sm text-muted-foreground">Administrateur</p>
           </div>
         </div>
 
         <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">
+                  <User className="h-4 w-4 inline mr-2" />
+                  Prénom
+                </Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Votre prénom"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">
+                  <User className="h-4 w-4 inline mr-2" />
+                  Nom
+                </Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Votre nom"
+                />
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleSaveProfile} 
+              disabled={loading}
+              className="w-full"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? "Enregistrement..." : "Enregistrer le profil"}
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">
               <Mail className="h-4 w-4 inline mr-2" />

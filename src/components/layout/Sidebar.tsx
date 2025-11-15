@@ -134,15 +134,23 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     >
       {/* Header with toggle button */}
       <div className="p-4 flex items-center justify-between border-b border-border/50">
-        {!isCollapsed && <img src={logo} alt="Logo" className="w-20 h-auto" />}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleCollapsed}
-          className={cn("ml-auto shrink-0", isCollapsed && "mx-auto")}
-        >
-          ↔︎
-        </Button>
+        <div className={cn("flex items-center", isCollapsed && "mx-auto")}>
+          <img 
+            src={logo} 
+            alt="Provia Base" 
+            className={cn("object-contain", isCollapsed ? "w-10 h-10" : "w-10 h-10")} 
+          />
+        </div>
+        {!isCollapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            className="ml-auto shrink-0"
+          >
+            ↔︎
+          </Button>
+        )}
       </div>
 
       <div className="p-4 space-y-1 overflow-y-auto flex-1">
