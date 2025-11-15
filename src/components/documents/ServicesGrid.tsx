@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Library } from "lucide-react";
 import { DocumentLine, DOCUMENT_UNITS } from "@/types/documents";
 import { useTaxes, useDefaultTax } from "@/hooks/useTaxes";
+import { ServiceCatalogSelector } from "@/components/devis/ServiceCatalogSelector";
 
 interface ServicesGridProps {
   lines: DocumentLine[];
@@ -15,6 +17,7 @@ export function ServicesGrid({ lines, onChange, disabled }: ServicesGridProps) {
   const serviceLines = lines.filter(l => l.type === "service");
   const { data: taxes = [] } = useTaxes();
   const { data: defaultTax } = useDefaultTax();
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const updateLine = (index: number, updates: Partial<DocumentLine>) => {
     const actualIndex = lines.findIndex(l => l.id === serviceLines[index].id);
@@ -54,15 +57,44 @@ export function ServicesGrid({ lines, onChange, disabled }: ServicesGridProps) {
     onChange([...lines, newLine]);
   };
 
+  const addFromCatalog = (service: any) => {
+    const newLine: DocumentLine = {
+      id: crypto.randomUUID(),
+      type: "service",
+      label: service.name,
+      description: service.description || "",
+      qty: 1,
+      unit: service.unit,
+      unitPriceHT: service.default_price_ht,
+      vatRate: service.default_tva_rate,
+      totalHT: service.default_price_ht,
+      totalVAT: service.default_price_ht * (service.default_tva_rate / 100),
+      totalTTC: service.default_price_ht * (1 + service.default_tva_rate / 100),
+    };
+    onChange([...lines, newLine]);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Services / Prestations</h3>
-        <Button size="sm" variant="outline" onClick={addLine} disabled={disabled}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ajouter une prestation
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setCatalogOpen(true)} disabled={disabled}>
+            <Library className="h-4 w-4 mr-2" />
+            Depuis le catalogue
+          </Button>
+          <Button size="sm" variant="outline" onClick={addLine} disabled={disabled}>
+            <Plus className="h-4 w-4 mr-2" />
+            Ligne vide
+          </Button>
+        </div>
       </div>
+
+      <ServiceCatalogSelector
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onSelect={addFromCatalog}
+      />
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
