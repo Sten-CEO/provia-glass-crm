@@ -374,6 +374,20 @@ const DevisEditor = () => {
         toast.error("Erreur de sauvegarde");
         return;
       }
+      
+      // Sync inventory planning after save
+      try {
+        const { syncQuoteInventoryPlanning } = await import("@/lib/quoteInventoryPlanning");
+        await syncQuoteInventoryPlanning(
+          id,
+          finalNumber,
+          quote.lignes,
+          quote.planned_date
+        );
+      } catch (planningError) {
+        console.error("Error syncing inventory planning:", planningError);
+      }
+      
       setQuote((q) => ({ ...q, numero: finalNumber }));
       
       // Log pour debug
@@ -397,6 +411,20 @@ const DevisEditor = () => {
         toast.error("Erreur de création");
         return;
       }
+      
+      // Sync inventory planning after creation
+      try {
+        const { syncQuoteInventoryPlanning } = await import("@/lib/quoteInventoryPlanning");
+        await syncQuoteInventoryPlanning(
+          data.id,
+          finalNumber,
+          quote.lignes,
+          quote.planned_date
+        );
+      } catch (planningError) {
+        console.error("Error syncing inventory planning:", planningError);
+      }
+      
       const newQuoteState: Quote = { ...quote, id: data.id, numero: finalNumber };
       setQuote(newQuoteState);
       // Auto-créer l'intervention si activé et statut est Accepté/Signé

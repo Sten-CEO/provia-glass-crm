@@ -338,12 +338,26 @@ const Devis = () => {
                                 quote_id: q.id,
                                 checklist: Array.isArray(q.lignes) ? (q.lignes as any[]).map((l: any) => ({ id: crypto.randomUUID(), label: l.name, done: false })) as any : [] as any,
                               };
-                              const { error: jobErr } = await supabase.from("jobs").insert([jobPayload]);
-                              if (jobErr) {
-                                console.error("Auto-create job error:", jobErr);
-                              } else {
+                              const { data: createdJob, error: jobErr } = await supabase
+                                .from("jobs")
+                                .insert([jobPayload])
+                                .select()
+                                .single();
+                              
+                              if (!jobErr && createdJob) {
+                                // Sync consumables and services from quote to intervention
+                                try {
+                                  const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
+                                  const result = await syncQuoteConsumablesToIntervention(q.id, createdJob.id);
+                                  console.log(`Synced ${result.consumablesCount} consumables and ${result.servicesCount} services`);
+                                } catch (syncError) {
+                                  console.error("Error syncing quote items:", syncError);
+                                }
+                                
                                 eventBus.emit(EVENTS.DATA_CHANGED, { scope: "jobs" });
                                 eventBus.emit(EVENTS.PLANNING_UPDATED, { scope: "planning" });
+                              } else if (jobErr) {
+                                console.error("Auto-create job error:", jobErr);
                               }
                             }
                           }
