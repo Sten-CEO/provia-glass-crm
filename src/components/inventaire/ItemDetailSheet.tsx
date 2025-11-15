@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface ItemDetailSheetProps {
   itemId: string | null;
@@ -141,21 +142,49 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
     }
   };
 
-  const handleNavigateToSource = (movement: Movement) => {
+  const handleNavigateToSource = async (movement: Movement) => {
     if (!movement.ref_id) return;
     
-    switch (movement.source) {
-      case "devis":
-        navigate(`/devis/${movement.ref_id}`);
-        break;
-      case "intervention":
-        navigate(`/interventions/${movement.ref_id}/report`);
-        break;
-      case "achat":
-        navigate(`/inventaire/achats/${movement.ref_id}`);
-        break;
+    try {
+      // Verify the source exists before navigating
+      switch (movement.source) {
+        case "devis":
+          const { data: devis, error: devisError } = await supabase
+            .from("devis")
+            .select("id")
+            .eq("id", movement.ref_id)
+            .maybeSingle();
+          
+          if (devisError || !devis) {
+            toast.error("Ce devis n'existe plus");
+            return;
+          }
+          navigate(`/devis/${movement.ref_id}`);
+          break;
+          
+        case "intervention":
+          const { data: intervention, error: interventionError } = await supabase
+            .from("jobs")
+            .select("id")
+            .eq("id", movement.ref_id)
+            .maybeSingle();
+          
+          if (interventionError || !intervention) {
+            toast.error("Cette intervention n'existe plus");
+            return;
+          }
+          navigate(`/interventions/${movement.ref_id}/report`);
+          break;
+          
+        case "achat":
+          navigate(`/inventaire/achats/${movement.ref_id}`);
+          break;
+      }
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error navigating to source:", error);
+      toast.error("Erreur lors de la navigation");
     }
-    onOpenChange(false);
   };
 
   if (!item) {
