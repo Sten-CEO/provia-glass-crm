@@ -6,11 +6,7 @@ import { InvoicingAlertsCard } from "./InvoicingAlertsCard";
 export const AlertsColumn = () => {
   return (
     <div className="space-y-6">
-      <div className="glass-card p-6">
-        <h2 className="text-xl font-bold uppercase tracking-wide mb-6">Alertes</h2>
-        <AlertsStrip />
-      </div>
-      
+      <AlertsStrip />
       <ToPlanCard />
       <StockAlertsCard />
       <InvoicingAlertsCard />

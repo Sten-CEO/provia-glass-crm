@@ -184,14 +184,21 @@ export const AlertsStrip = () => {
       color: alerts.failedOrPostponed > 0 ? "red" : "gray",
       onClick: () => navigate("/interventions?filter=failed_postponed"),
     },
-  ].filter(chip => chip.count > 0); // Ne montrer que les alertes avec count > 0
+  ];
+
+  // Ne montrer que les alertes avec count > 0
+  const activeAlerts = alertChips.filter(chip => chip.count > 0);
+
+  if (activeAlerts.length === 0) {
+    return null;
+  }
 
   return (
     <div className="glass-card p-4 mb-6">
       <div className="flex items-center gap-4 flex-wrap">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Alertes</h2>
         <div className="flex items-center gap-3 flex-wrap">
-          {alertChips.map((chip) => (
+          {activeAlerts.map((chip) => (
             <button
               key={chip.label}
               onClick={chip.onClick}

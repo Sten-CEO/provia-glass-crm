@@ -239,7 +239,7 @@ const EmployeeDetail = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Membre">Membre</SelectItem>
+                          <SelectItem value="Employé terrain">Employé terrain</SelectItem>
                           <SelectItem value="Admin">Admin</SelectItem>
                           <SelectItem value="Owner">Owner</SelectItem>
                         </SelectContent>

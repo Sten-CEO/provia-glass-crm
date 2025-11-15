@@ -132,7 +132,7 @@ const Equipe = () => {
       return;
     }
 
-    toast.success("Membre invité avec succès");
+    toast.success("Employé invité avec succès");
     setNewMember({
       nom: "",
       role: "Employé terrain",
@@ -173,7 +173,7 @@ const Equipe = () => {
       return;
     }
 
-    toast.success("Membre modifié avec succès");
+    toast.success("Employé modifié avec succès");
     setEditOpen(false);
     setSelectedMember(null);
   };
@@ -188,7 +188,7 @@ const Equipe = () => {
       return;
     }
 
-    toast.success("Membre supprimé avec succès");
+    toast.success("Employé supprimé avec succès");
     setDeleteOpen(false);
     setSelectedMember(null);
   };
@@ -213,12 +213,12 @@ const Equipe = () => {
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
               <Plus className="mr-2 h-4 w-4" />
-              Inviter un membre
+              Inviter un employé
             </Button>
           </DialogTrigger>
           <DialogContent className="glass-modal">
             <DialogHeader>
-              <DialogTitle className="uppercase tracking-wide">Inviter un membre</DialogTitle>
+              <DialogTitle className="uppercase tracking-wide">Inviter un employé</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -246,11 +246,11 @@ const Equipe = () => {
                   <SelectTrigger className="glass-card">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Membre">Membre</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
-                    <SelectItem value="Owner">Owner</SelectItem>
-                  </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="Employé terrain">Employé terrain</SelectItem>
+                          <SelectItem value="Admin">Admin</SelectItem>
+                          <SelectItem value="Owner">Owner</SelectItem>
+                        </SelectContent>
                 </Select>
               </div>
               <div>
@@ -388,7 +388,7 @@ const Equipe = () => {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="glass-modal">
           <DialogHeader>
-            <DialogTitle className="uppercase tracking-wide">Modifier Membre</DialogTitle>
+            <DialogTitle className="uppercase tracking-wide">Modifier Employé</DialogTitle>
           </DialogHeader>
           {selectedMember && (
             <div className="space-y-4">
@@ -418,7 +418,7 @@ const Equipe = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Membre">Membre</SelectItem>
+                    <SelectItem value="Employé terrain">Employé terrain</SelectItem>
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Owner">Owner</SelectItem>
                   </SelectContent>
@@ -477,7 +477,7 @@ const Equipe = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce membre ?
+              Êtes-vous sûr de vouloir supprimer cet employé ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
