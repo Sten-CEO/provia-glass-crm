@@ -149,21 +149,36 @@ const Planning = () => {
     const newHeureFin = info.event.endStr?.split("T")[1]?.substring(0, 5) || "17:00";
     const newEmployeId = info.event.getResources()[0]?.id;
 
+    // Get current job to check its status
+    const { data: currentJob } = await supabase
+      .from("jobs")
+      .select("statut")
+      .eq("id", info.event.id)
+      .single();
+
+    // Build update object - change status to "À faire" if it was "À planifier"
+    const updates: any = {
+      date: newDate,
+      heure_debut: newHeureDebut,
+      heure_fin: newHeureFin,
+      employe_id: newEmployeId || null,
+    };
+
+    if (currentJob?.statut === "À planifier") {
+      updates.statut = "À faire";
+    }
+
     const { error } = await supabase
       .from("jobs")
-      .update({
-        date: newDate,
-        heure_debut: newHeureDebut,
-        heure_fin: newHeureFin,
-        employe_id: newEmployeId || null,
-      })
+      .update(updates)
       .eq("id", info.event.id);
 
     if (error) {
       toast.error("Erreur lors du déplacement");
       info.revert();
     } else {
-      toast.success("Job déplacé");
+      toast.success(currentJob?.statut === "À planifier" ? "Job planifié et prêt" : "Job déplacé");
+      loadJobs(); // Reload to update the view
     }
   };
 

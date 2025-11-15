@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 interface InterventionInfoBlockProps {
   plannedDate?: string;
   plannedStartTime?: string;
-  plannedDurationMinutes?: number;
+  plannedEndTime?: string;
   assigneeName?: string;
   siteAddress?: string;
   autoCreateEnabled: boolean;
@@ -16,7 +16,7 @@ interface InterventionInfoBlockProps {
 export const InterventionInfoBlock = ({
   plannedDate,
   plannedStartTime,
-  plannedDurationMinutes,
+  plannedEndTime,
   assigneeName,
   siteAddress,
   autoCreateEnabled
@@ -58,10 +58,9 @@ export const InterventionInfoBlock = ({
             <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
               <Clock className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Heure de début</p>
+                <p className="text-sm font-medium">Horaires</p>
                 <p className="text-sm text-muted-foreground">
-                  {plannedStartTime}
-                  {plannedDurationMinutes && ` (${Math.floor(plannedDurationMinutes / 60)}h${plannedDurationMinutes % 60 > 0 ? (plannedDurationMinutes % 60) + 'min' : ''})`}
+                  {plannedStartTime}{plannedEndTime && ` - ${plannedEndTime}`}
                 </p>
               </div>
             </div>

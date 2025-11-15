@@ -81,6 +81,7 @@ interface Quote {
   auto_create_job_on_accept?: boolean;
   planned_date?: string;
   planned_start_time?: string;
+  planned_end_time?: string;
   planned_duration_minutes?: number;
   assignee_id?: string;
   site_address?: string;
@@ -465,7 +466,7 @@ const DevisEditor = () => {
       assigned_employee_ids: src.assignee_id ? [src.assignee_id] : [],
       date: src.planned_date || new Date().toISOString().split("T")[0],
       heure_debut: src.planned_start_time || null,
-      duration_estimated: src.planned_duration_minutes || null,
+      heure_fin: src.planned_end_time || null,
       statut: "À planifier",
       adresse: src.site_address || src.property_address || "",
       description: src.client_message || src.title || "",
@@ -775,17 +776,41 @@ const DevisEditor = () => {
                   Dupliquer
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id).then(() => loadQuote())}
+                  onClick={async () => {
+                    const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
+                    if (error) {
+                      toast.error("Erreur lors du changement de statut");
+                    } else {
+                      toast.success("Statut changé en Brouillon");
+                      loadQuote();
+                    }
+                  }}
                 >
                   Marquer Brouillon
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => supabase.from("devis").update({ statut: "Accepté" }).eq("id", id).then(() => loadQuote())}
+                  onClick={async () => {
+                    const { error } = await supabase.from("devis").update({ statut: "Accepté" }).eq("id", id);
+                    if (error) {
+                      toast.error("Erreur lors du changement de statut");
+                    } else {
+                      toast.success("Statut changé en Accepté");
+                      loadQuote();
+                    }
+                  }}
                 >
                   Marquer Accepté
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => supabase.from("devis").update({ statut: "Refusé" }).eq("id", id).then(() => loadQuote())}
+                  onClick={async () => {
+                    const { error } = await supabase.from("devis").update({ statut: "Refusé" }).eq("id", id);
+                    if (error) {
+                      toast.error("Erreur lors du changement de statut");
+                    } else {
+                      toast.success("Statut changé en Refusé");
+                      loadQuote();
+                    }
+                  }}
                 >
                   Marquer Refusé
                 </DropdownMenuItem>
@@ -1030,17 +1055,11 @@ const DevisEditor = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Durée estimée (minutes)</Label>
+                  <Label>Heure de fin</Label>
                   <Input
-                    type="number"
-                    value={quote.planned_duration_minutes || ""}
-                    onChange={(e) => 
-                      setQuote({ 
-                        ...quote, 
-                        planned_duration_minutes: e.target.value ? parseInt(e.target.value) : undefined 
-                      })
-                    }
-                    placeholder="120"
+                    type="time"
+                    value={quote.planned_end_time || ""}
+                    onChange={(e) => setQuote({ ...quote, planned_end_time: e.target.value })}
                     className="mt-1"
                   />
                 </div>
@@ -1081,7 +1100,7 @@ const DevisEditor = () => {
               <InterventionInfoBlock
                 plannedDate={quote.planned_date}
                 plannedStartTime={quote.planned_start_time}
-                plannedDurationMinutes={quote.planned_duration_minutes}
+                plannedEndTime={quote.planned_end_time}
                 assigneeName={employees.find(e => e.id === quote.assignee_id)?.nom}
                 siteAddress={quote.site_address || quote.property_address}
                 autoCreateEnabled={quote.auto_create_job_on_accept || false}
