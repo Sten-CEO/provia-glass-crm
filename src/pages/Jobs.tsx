@@ -192,6 +192,14 @@ const Jobs = () => {
   const handleDeleteJob = async () => {
     if (!selectedJob) return;
 
+    // Cancel inventory reservations first
+    try {
+      const { cancelInventoryReservations } = await import("@/lib/interventionInventorySync");
+      await cancelInventoryReservations(selectedJob.id);
+    } catch (error) {
+      console.error("Error canceling inventory:", error);
+    }
+
     const { error } = await supabase.from("jobs").delete().eq("id", selectedJob.id);
 
     if (error) {
