@@ -6,6 +6,7 @@ import { Calendar, MapPin, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface AgendaEvent {
   id: string;
@@ -14,6 +15,7 @@ interface AgendaEvent {
   end_at: string;
   location: string | null;
   type: string;
+  status: string;
 }
 
 interface ClientPlanningSectionProps {
@@ -56,6 +58,7 @@ export const ClientPlanningSection = ({ clientId }: ClientPlanningSectionProps) 
 
     const eventIds = eventClients.map(ec => ec.event_id);
 
+    // Charger TOUS les événements (passés et futurs) triés du plus récent au plus ancien
     const { data } = await supabase
       .from('agenda_events')
       .select('*')
@@ -91,7 +94,18 @@ export const ClientPlanningSection = ({ clientId }: ClientPlanningSectionProps) 
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium">{event.title}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-medium">{event.title}</p>
+                    <span className={cn(
+                      "text-xs px-2 py-0.5 rounded-full",
+                      event.status === 'à venir' && "bg-blue-500/10 text-blue-500",
+                      event.status === 'en cours' && "bg-yellow-500/10 text-yellow-500",
+                      event.status === 'terminé' && "bg-green-500/10 text-green-500",
+                      event.status === 'annulé' && "bg-red-500/10 text-red-500"
+                    )}>
+                      {event.status}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />

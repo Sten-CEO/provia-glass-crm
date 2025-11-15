@@ -74,7 +74,18 @@ export const ContractUploadSection = ({ clientId }: ContractUploadSectionProps) 
         .from('client-contracts')
         .getPublicUrl(filePath);
 
-      const { error: dbError } = await supabase
+      // Récupérer les infos du client
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('nom')
+        .eq('id', clientId)
+        .single();
+
+      // Générer un numéro de contrat unique
+      const contractNumber = `CONT-${Date.now()}`;
+
+      // Insérer dans client_contracts (pour la fiche client)
+      const { error: dbError1 } = await supabase
         .from('client_contracts')
         .insert({
           client_id: clientId,
@@ -82,7 +93,20 @@ export const ContractUploadSection = ({ clientId }: ContractUploadSectionProps) 
           file_url: publicUrl,
         });
 
-      if (dbError) throw dbError;
+      if (dbError1) throw dbError1;
+
+      // Insérer AUSSI dans contracts (pour la page globale)
+      const { error: dbError2 } = await supabase
+        .from('contracts')
+        .insert({
+          client_id: clientId,
+          contract_number: contractNumber,
+          title: file.name.replace(/\.[^/.]+$/, ''), // nom sans extension
+          status: 'active',
+          notes: 'Contrat téléchargé depuis la fiche client'
+        });
+
+      if (dbError2) throw dbError2;
 
       toast.success('Contrat ajouté avec succès');
       loadContracts();

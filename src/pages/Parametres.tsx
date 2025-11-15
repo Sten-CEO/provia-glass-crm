@@ -47,10 +47,14 @@ const Parametres = () => {
             company_name: companyName,
             siret: siret,
             tva_intracom: tva,
+            updated_at: new Date().toISOString()
           })
           .eq("id", settingsId);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erreur update:", error);
+          throw error;
+        }
       } else {
         // Création
         const { data, error } = await supabase
@@ -63,14 +67,19 @@ const Parametres = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Erreur insert:", error);
+          throw error;
+        }
         if (data) setSettingsId(data.id);
       }
 
       toast.success("Paramètres enregistrés avec succès");
-    } catch (error) {
-      console.error("Erreur:", error);
-      toast.error("Erreur lors de l'enregistrement");
+      // Recharger pour vérifier
+      await loadCompanySettings();
+    } catch (error: any) {
+      console.error("Erreur complète:", error);
+      toast.error("Erreur lors de l'enregistrement: " + (error.message || "Inconnue"));
     } finally {
       setLoading(false);
     }

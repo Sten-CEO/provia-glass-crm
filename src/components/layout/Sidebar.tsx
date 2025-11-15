@@ -132,13 +132,22 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         "overflow-hidden"
       )}
     >
-      {/* Header with toggle button */}
-      <div className="p-4 flex items-center justify-between border-b border-border/50">
-        <div className={cn("flex items-center", isCollapsed && "mx-auto")}>
+      {/* Header with logo */}
+      <div className={cn(
+        "p-3 flex items-center border-b border-border/50",
+        isCollapsed ? "justify-center" : "justify-between"
+      )}>
+        <div className={cn(
+          "flex items-center",
+          !isCollapsed && "ml-2"
+        )}>
           <img 
             src={logo} 
             alt="Provia Base" 
-            className={cn("object-contain", isCollapsed ? "w-10 h-10" : "w-10 h-10")} 
+            className={cn(
+              "object-contain rounded-lg",
+              isCollapsed ? "w-8 h-8" : "w-7 h-7"
+            )} 
           />
         </div>
         {!isCollapsed && (
@@ -146,9 +155,19 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="ml-auto shrink-0"
+            className="shrink-0 h-8 w-8"
           >
-            ↔︎
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+        {isCollapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            className="absolute -right-3 top-3 h-6 w-6 rounded-full border border-border bg-background shadow-sm"
+          >
+            <ChevronRight className="h-3 w-3" />
           </Button>
         )}
       </div>
