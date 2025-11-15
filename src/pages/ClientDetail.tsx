@@ -15,6 +15,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SubFunctionsDrawer } from "@/components/layout/SubFunctionsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuickCreateDialog } from "@/components/clients/QuickCreateDialog";
+import { ContractUploadSection } from "@/components/clients/ContractUploadSection";
+import { SecondaryAddressesSection } from "@/components/clients/SecondaryAddressesSection";
+import { ClientPlanningSection } from "@/components/clients/ClientPlanningSection";
 
 const subFunctions = [
   { label: "Contrats", path: "/clients?filter=contrats" },
@@ -497,6 +500,13 @@ const ClientDetail = () => {
               </div>
             </Card>
 
+            {/* Adresses secondaires */}
+            {id && (
+              <Card className="glass-card p-6">
+                <SecondaryAddressesSection clientId={id} />
+              </Card>
+            )}
+
             {/* Custom fields */}
             {formData.custom_fields && formData.custom_fields.length > 0 && (
               <Card className="glass-card p-6">
@@ -655,12 +665,9 @@ const ClientDetail = () => {
         </TabsContent>
 
         <TabsContent value="contrat">
-          <Card className="glass-card p-6">
-            <h3 className="font-semibold mb-4">Contrats</h3>
-            <p className="text-muted-foreground text-center py-8">
-              Fonctionnalité en cours de développement
-            </p>
-          </Card>
+          <div className="space-y-6">
+            {id && <ContractUploadSection clientId={id} />}
+          </div>
         </TabsContent>
 
         <TabsContent value="contact">
@@ -673,12 +680,9 @@ const ClientDetail = () => {
         </TabsContent>
 
         <TabsContent value="planning">
-          <Card className="glass-card p-6">
-            <h3 className="font-semibold mb-4">Planning</h3>
-            <Button onClick={() => navigate(`/planning?client_id=${id}`)}>
-              Voir le planning de ce client
-            </Button>
-          </Card>
+          <div className="space-y-6">
+            {id && <ClientPlanningSection clientId={id} />}
+          </div>
         </TabsContent>
 
         <TabsContent value="historique" className="space-y-4">
