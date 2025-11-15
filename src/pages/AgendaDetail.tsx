@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, MapPin, Users, Clock, Edit, Copy, X } from "lucide
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { EditEventDialog } from "@/components/agenda/EditEventDialog";
 
 interface AgendaEvent {
   id: string;
@@ -26,6 +27,7 @@ export default function AgendaDetail() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<AgendaEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -142,7 +144,7 @@ export default function AgendaDetail() {
           <p className="text-muted-foreground">Détails de l'événement</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate(`/agenda/${id}/edit`)}>
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
             <Edit className="h-4 w-4 mr-2" />
             Modifier
           </Button>
@@ -224,6 +226,13 @@ export default function AgendaDetail() {
           </div>
         </Card>
       </div>
+
+      <EditEventDialog
+        eventId={id!}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onEventUpdated={loadEvent}
+      />
     </div>
   );
 }
