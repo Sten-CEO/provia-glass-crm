@@ -176,6 +176,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         status: "planned",
         scheduled_at: interventionDate,
       }]);
+
+      // Update reserved quantity for planned consumables too
+      await supabase
+        .from("inventory_items")
+        .update({ 
+          qty_reserved: (item.qty_reserved || 0) + qty 
+        })
+        .eq("id", itemId);
       
       toast.success(`Consommable ajouté - À prévoir le ${new Date(interventionDate).toLocaleDateString()}`);
     } else {
@@ -208,6 +216,9 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
   };
 
   const deleteLine = async (lineId: string) => {
+    // Get the line details before deleting to clean up inventory movements
+    const lineToDelete = lines.find(l => l.id === lineId);
+    
     const { error } = await supabase
       .from("intervention_consumables")
       .delete()
@@ -218,7 +229,35 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       return;
     }
 
+    // Cancel associated inventory movements and update reserved quantity
+    if (lineToDelete?.inventory_item_id && interventionId) {
+      // Cancel the planned movement
+      await supabase
+        .from("inventory_movements")
+        .update({ status: "canceled" })
+        .eq("ref_id", interventionId)
+        .eq("item_id", lineToDelete.inventory_item_id)
+        .eq("status", "planned");
+
+      // Update reserved quantity
+      const { data: item } = await supabase
+        .from("inventory_items")
+        .select("qty_reserved")
+        .eq("id", lineToDelete.inventory_item_id)
+        .single();
+
+      if (item) {
+        await supabase
+          .from("inventory_items")
+          .update({ 
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - lineToDelete.quantity)
+          })
+          .eq("id", lineToDelete.inventory_item_id);
+      }
+    }
+
     setLines(lines.filter(l => l.id !== lineId));
+    loadInventoryItems();
   };
 
   return (

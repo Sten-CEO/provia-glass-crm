@@ -116,6 +116,14 @@ const Interventions = () => {
   const handleDeleteIntervention = async () => {
     if (!selectedIntervention) return;
 
+    // Cancel inventory reservations first
+    try {
+      const { cancelInventoryReservations } = await import("@/lib/interventionInventorySync");
+      await cancelInventoryReservations(selectedIntervention.id);
+    } catch (error) {
+      console.error("Error canceling inventory:", error);
+    }
+
     const { error } = await supabase.from("jobs").delete().eq("id", selectedIntervention.id);
 
     if (error) {

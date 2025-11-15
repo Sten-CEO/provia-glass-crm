@@ -97,6 +97,14 @@ export const JobDetailPanel = ({ jobId, onClose, onUpdate }: JobDetailPanelProps
   };
 
   const handleDelete = async () => {
+    // Cancel inventory reservations first
+    try {
+      const { cancelInventoryReservations } = await import("@/lib/interventionInventorySync");
+      await cancelInventoryReservations(jobId);
+    } catch (error) {
+      console.error("Error canceling inventory:", error);
+    }
+
     const { error } = await supabase.from("jobs").delete().eq("id", jobId);
 
     if (error) {
