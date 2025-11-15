@@ -51,10 +51,14 @@ const EmployeeDetail = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<InterventionStat>({ total: 0, completed: 0, in_progress: 0 });
   const [editedEmployee, setEditedEmployee] = useState<Partial<EmployeeDetails>>({});
+  const [activeTab, setActiveTab] = useState<'info' | 'performances'>('info');
+  const [performanceData, setPerformanceData] = useState<any>(null);
+  const [interventionDetails, setInterventionDetails] = useState<any[]>([]);
 
   useEffect(() => {
     loadEmployee();
     loadStats();
+    loadPerformanceData();
   }, [id]);
 
   const loadEmployee = async () => {
@@ -98,9 +102,48 @@ const EmployeeDetail = () => {
       if (interventions) {
         setStats({
           total: interventions.length,
-          completed: interventions.filter(i => i.statut === "TERMINÉE").length,
-          in_progress: interventions.filter(i => i.statut === "EN_COURS").length,
+          completed: interventions.filter(i => i.statut === "Terminée").length,
+          in_progress: interventions.filter(i => i.statut === "En cours").length,
         });
+      }
+    }
+  };
+
+  const loadPerformanceData = async () => {
+    if (!id) return;
+
+    // Charger les données de la vue employee_performance_v
+    const { data: perfData } = await supabase
+      .from('employee_performance_v' as any)
+      .select('*')
+      .eq('employee_id', id)
+      .single();
+
+    if (perfData) {
+      setPerformanceData(perfData);
+    }
+
+    // Charger les détails des interventions
+    const { data: assignments } = await supabase
+      .from("intervention_assignments")
+      .select("intervention_id")
+      .eq("employee_id", id);
+
+    if (assignments && assignments.length > 0) {
+      const interventionIds = assignments.map(a => a.intervention_id);
+      
+      const { data: interventions } = await supabase
+        .from("jobs")
+        .select(`
+          *,
+          clients:client_id(nom),
+          timesheets_entries(start_at, end_at, break_min)
+        `)
+        .in("id", interventionIds)
+        .order('date', { ascending: false });
+
+      if (interventions) {
+        setInterventionDetails(interventions);
       }
     }
   };
