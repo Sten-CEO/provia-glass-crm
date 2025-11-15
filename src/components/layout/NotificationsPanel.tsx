@@ -75,20 +75,27 @@ export const NotificationsPanel = () => {
   };
 
   const deleteNotification = async (id: string) => {
+    // Optimistic UI update
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setUnreadCount((prev) => {
+      const removed = notifications.find((n) => n.id === id);
+      return removed && !removed.read_at ? Math.max(0, prev - 1) : prev;
+    });
+
     const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
+      // Revert if needed (best effort)
+      await loadNotifications();
       toast.error("Erreur lors de la suppression");
       return;
     }
-    
-    loadNotifications();
+
     toast.success("Notification supprimée");
   };
-
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
     let link = (notification as any).link || notification.payload?.link;
