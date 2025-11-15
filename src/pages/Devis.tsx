@@ -300,7 +300,7 @@ const Devis = () => {
                         try {
                           const { data: q } = await supabase
                             .from("devis")
-                            .select("id, numero, client_id, client_nom, title, auto_create_job_on_accept, planned_date, planned_start_time, assignee_id, site_address, property_address, message_client, lignes")
+                            .select("id, numero, client_id, client_nom, title, auto_create_job_on_accept, planned_date, planned_start_time, planned_end_time, assignee_id, site_address, property_address, message_client, lignes")
                             .eq("id", quote.id)
                             .maybeSingle();
                           
@@ -330,6 +330,7 @@ const Devis = () => {
                                 assigned_employee_ids: q.assignee_id ? [q.assignee_id] : [],
                                 date: q.planned_date || new Date().toISOString().split("T")[0],
                                 heure_debut: q.planned_start_time || null,
+                                heure_fin: q.planned_end_time || null,
                                 statut: "À faire",
                                 adresse: q.site_address || q.property_address || "",
                                 description: q.message_client || q.title || "",

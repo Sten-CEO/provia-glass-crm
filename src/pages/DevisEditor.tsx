@@ -127,6 +127,7 @@ const DevisEditor = () => {
     auto_create_job_on_accept: false,
     planned_date: "",
     planned_start_time: "",
+    planned_end_time: "",
     planned_duration_minutes: undefined,
     assignee_id: "",
     site_address: "",
