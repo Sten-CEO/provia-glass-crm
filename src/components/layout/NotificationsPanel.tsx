@@ -75,10 +75,16 @@ export const NotificationsPanel = () => {
   };
 
   const deleteNotification = async (id: string) => {
-    await supabase
+    const { error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', id);
+    
+    if (error) {
+      toast.error("Erreur lors de la suppression");
+      return;
+    }
+    
     loadNotifications();
     toast.success("Notification supprimée");
   };
@@ -201,10 +207,9 @@ export const NotificationsPanel = () => {
                         variant="ghost"
                         size="icon"
                         className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          await supabase.from('notifications').delete().eq('id', notification.id);
-                          loadNotifications();
+                          deleteNotification(notification.id);
                         }}
                       >
                         <X className="h-3 w-3" />
