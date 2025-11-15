@@ -10,6 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { NewEventDialog } from "@/components/agenda/NewEventDialog";
 import { EditEventDialog } from "@/components/agenda/EditEventDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -27,7 +29,9 @@ interface AgendaEvent {
 
 export default function Agenda() {
   const [events, setEvents] = useState<AgendaEvent[]>([]);
-  const [view, setView] = useState<'day' | 'week'>('day');
+  const [view, setView] = useState<'day' | 'week' | 'month' | 'custom'>('day');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -81,6 +85,36 @@ export default function Agenda() {
       case 'appel': return 'Appel';
       case 'autre': return 'Autre';
       default: return type;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'à venir':
+        return <Badge className="bg-blue-100 text-blue-700">À venir</Badge>;
+      case 'terminé':
+        return <Badge className="bg-green-100 text-green-700">Terminé</Badge>;
+      case 'reporté':
+        return <Badge className="bg-yellow-100 text-yellow-700">Reporté</Badge>;
+      case 'annulé':
+        return <Badge className="bg-red-100 text-red-700">Annulé</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const handleStatusChange = async (eventId: string, newStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { error } = await supabase
+      .from('agenda_events')
+      .update({ status: newStatus })
+      .eq('id', eventId);
+
+    if (error) {
+      toast.error("Erreur lors de la mise à jour du statut");
+    } else {
+      toast.success("Statut mis à jour");
+      loadEvents();
     }
   };
 
@@ -164,9 +198,46 @@ export default function Agenda() {
           >
             Semaine
           </Button>
+          <Button
+            variant={view === 'month' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('month')}
+          >
+            Mois
+          </Button>
+          <Button
+            variant={view === 'custom' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setView('custom')}
+          >
+            Personnalisé
+          </Button>
           <NewEventDialog onEventCreated={loadEvents} />
         </div>
       </div>
+
+      {view === 'custom' && (
+        <Card className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-2 block">Date de début</label>
+              <Input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-2 block">Date de fin</label>
+              <Input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-4">
         {events.map((event) => (
@@ -179,12 +250,29 @@ export default function Agenda() {
               <div className={`w-1 h-full rounded ${getEventTypeColor(event.type)}`} />
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-2">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold">{event.title}</h3>
                     <p className="text-sm text-muted-foreground">{event.description}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{getEventTypeLabel(event.type)}</Badge>
+                    <Select 
+                      value={event.status} 
+                      onValueChange={(value) => handleStatusChange(event.id, value, {} as any)}
+                    >
+                      <SelectTrigger 
+                        className="w-32 h-8" 
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent onClick={(e) => e.stopPropagation()}>
+                        <SelectItem value="à venir">À venir</SelectItem>
+                        <SelectItem value="terminé">Terminé</SelectItem>
+                        <SelectItem value="reporté">Reporté</SelectItem>
+                        <SelectItem value="annulé">Annulé</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
