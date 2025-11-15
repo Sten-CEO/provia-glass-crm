@@ -467,6 +467,7 @@ export type Database = {
           pdf_url: string | null
           planned_date: string | null
           planned_duration_minutes: number | null
+          planned_end_time: string | null
           planned_start_time: string | null
           property_address: string | null
           quote_valid_days: number | null
@@ -521,6 +522,7 @@ export type Database = {
           pdf_url?: string | null
           planned_date?: string | null
           planned_duration_minutes?: number | null
+          planned_end_time?: string | null
           planned_start_time?: string | null
           property_address?: string | null
           quote_valid_days?: number | null
@@ -575,6 +577,7 @@ export type Database = {
           pdf_url?: string | null
           planned_date?: string | null
           planned_duration_minutes?: number | null
+          planned_end_time?: string | null
           planned_start_time?: string | null
           property_address?: string | null
           quote_valid_days?: number | null
