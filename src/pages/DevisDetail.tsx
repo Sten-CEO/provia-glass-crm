@@ -163,6 +163,7 @@ const DevisDetail = () => {
         assigned_employee_ids: devis.assignee_id ? [devis.assignee_id] : [],
         date: devis.planned_date || new Date().toISOString().split("T")[0],
         heure_debut: devis.planned_start_time,
+        heure_fin: devis.planned_end_time || null,
         statut: "À faire",
         adresse: devis.site_address || client?.adresse || "",
         description: devis.message_client || devis.title || "",
