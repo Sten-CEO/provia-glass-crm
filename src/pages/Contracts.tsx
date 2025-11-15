@@ -26,6 +26,22 @@ export default function Contracts() {
 
   useEffect(() => {
     loadContracts();
+
+    // Écouter les changements en temps réel
+    const channel = supabase
+      .channel('contracts-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contracts'
+      }, () => {
+        loadContracts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadContracts = async () => {
