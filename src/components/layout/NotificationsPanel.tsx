@@ -153,12 +153,11 @@ export const NotificationsPanel = () => {
                   {notifications.slice(0, 10).map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
+                      className={`p-4 hover:bg-accent transition-colors relative group ${
                         !notification.read_at ? 'bg-accent/50' : ''
                       }`}
-                      onClick={() => handleNotificationClick(notification)}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-3 cursor-pointer" onClick={() => handleNotificationClick(notification)}>
                         <div className={`w-2 h-2 rounded-full mt-2 ${(() => {
                           const type = (notification as any).kind || notification.type;
                           switch (type) {
@@ -189,6 +188,18 @@ export const NotificationsPanel = () => {
                           )}
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await supabase.from('notifications').delete().eq('id', notification.id);
+                          loadNotifications();
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))}
                 </div>
