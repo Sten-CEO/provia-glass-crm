@@ -103,8 +103,7 @@ export default function Agenda() {
     }
   };
 
-  const handleStatusChange = async (eventId: string, newStatus: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleStatusChange = async (eventId: string, newStatus: string) => {
     const { error } = await supabase
       .from('agenda_events')
       .update({ status: newStatus })
@@ -258,7 +257,7 @@ export default function Agenda() {
                     <Badge variant="outline">{getEventTypeLabel(event.type)}</Badge>
                     <Select 
                       value={event.status} 
-                      onValueChange={(value) => handleStatusChange(event.id, value, {} as any)}
+                      onValueChange={(value) => handleStatusChange(event.id, value)}
                     >
                       <SelectTrigger 
                         className="w-32 h-8" 
