@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Download, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, Download, ArrowLeft } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -220,68 +220,51 @@ export default function CADetail() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="CA_HT" stroke="#FBCB45" strokeWidth={2} name="CA HT" />
-            <Line type="monotone" dataKey="CA_TTC" stroke="#8884d8" strokeWidth={2} name="CA TTC" />
+            <Line type="monotone" dataKey="ca_ht" stroke="#FBCB45" strokeWidth={2} name="CA HT" />
+            <Line type="monotone" dataKey="ca_ttc" stroke="#8884d8" strokeWidth={2} name="CA TTC" />
           </LineChart>
         </ResponsiveContainer>
       </Card>
 
-      {viewMode === 'by_client' && (
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Performance par client</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>CA HT</TableHead>
-                <TableHead>CA TTC</TableHead>
-                <TableHead>Factures</TableHead>
-                <TableHead>Impayés</TableHead>
-                <TableHead>Dépenses</TableHead>
-                <TableHead>Marge</TableHead>
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold mb-4">Performance par client</h2>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Client</TableHead>
+              <TableHead>CA HT</TableHead>
+              <TableHead>CA TTC</TableHead>
+              <TableHead>Factures</TableHead>
+              <TableHead>Impayés</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {clientsData.map((client) => (
+              <TableRow key={client.client_id} className="cursor-pointer hover:bg-accent">
+                <TableCell className="font-medium">{client.client_name}</TableCell>
+                <TableCell>{client.ca_ht.toLocaleString()} €</TableCell>
+                <TableCell>{client.ca_ttc.toLocaleString()} €</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-green-50">
+                      {client.invoices_paid} payées
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-50">
+                      {client.invoices_sent} envoyées
+                    </Badge>
+                    <Badge variant="outline" className="bg-yellow-50">
+                      {client.invoices_to_send} à envoyer
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="text-red-600 font-medium">
+                  {client.unpaid.toLocaleString()} €
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clientsData.map((client) => (
-                <TableRow key={client.client_id} className="cursor-pointer hover:bg-accent">
-                  <TableCell className="font-medium">{client.client_name}</TableCell>
-                  <TableCell>{client.ca_ht.toLocaleString()} €</TableCell>
-                  <TableCell>{client.ca_ttc.toLocaleString()} €</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-green-50">
-                        {client.invoices_paid} payées
-                      </Badge>
-                      <Badge variant="outline" className="bg-blue-50">
-                        {client.invoices_sent} envoyées
-                      </Badge>
-                      <Badge variant="outline" className="bg-yellow-50">
-                        {client.invoices_to_send} à envoyer
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-red-600 font-medium">
-                    {client.unpaid.toLocaleString()} €
-                  </TableCell>
-                  <TableCell>{client.expenses.toLocaleString()} €</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {client.margin > 0 ? (
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                      )}
-                      <span className={client.margin > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {client.margin.toLocaleString()} €
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }
