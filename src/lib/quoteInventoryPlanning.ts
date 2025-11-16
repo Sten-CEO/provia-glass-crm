@@ -26,18 +26,31 @@ export async function syncQuoteInventoryPlanning(
       return { movementsCount: 0 };
     }
 
-    const movements = inventoryLines.map((line) => ({
-      item_id: line.inventory_item_id,
-      type: "out",
-      source: "devis",
-      qty: -Math.abs(line.qty),
-      ref_id: quoteId,
-      ref_number: quoteNumber,
-      note: `Prévu pour devis ${quoteNumber} - ${line.name}`,
-      status: "planned",
-      scheduled_at: plannedDate || new Date().toISOString(),
-      date: new Date().toISOString(),
-    }));
+    const movements = inventoryLines
+      .map((line) => {
+        const normalizedType = (line.type || "").toString().toLowerCase();
+        if (normalizedType === "service") return null;
+        const isConsumable = normalizedType === "consumable";
+        const isMaterial = normalizedType === "material";
+        const movementType = isMaterial ? "reserve" : "expected_out"; // default to expected_out
+        const qty = Math.abs(line.qty || 0);
+        if (!qty) return null;
+        const label = line.name || line.label || "";
+        const notePrefix = isMaterial ? "Réservation (matériel)" : "À prévoir (consommable)";
+        return {
+          item_id: line.inventory_item_id,
+          type: movementType,
+          source: "devis",
+          qty,
+          ref_id: quoteId,
+          ref_number: quoteNumber,
+          note: `${notePrefix} pour devis ${quoteNumber}${label ? ` - ${label}` : ""}`,
+          status: "planned",
+          scheduled_at: plannedDate || new Date().toISOString(),
+          date: new Date().toISOString(),
+        };
+      })
+      .filter(Boolean) as any[];
 
     const { error } = await supabase
       .from("inventory_movements")
