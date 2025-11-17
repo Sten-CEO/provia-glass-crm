@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { updateExpiredAgendaEvents } from "@/lib/agendaStatusUpdater";
 
 export const AgendaWidget = () => {
   const [events, setEvents] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
+    updateExpiredAgendaEvents();
     loadTodayEvents();
   }, []);
 
