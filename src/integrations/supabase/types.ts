@@ -1892,6 +1892,74 @@ export type Database = {
           },
         ]
       }
+      material_reservations: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string | null
+          material_id: string
+          qty_reserved: number
+          quote_id: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          material_id: string
+          qty_reserved?: number
+          quote_id?: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          material_id?: string
+          qty_reserved?: number
+          quote_id?: string | null
+          scheduled_end?: string
+          scheduled_start?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_reservations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_reservations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_reservations_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_reservations_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "devis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           actor_id: string | null
@@ -2820,6 +2888,25 @@ export type Database = {
       bulk_reject_timesheets: {
         Args: { entry_ids: string[]; manager_id: string; reason: string }
         Returns: undefined
+      }
+      calculate_material_reserved: {
+        Args: { p_material_id: string }
+        Returns: number
+      }
+      check_material_availability: {
+        Args: {
+          p_end: string
+          p_exclude_reservation_id?: string
+          p_material_id: string
+          p_qty_needed: number
+          p_start: string
+        }
+        Returns: {
+          is_available: boolean
+          qty_already_reserved: number
+          qty_available: number
+          qty_on_hand: number
+        }[]
       }
       create_notification: {
         Args: {
