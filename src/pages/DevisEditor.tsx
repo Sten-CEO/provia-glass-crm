@@ -803,11 +803,13 @@ const DevisEditor = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => toast.info("Duplication en cours...")}>
+                <DropdownMenuItem onClick={() => toast.info("Duplication en cours...")} disabled={!quote.id}>
                   Dupliquer
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={!quote.id}
                   onClick={async () => {
+                    if (!id || id === "new") return;
                     const { error } = await supabase.from("devis").update({ statut: "Brouillon" }).eq("id", id);
                     if (error) {
                       toast.error("Erreur lors du changement de statut");
@@ -820,7 +822,9 @@ const DevisEditor = () => {
                   Marquer Brouillon
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={!quote.id}
                   onClick={async () => {
+                    if (!id || id === "new") return;
                     const { error } = await supabase.from("devis").update({ statut: "Accepté" }).eq("id", id);
                     if (error) {
                       toast.error("Erreur lors du changement de statut");
@@ -833,7 +837,9 @@ const DevisEditor = () => {
                   Marquer Accepté
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={!quote.id}
                   onClick={async () => {
+                    if (!id || id === "new") return;
                     const { error } = await supabase.from("devis").update({ statut: "Refusé" }).eq("id", id);
                     if (error) {
                       toast.error("Erreur lors du changement de statut");
