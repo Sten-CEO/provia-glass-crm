@@ -448,15 +448,19 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>
-                              {parseDateSafe(reservation.scheduled_start)
-                                ? format(parseDateSafe(reservation.scheduled_start)!, "dd MMM yyyy", { locale: fr })
-                                : "Date à confirmer"}
+                              {reservation.job?.date
+                                ? format(new Date(`${reservation.job.date}T00:00:00`), "dd MMM yyyy", { locale: fr })
+                                : (parseDateSafe(reservation.scheduled_start)
+                                    ? format(parseDateSafe(reservation.scheduled_start)!, "dd MMM yyyy", { locale: fr })
+                                    : "Date à confirmer")}
                             </span>
                             <span>•</span>
                             <span>
-                              {parseDateSafe(reservation.scheduled_start) && parseDateSafe(reservation.scheduled_end)
-                                ? `${format(parseDateSafe(reservation.scheduled_start)!, "HH:mm", { locale: fr })} - ${format(parseDateSafe(reservation.scheduled_end)!, "HH:mm", { locale: fr })}`
-                                : "Horaire à confirmer"}
+                              {reservation.job?.heure_debut && reservation.job?.heure_fin
+                                ? `${reservation.job.heure_debut.slice(0,5)} - ${reservation.job.heure_fin.slice(0,5)}`
+                                : (parseDateSafe(reservation.scheduled_start) && parseDateSafe(reservation.scheduled_end)
+                                    ? `${format(parseDateSafe(reservation.scheduled_start)!, "HH:mm", { locale: fr })} - ${format(parseDateSafe(reservation.scheduled_end)!, "HH:mm", { locale: fr })}`
+                                    : "Horaire à confirmer")}
                             </span>
                           </div>
                           {reservation.job.intervention_number && (

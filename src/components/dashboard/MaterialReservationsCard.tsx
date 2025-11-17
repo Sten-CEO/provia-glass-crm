@@ -18,6 +18,9 @@ interface MaterialReservation {
     id: string;
     titre: string;
     employe_nom: string;
+    date?: string | null;
+    heure_debut?: string | null;
+    heure_fin?: string | null;
   };
 }
 
@@ -71,7 +74,7 @@ export const MaterialReservationsCard = () => {
           scheduled_start,
           scheduled_end,
           material:inventory_items!material_reservations_material_id_fkey(name),
-          job:jobs!material_reservations_job_id_fkey(id, titre, employe_nom)
+          job:jobs!material_reservations_job_id_fkey(id, titre, employe_nom, date, heure_debut, heure_fin)
         `
         )
         .in("status", ["planned", "active"])
@@ -110,7 +113,13 @@ export const MaterialReservationsCard = () => {
           {reservations.map((reservation) => {
             const start = parseDateSafe(reservation.scheduled_start);
             const end = parseDateSafe(reservation.scheduled_end);
-
+            const hasJobTimes = Boolean(reservation.job?.date && reservation.job?.heure_debut && reservation.job?.heure_fin);
+            const dateLabel = hasJobTimes
+              ? format(new Date(`${reservation.job.date}T00:00:00`), "d MMM yyyy", { locale: fr })
+              : (start ? format(start, "d MMM yyyy", { locale: fr }) : "Date à confirmer");
+            const timeLabel = hasJobTimes
+              ? `${(reservation.job.heure_debut || '').slice(0,5)}–${(reservation.job.heure_fin || '').slice(0,5)}`
+              : (start && end ? `${format(start, "HH:mm")}–${format(end, "HH:mm")}` : "Horaire à confirmer");
             return (
               <div
                 key={reservation.id}
@@ -137,8 +146,7 @@ export const MaterialReservationsCard = () => {
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      {start ? format(start, "d MMM yyyy", { locale: fr }) : "Date à confirmer"} ·{" "}
-                      {start && end ? `${format(start, "HH:mm")}–${format(end, "HH:mm")}` : "Horaire à confirmer"}
+                      {dateLabel} · {timeLabel}
                     </span>
                   </div>
                 </div>
