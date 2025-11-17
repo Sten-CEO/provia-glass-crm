@@ -33,12 +33,14 @@ export async function syncQuoteConsumablesToIntervention(
     }
 
     const lines = (quote.lignes as any[]) || [];
-    const consumableLines = lines.filter(
-      (line) =>
-        line.type === "consumable" ||
-        line.type === "material" ||
-        line.inventory_item_id
-    );
+    const consumableLines = lines.filter((line) => {
+      const rawType = (line.type || line.category || line.item_type || "").toString().toLowerCase();
+      const isInventoryLinked = Boolean(line.inventory_item_id);
+      return (
+        ["consumable", "material", "consommable", "materiel", "matériel"].includes(rawType) ||
+        isInventoryLinked
+      );
+    });
 
     // Create intervention consumables
     const consumablesToCreate = consumableLines.map((line) => ({
@@ -50,9 +52,9 @@ export async function syncQuoteConsumablesToIntervention(
       unit: line.unit || line.unite || "unité",
       unit_price_ht: line.unit_price_ht || line.prix_unitaire || 0,
       tax_rate: line.tva_rate || line.taux_tva || 20,
-      total_ht: (line.qty || 1) * (line.unit_price_ht || 0),
+      total_ht: (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0),
       total_ttc:
-        (line.qty || 1) * (line.unit_price_ht || 0) * (1 + (line.tva_rate || 20) / 100),
+        (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0) * (1 + (line.tva_rate || line.taux_tva || 20) / 100),
       serial_number: line.serial_number || null,
       location: line.location || null,
     }));
@@ -81,9 +83,9 @@ export async function syncQuoteConsumablesToIntervention(
       unit: line.unit || line.unite || "h",
       unit_price_ht: line.unit_price_ht || line.prix_unitaire || 0,
       tax_rate: line.tva_rate || line.taux_tva || 20,
-      total_ht: (line.qty || 1) * (line.unit_price_ht || 0),
+      total_ht: (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0),
       total_ttc:
-        (line.qty || 1) * (line.unit_price_ht || 0) * (1 + (line.tva_rate || 20) / 100),
+        (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0) * (1 + (line.tva_rate || line.taux_tva || 20) / 100),
       is_billable: true,
       assigned_to: null,
     }));
