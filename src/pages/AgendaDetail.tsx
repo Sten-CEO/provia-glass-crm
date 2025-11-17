@@ -36,6 +36,9 @@ export default function AgendaDetail() {
   }, [id]);
 
   const loadEvent = async () => {
+    // Update statuses first based on dates
+    await supabase.rpc('update_agenda_event_statuses');
+
     const { data, error } = await supabase
       .from('agenda_events' as any)
       .select('*')

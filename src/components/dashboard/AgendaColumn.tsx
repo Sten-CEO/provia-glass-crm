@@ -34,6 +34,9 @@ export const AgendaColumn = () => {
   }, []);
 
   const loadEvents = async () => {
+    // Update statuses first based on dates
+    await supabase.rpc('update_agenda_event_statuses');
+
     const now = new Date();
     const tomorrow = addDays(now, 1);
     const nextWeek = addDays(now, 7);

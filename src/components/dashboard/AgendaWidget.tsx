@@ -19,6 +19,9 @@ export const AgendaWidget = () => {
   }, []);
 
   const loadTodayEvents = async () => {
+    // Update statuses first based on dates
+    await supabase.rpc('update_agenda_event_statuses');
+
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
