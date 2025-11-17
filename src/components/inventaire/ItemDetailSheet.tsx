@@ -22,6 +22,18 @@ import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+// Safe date parser that tolerates null/invalid inputs and missing 'Z'
+const parseDateSafe = (input?: string | null) => {
+  if (!input) return null as Date | null;
+  const d1 = new Date(input);
+  if (!isNaN(d1.getTime())) return d1;
+  const withZ = input.endsWith('Z') ? input : input + 'Z';
+  const d2 = new Date(withZ);
+  if (!isNaN(d2.getTime())) return d2;
+  return null;
+};
+
+
 interface ItemDetailSheetProps {
   itemId: string | null;
   open: boolean;
@@ -436,13 +448,15 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>
-                              {format(new Date(reservation.scheduled_start), "dd MMM yyyy", { locale: fr })}
+                              {parseDateSafe(reservation.scheduled_start)
+                                ? format(parseDateSafe(reservation.scheduled_start)!, "dd MMM yyyy", { locale: fr })
+                                : "Date à confirmer"}
                             </span>
                             <span>•</span>
                             <span>
-                              {format(new Date(reservation.scheduled_start + 'Z'), "HH:mm", { locale: fr })} 
-                              {" - "}
-                              {format(new Date(reservation.scheduled_end + 'Z'), "HH:mm", { locale: fr })}
+                              {parseDateSafe(reservation.scheduled_start) && parseDateSafe(reservation.scheduled_end)
+                                ? `${format(parseDateSafe(reservation.scheduled_start)!, "HH:mm", { locale: fr })} - ${format(parseDateSafe(reservation.scheduled_end)!, "HH:mm", { locale: fr })}`
+                                : "Horaire à confirmer"}
                             </span>
                           </div>
                           {reservation.job.intervention_number && (
