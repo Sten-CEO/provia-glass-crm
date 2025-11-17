@@ -79,11 +79,21 @@ export function QuoteConversionDialog({
             statut: 'À faire',
             description: `Converti du devis ${quoteData.numero}`,
             converted_from_quote_id: quoteId,
+            quote_id: quoteId,
           })
           .select()
           .single();
 
         if (jobError) throw jobError;
+
+        // Sync consumables and materials from quote to intervention
+        try {
+          const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
+          const result = await syncQuoteConsumablesToIntervention(quoteId, job.id);
+          console.log(`Synced ${result.consumablesCount} consommables/matériels and ${result.servicesCount} services`);
+        } catch (syncError) {
+          console.error("Error syncing quote items:", syncError);
+        }
 
         // Mettre à jour le devis
         await supabase
