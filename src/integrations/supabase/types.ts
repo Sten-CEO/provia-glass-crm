@@ -2849,6 +2849,10 @@ export type Database = {
       is_manager: { Args: { user_id: string }; Returns: boolean }
       start_job: { Args: { p_job_id: string }; Returns: Json }
       update_agenda_event_statuses: { Args: never; Returns: undefined }
+      update_reservations_for_quote: {
+        Args: { p_quote_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
