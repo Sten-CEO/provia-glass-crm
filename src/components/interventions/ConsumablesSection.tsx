@@ -9,6 +9,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MaterialsAvailabilityChecker } from "./MaterialsAvailabilityChecker";
 
 interface ConsumablesSectionProps {
   interventionId: string | undefined;
@@ -19,12 +20,24 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [itemCategory, setItemCategory] = useState<"consumable" | "material">("consumable");
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [intervention, setIntervention] = useState<any>(null);
 
   useEffect(() => {
     if (interventionId) {
       loadLines();
+      loadIntervention();
     }
   }, [interventionId]);
+
+  const loadIntervention = async () => {
+    if (!interventionId) return;
+    const { data } = await supabase
+      .from("jobs")
+      .select("date, heure_debut, heure_fin, scheduled_start, scheduled_end")
+      .eq("id", interventionId)
+      .single();
+    if (data) setIntervention(data);
+  };
 
   // Load items when category changes - force complete reset
   useEffect(() => {
@@ -304,6 +317,16 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
             </p>
           )}
         </div>
+
+        {/* Material Availability Checker */}
+        {intervention && intervention.date && intervention.heure_debut && intervention.heure_fin && (
+          <MaterialsAvailabilityChecker
+            lines={lines}
+            scheduledStart={`${intervention.date}T${intervention.heure_debut}`}
+            scheduledEnd={`${intervention.date}T${intervention.heure_fin}`}
+            excludeReservationId={interventionId}
+          />
+        )}
 
         {lines.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
