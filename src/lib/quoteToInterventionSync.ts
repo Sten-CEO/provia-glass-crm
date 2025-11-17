@@ -52,9 +52,6 @@ export async function syncQuoteConsumablesToIntervention(
       unit: line.unit || line.unite || "unité",
       unit_price_ht: line.unit_price_ht || line.prix_unitaire || 0,
       tax_rate: line.tva_rate || line.taux_tva || 20,
-      total_ht: (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0),
-      total_ttc:
-        (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0) * (1 + (line.tva_rate || line.taux_tva || 20) / 100),
       serial_number: line.serial_number || null,
       location: line.location || null,
     }));
@@ -83,9 +80,6 @@ export async function syncQuoteConsumablesToIntervention(
       unit: line.unit || line.unite || "h",
       unit_price_ht: line.unit_price_ht || line.prix_unitaire || 0,
       tax_rate: line.tva_rate || line.taux_tva || 20,
-      total_ht: (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0),
-      total_ttc:
-        (line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0) * (1 + (line.tva_rate || line.taux_tva || 20) / 100),
       is_billable: true,
       assigned_to: null,
     }));
