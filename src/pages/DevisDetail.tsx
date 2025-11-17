@@ -106,7 +106,22 @@ const DevisDetail = () => {
     if (error) {
       toast.error("Erreur lors de la sauvegarde");
     } else {
-      // Sync inventory planning
+      // Sync inventory when status changes
+      try {
+        const { syncQuoteInventoryStatus } = await import("@/lib/quoteInventorySync");
+        await syncQuoteInventoryStatus(
+          id!,
+          devis.numero,
+          devis.statut,
+          previousStatus,
+          lignes
+        );
+      } catch (invError) {
+        console.error("Inventory sync error:", invError);
+        toast.error("Erreur lors de la mise à jour du stock");
+      }
+
+      // Sync inventory planning for future date
       try {
         const { syncQuoteInventoryPlanning } = await import("@/lib/quoteInventoryPlanning");
         await syncQuoteInventoryPlanning(

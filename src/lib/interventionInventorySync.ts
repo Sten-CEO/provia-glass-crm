@@ -66,7 +66,23 @@ export async function consumeReservedInventory(
   interventionNumber: string
 ) {
   try {
-    // Get consumables for this intervention
+    // First, check if this intervention is linked to a quote
+    const { data: intervention } = await supabase
+      .from("jobs")
+      .select("quote_id, converted_from_quote_id")
+      .eq("id", interventionId)
+      .single();
+
+    const linkedQuoteId = intervention?.quote_id || intervention?.converted_from_quote_id;
+
+    // If linked to quote, use quote inventory consumption
+    if (linkedQuoteId) {
+      const { consumeQuoteInventory } = await import("./quoteInventorySync");
+      await consumeQuoteInventory(linkedQuoteId, interventionId, interventionNumber);
+      return;
+    }
+
+    // Otherwise, consume intervention consumables normally
     const { data: consumables, error } = await supabase
       .from("intervention_consumables")
       .select("*")
