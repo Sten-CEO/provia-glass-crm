@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { updateExpiredAgendaEvents } from "@/lib/agendaStatusUpdater";
 
 interface AgendaEvent {
   id: string;
@@ -39,6 +40,8 @@ export default function Agenda() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Mettre à jour les événements expirés au chargement
+    updateExpiredAgendaEvents();
     loadEvents();
 
     const channel = supabase
