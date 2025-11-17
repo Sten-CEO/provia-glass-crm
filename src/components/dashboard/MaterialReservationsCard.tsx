@@ -26,6 +26,16 @@ export const MaterialReservationsCard = () => {
   const [reservations, setReservations] = useState<MaterialReservation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const parseDateSafe = (input?: string | null) => {
+    if (!input) return null as Date | null;
+    const d1 = new Date(input);
+    if (!isNaN(d1.getTime())) return d1;
+    const withZ = input.endsWith('Z') ? input : input + 'Z';
+    const d2 = new Date(withZ);
+    if (!isNaN(d2.getTime())) return d2;
+    return null;
+  };
+
   useEffect(() => {
     loadReservations();
 
@@ -98,8 +108,8 @@ export const MaterialReservationsCard = () => {
         </div>
         <div className="space-y-3">
           {reservations.map((reservation) => {
-            const startDate = new Date(reservation.scheduled_start);
-            const endDate = new Date(reservation.scheduled_end);
+            const start = parseDateSafe(reservation.scheduled_start);
+            const end = parseDateSafe(reservation.scheduled_end);
 
             return (
               <div
@@ -127,8 +137,8 @@ export const MaterialReservationsCard = () => {
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      {format(new Date(reservation.scheduled_start + 'Z'), "d MMM yyyy", { locale: fr })} ·{" "}
-                      {format(new Date(reservation.scheduled_start + 'Z'), "HH:mm")}–{format(new Date(reservation.scheduled_end + 'Z'), "HH:mm")}
+                      {start ? format(start, "d MMM yyyy", { locale: fr }) : "Date à confirmer"} ·{" "}
+                      {start && end ? `${format(start, "HH:mm")}–${format(end, "HH:mm")}` : "Horaire à confirmer"}
                     </span>
                   </div>
                 </div>
