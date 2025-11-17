@@ -127,8 +127,8 @@ export const MaterialReservationsCard = () => {
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      {format(startDate, "d MMM yyyy", { locale: fr })} ·{" "}
-                      {format(startDate, "HH:mm")}–{format(endDate, "HH:mm")}
+                      {format(new Date(reservation.scheduled_start + 'Z'), "d MMM yyyy", { locale: fr })} ·{" "}
+                      {format(new Date(reservation.scheduled_start + 'Z'), "HH:mm")}–{format(new Date(reservation.scheduled_end + 'Z'), "HH:mm")}
                     </span>
                   </div>
                 </div>
