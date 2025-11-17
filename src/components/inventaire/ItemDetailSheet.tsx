@@ -51,11 +51,30 @@ interface ItemDetails {
   unit_price_ht: number;
   category: string | null;
   supplier_name: string | null;
+  type: string;
+}
+
+interface MaterialReservation {
+  id: string;
+  qty_reserved: number;
+  scheduled_start: string;
+  scheduled_end: string;
+  status: string;
+  job: {
+    id: string;
+    titre: string;
+    client_nom: string;
+    intervention_number: string;
+    date: string;
+    heure_debut: string;
+    heure_fin: string;
+  } | null;
 }
 
 export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetProps) => {
   const [item, setItem] = useState<ItemDetails | null>(null);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [materialReservations, setMaterialReservations] = useState<MaterialReservation[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -112,10 +131,28 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
         )
         .subscribe();
 
+      // Material reservations channel
+      const materialReservationsChannel = supabase
+        .channel(`material_reservations_${itemId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'material_reservations',
+            filter: `material_id=eq.${itemId}`
+          },
+          () => {
+            loadItemDetails();
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(itemsChannel);
         supabase.removeChannel(movementsChannel);
         supabase.removeChannel(reservationsChannel);
+        supabase.removeChannel(materialReservationsChannel);
       };
     }
   }, [open, itemId]);
@@ -145,6 +182,24 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
 
       if (movementsError) throw movementsError;
       setMovements(movementsData as Movement[]);
+
+      // Load material reservations if this is a material
+      if (itemData?.type === 'materiel') {
+        const { data: reservationsData, error: reservationsError } = await supabase
+          .from("material_reservations")
+          .select(`
+            *,
+            job:jobs(id, titre, client_nom, intervention_number, date, heure_debut, heure_fin)
+          `)
+          .eq("material_id", itemId)
+          .in("status", ["planned", "active"])
+          .gte("scheduled_end", new Date().toISOString())
+          .order("scheduled_start", { ascending: true });
+
+        if (!reservationsError && reservationsData) {
+          setMaterialReservations(reservationsData);
+        }
+      }
     } catch (error) {
       console.error("Error loading item details:", error);
     } finally {
@@ -201,7 +256,6 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
     if (!movement.ref_id) return;
     
     try {
-      // Verify the source exists before navigating
       switch (movement.source) {
         case "devis":
           const { data: devis, error: devisError } = await supabase
@@ -293,8 +347,8 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
             )}
           </div>
 
-          {/* Planned Consumables (À prévoir) */}
-          {plannedConsumables.length > 0 && (
+          {/* Planned Consumables (À prévoir) - SEULEMENT pour consommables */}
+          {item.type === 'consommable' && plannedConsumables.length > 0 && (
             <div className="glass-card p-4 space-y-3 border-l-4 border-orange-500">
               <h3 className="font-semibold flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-orange-600" />
@@ -342,36 +396,92 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
             </div>
           )}
 
-          {/* Planned Material Reservations */}
-          {plannedReservations.length > 0 && (
+          {/* Material Reservations (Réservations à venir) - SEULEMENT pour matériels */}
+          {item.type === 'materiel' && materialReservations.length > 0 && (
             <div className="glass-card p-4 space-y-3 border-l-4 border-blue-500">
               <h3 className="font-semibold flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-blue-600" />
-                Réservés - Matériaux ({plannedReservations.length})
+                Réservations à venir - Matériels ({materialReservations.length})
               </h3>
               <p className="text-xs text-muted-foreground">
-                Ces matériaux sont réservés et seront restitués après les interventions (pas de déduction de stock)
+                Ces matériels sont réservés sur des créneaux horaires et seront restitués après utilisation (pas de déduction de stock)
               </p>
               <div className="space-y-2">
-                {plannedReservations.map((movement) => (
+                {materialReservations.map((reservation) => (
+                  <div
+                    key={reservation.id}
+                    className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (reservation.job?.id) {
+                        navigate(`/interventions/${reservation.job.id}/report`);
+                        onOpenChange(false);
+                      }
+                    }}
+                  >
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-blue-600">🔒 {reservation.qty_reserved}x</span>
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                          {reservation.status === 'planned' ? 'Planifié' : 'Actif'}
+                        </Badge>
+                      </div>
+                      {reservation.job && (
+                        <>
+                          <p className="text-sm font-medium truncate">
+                            {reservation.job.titre}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            Client: {reservation.job.client_nom}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>
+                              {format(new Date(reservation.scheduled_start), "dd MMM yyyy", { locale: fr })}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {format(new Date(reservation.scheduled_start), "HH:mm", { locale: fr })} 
+                              {" - "}
+                              {format(new Date(reservation.scheduled_end), "HH:mm", { locale: fr })}
+                            </span>
+                          </div>
+                          {reservation.job.intervention_number && (
+                            <p className="text-xs text-muted-foreground">
+                              Intervention {reservation.job.intervention_number}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-blue-600" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Planned Incoming */}
+          {plannedIncoming.length > 0 && (
+            <div className="glass-card p-4 space-y-3 border-l-4 border-green-500">
+              <h3 className="font-semibold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                Entrées prévues ({plannedIncoming.length})
+              </h3>
+              <div className="space-y-2">
+                {plannedIncoming.map((movement) => (
                   <div
                     key={movement.id}
-                    className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-colors"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-blue-600">🔒 {movement.qty}</span>
+                        <span className="font-medium text-green-600">+{movement.qty}</span>
                         {movement.scheduled_at && (
                           <span className="text-sm text-muted-foreground">
                             prévu le {format(new Date(movement.scheduled_at), "dd MMM yyyy", { locale: fr })}
                           </span>
                         )}
                       </div>
-                      {movement.ref_number && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {movement.source === "devis" ? "Devis" : movement.source === "intervention" ? "Intervention" : movement.source} {movement.ref_number}
-                        </p>
-                      )}
                       {movement.note && (
                         <p className="text-xs text-muted-foreground mt-1">{movement.note}</p>
                       )}
@@ -391,33 +501,44 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
             </div>
           )}
 
-          {/* Planned Incoming */}
-          {plannedIncoming.length > 0 && (
-            <div className="glass-card p-4 space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-success" />
-                Arrivages prévus ({plannedIncoming.length})
-              </h3>
+          <Separator />
+
+          {/* Movement History */}
+          <div className="space-y-3">
+            <h3 className="font-semibold">Historique des mouvements</h3>
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun mouvement enregistré</p>
+            ) : (
               <div className="space-y-2">
-                {plannedIncoming.map((movement) => (
+                {history.map((movement) => (
                   <div
                     key={movement.id}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-start justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-success">+{movement.qty}</span>
-                        {movement.scheduled_at && (
-                          <span className="text-sm text-muted-foreground">
-                            prévu le {format(new Date(movement.scheduled_at), "dd MMM yyyy", { locale: fr })}
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {getMovementIcon(movement.type)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{getMovementLabel(movement.type)}</span>
+                          <span className={`font-semibold ${
+                            movement.type === "in" ? "text-success" : "text-destructive"
+                          }`}>
+                            {movement.type === "in" ? "+" : ""}{movement.qty}
                           </span>
+                          {getStatusBadge(movement.status)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(movement.date), "dd MMM yyyy HH:mm", { locale: fr })}
+                        </p>
+                        {movement.ref_number && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {movement.source === "devis" ? "Devis" : movement.source === "intervention" ? "Intervention" : movement.source} {movement.ref_number}
+                          </p>
+                        )}
+                        {movement.note && (
+                          <p className="text-xs text-muted-foreground mt-1">{movement.note}</p>
                         )}
                       </div>
-                      {movement.ref_number && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          Achat {movement.ref_number}
-                        </p>
-                      )}
                     </div>
                     {movement.ref_id && (
                       <Button
@@ -431,57 +552,7 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* History */}
-          <div className="glass-card p-4 space-y-3">
-            <h3 className="font-semibold">Historique des mouvements</h3>
-            <Separator />
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {history.map((movement) => (
-                <div
-                  key={movement.id}
-                  className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg"
-                >
-                  {getMovementIcon(movement.type)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">
-                        {getMovementLabel(movement.type)}
-                      </span>
-                       <span className={
-                         movement.type === "in" 
-                           ? "text-success font-medium" 
-                           : movement.type === "reserve" && movement.qty < 0
-                           ? "text-success font-medium"
-                           : "text-destructive font-medium"
-                       }>
-                        {movement.type === "in" || (movement.type === "reserve" && movement.qty < 0) ? "+" : "-"}
-                        {Math.abs(movement.qty)}
-                      </span>
-                      {getStatusBadge(movement.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(movement.date), "dd MMM yyyy à HH:mm", { locale: fr })}
-                    </p>
-                    {movement.ref_number && (
-                      <p className="text-sm text-muted-foreground">
-                        {movement.source === "devis" ? "Devis" : movement.source === "intervention" ? "Intervention" : movement.source === "achat" ? "Achat" : movement.source} {movement.ref_number}
-                      </p>
-                    )}
-                    {movement.note && (
-                      <p className="text-xs text-muted-foreground mt-1">{movement.note}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {history.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">
-                  Aucun mouvement pour le moment
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </SheetContent>
