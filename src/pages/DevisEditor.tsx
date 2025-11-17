@@ -53,6 +53,7 @@ import { ServiceCatalogSelector } from "@/components/devis/ServiceCatalogSelecto
 import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { InterventionInfoBlock } from "@/components/devis/InterventionInfoBlock";
+import { MaterialsAvailabilityChecker } from "@/components/interventions/MaterialsAvailabilityChecker";
 
 interface Quote {
   id?: string;
@@ -1142,6 +1143,15 @@ const DevisEditor = () => {
                 siteAddress={quote.site_address || quote.property_address}
                 autoCreateEnabled={quote.auto_create_job_on_accept || false}
               />
+
+              {/* Material Availability Checker */}
+              {quote.planned_date && quote.planned_start_time && quote.planned_end_time && (
+                <MaterialsAvailabilityChecker
+                  lines={quote.lignes}
+                  scheduledStart={`${quote.planned_date}T${quote.planned_start_time}`}
+                  scheduledEnd={`${quote.planned_date}T${quote.planned_end_time}`}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
