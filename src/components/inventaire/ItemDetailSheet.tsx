@@ -440,9 +440,9 @@ export const ItemDetailSheet = ({ itemId, open, onOpenChange }: ItemDetailSheetP
                             </span>
                             <span>•</span>
                             <span>
-                              {new Date(reservation.scheduled_start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })} 
+                              {format(new Date(reservation.scheduled_start + 'Z'), "HH:mm", { locale: fr })} 
                               {" - "}
-                              {new Date(reservation.scheduled_end).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}
+                              {format(new Date(reservation.scheduled_end + 'Z'), "HH:mm", { locale: fr })}
                             </span>
                           </div>
                           {reservation.job.intervention_number && (
