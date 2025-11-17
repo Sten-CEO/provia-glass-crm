@@ -8,6 +8,19 @@ export async function syncQuoteConsumablesToIntervention(
   interventionId: string
 ) {
   try {
+    // Check if consumables already exist for this intervention
+    const { data: existingConsumables } = await supabase
+      .from("intervention_consumables")
+      .select("id")
+      .eq("intervention_id", interventionId)
+      .limit(1);
+
+    // If consumables already exist, don't duplicate
+    if (existingConsumables && existingConsumables.length > 0) {
+      console.log("Consumables already exist for this intervention, skipping sync");
+      return { consumablesCount: 0, servicesCount: 0 };
+    }
+
     // Get all consumable/material lines from the quote
     const { data: quote, error: quoteError } = await supabase
       .from("devis")
