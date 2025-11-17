@@ -32,8 +32,8 @@ export async function syncQuoteInventoryStatus(
     // Load existing planned reservations for this quote
     const existingByItem = await getExistingPlannedReservations(quoteId);
 
-    // If moving into an accepted state
-    if (acceptedStatuses.includes(newStatus) && !acceptedStatuses.includes(previousStatus || "")) {
+    // If quote is in an accepted-like status → enforce reservations idempotently
+    if (acceptedStatuses.includes(newStatus)) {
       // Apply delta to qty_reserved per item
       for (const [itemId, desiredQty] of Object.entries(desiredByItem)) {
         const current = existingByItem[itemId] || 0;
@@ -195,12 +195,12 @@ async function resolveItemIdFromLine(line: any): Promise<string | null> {
     if (data?.id) return data.id;
   }
 
-  const name = line.name || line.designation || line.product_name || null;
+  const name = line.name || line.designation || line.product_name || line.description || null;
   if (name) {
     const { data } = await supabase
       .from("inventory_items")
       .select("id")
-      .ilike("name", name)
+      .ilike("name", `%${name}%`)
       .maybeSingle();
     if (data?.id) return data.id;
   }
