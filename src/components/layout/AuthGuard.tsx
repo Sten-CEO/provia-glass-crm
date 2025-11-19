@@ -45,7 +45,7 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
 
   // Bloquer les employés terrain du CRM
   useEffect(() => {
-    if (!roleLoading && role === 'employee' && !location.pathname.startsWith('/employee')) {
+    if (!roleLoading && (role === 'employee' || role === 'employe_terrain') && !location.pathname.startsWith('/employee')) {
       // Employé terrain essaie d'accéder au CRM -> rediriger vers app employé
       navigate('/employee');
     }
@@ -64,7 +64,7 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   }
 
   // Bloquer l'accès CRM pour les employés terrain
-  if (role === 'employee' && !location.pathname.startsWith('/employee')) {
+  if ((role === 'employee' || role === 'employe_terrain') && !location.pathname.startsWith('/employee')) {
     return (
       <div className="flex items-center justify-center h-screen p-8">
         <div className="glass-modal max-w-md p-8 text-center">
