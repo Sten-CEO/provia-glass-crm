@@ -2646,6 +2646,33 @@ export type Database = {
           },
         ]
       }
+      support_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_events: {
         Row: {
           created_at: string
@@ -2687,30 +2714,35 @@ export type Database = {
       }
       support_messages: {
         Row: {
-          category: string | null
+          content: string
+          conversation_id: string
           created_at: string
           id: string
-          is_from_support: boolean | null
-          message: string
-          user_name: string
+          sender: string
         }
         Insert: {
-          category?: string | null
+          content: string
+          conversation_id: string
           created_at?: string
           id?: string
-          is_from_support?: boolean | null
-          message: string
-          user_name: string
+          sender: string
         }
         Update: {
-          category?: string | null
+          content?: string
+          conversation_id?: string
           created_at?: string
           id?: string
-          is_from_support?: boolean | null
-          message?: string
-          user_name?: string
+          sender?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_tickets: {
         Row: {
