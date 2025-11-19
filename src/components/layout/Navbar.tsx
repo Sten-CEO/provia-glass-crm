@@ -17,12 +17,13 @@ const Navbar = ({
           <Menu className="h-5 w-5" />
         </Button>
         
-        <div className="flex items-center gap-3 bg-yellow-50 px-3 py-1.5 rounded-sm">
-          <span className="text-sm font-medium text-gray-600">Société:</span>
-          <span className="font-bold uppercase tracking-wide text-gray-900">
-            {company?.name || "Chargement..."}
-          </span>
-        </div>
+        {company?.name && (
+          <div className="flex items-center bg-yellow-50 px-3 py-1.5 rounded-sm">
+            <span className="font-bold uppercase tracking-wide text-gray-900">
+              {company.name}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
