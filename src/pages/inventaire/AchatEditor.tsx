@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { createInventoryMovement, cancelMovement } from "@/lib/inventoryMovements";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useCompany } from "@/hooks/useCompany";
 
 interface PurchaseItem {
   id?: string;
@@ -44,6 +45,7 @@ const AchatEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = !!id;
+  const { company } = useCompany();
 
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -351,6 +353,7 @@ const AchatEditor = () => {
     }
 
     const payload = {
+      company_id: company?.id,
       number: formData.number,
       supplier: formData.supplier,
       expected_date: formData.expected_date || null,
