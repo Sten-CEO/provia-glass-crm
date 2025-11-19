@@ -13,6 +13,7 @@ export default function Profil() {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [userRole, setUserRole] = useState<string>("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,24 @@ export default function Profil() {
       if (profile) {
         setFirstName(profile.first_name || "");
         setLastName(profile.last_name || "");
+      }
+      
+      // Charger le rôle
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (roleData) {
+        const roleLabels: Record<string, string> = {
+          'admin': 'Admin',
+          'owner': 'Propriétaire',
+          'backoffice': 'Back-office',
+          'employe_terrain': 'Employé terrain',
+          'manager': 'Manager'
+        };
+        setUserRole(roleLabels[roleData.role] || roleData.role);
       }
     }
   };
@@ -137,7 +156,7 @@ export default function Profil() {
             <h2 className="text-xl font-semibold">
               {firstName && lastName ? `${firstName} ${lastName}` : email}
             </h2>
-            <p className="text-sm text-muted-foreground">Administrateur</p>
+            <p className="text-sm text-muted-foreground">{userRole || "Chargement..."}</p>
           </div>
         </div>
 
