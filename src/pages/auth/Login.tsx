@@ -36,25 +36,6 @@ const Login = () => {
     };
     
     checkSessionAndRedirect();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { data: userRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .single();
-        
-        if (userRole?.role === 'employe_terrain') {
-          navigate("/employee");
-        } else {
-          navigate("/tableau-de-bord");
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -77,15 +58,37 @@ const Login = () => {
         } else {
           toast.error(error.message);
         }
+        setLoading(false);
         return;
       }
 
-      // La redirection est gérée par onAuthStateChange
-      toast.success("Connexion réussie");
+      if (data.session) {
+        // Fetch role immediately after login
+        const { data: userRole, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.session.user.id)
+          .single();
+
+        if (roleError) {
+          console.error("Role fetch error:", roleError);
+          toast.error("Erreur lors de la récupération du rôle");
+          setLoading(false);
+          return;
+        }
+
+        toast.success("Connexion réussie");
+        
+        // Redirect based on role
+        if (userRole?.role === 'employe_terrain') {
+          navigate("/employee");
+        } else {
+          navigate("/tableau-de-bord");
+        }
+      }
     } catch (error: any) {
       toast.error("Erreur de connexion");
       console.error(error);
-    } finally {
       setLoading(false);
     }
   };
