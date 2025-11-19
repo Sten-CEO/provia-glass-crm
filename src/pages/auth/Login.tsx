@@ -17,17 +17,40 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
-    // Check if already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check if already logged in and redirect based on role
+    const checkSessionAndRedirect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/tableau-de-bord");
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        
+        if (userRole?.role === 'employe_terrain') {
+          navigate("/employee");
+        } else {
+          navigate("/tableau-de-bord");
+        }
       }
-    });
+    };
+    
+    checkSessionAndRedirect();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate("/tableau-de-bord");
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        
+        if (userRole?.role === 'employe_terrain') {
+          navigate("/employee");
+        } else {
+          navigate("/tableau-de-bord");
+        }
       }
     });
 
@@ -57,8 +80,8 @@ const Login = () => {
         return;
       }
 
+      // La redirection est gérée par onAuthStateChange
       toast.success("Connexion réussie");
-      navigate("/tableau-de-bord");
     } catch (error: any) {
       toast.error("Erreur de connexion");
       console.error(error);

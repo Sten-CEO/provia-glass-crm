@@ -13,7 +13,7 @@ export const EmployeeLayout = () => {
 
   // Rediriger les admins/owners vers le CRM s'ils tentent d'accéder à l'app employé
   useEffect(() => {
-    if (!loading && role && role !== 'employee' && role !== 'employe_terrain') {
+    if (!loading && role && role !== 'employe_terrain') {
       navigate('/tableau-de-bord');
     }
   }, [role, loading, navigate]);
@@ -27,7 +27,7 @@ export const EmployeeLayout = () => {
   }
 
   // Bloquer l'accès si pas employé
-  if (role && role !== 'employee' && role !== 'employe_terrain') {
+  if (role && role !== 'employe_terrain') {
     return null; // Redirection en cours via useEffect
   }
 
