@@ -40,27 +40,20 @@ export function useCompany() {
         return;
       }
 
-      // Get user's company via user_roles
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("company_id")
-        .eq("user_id", user.id)
+      // Get company settings which includes company_name
+      const { data: settings } = await supabase
+        .from("company_settings")
+        .select("company_name, country, company_id")
+        .limit(1)
         .single();
 
-      if (!userRole?.company_id) {
-        setLoading(false);
-        return;
-      }
-
-      // Get company details
-      const { data: companyData } = await supabase
-        .from("companies")
-        .select("id, name, country, currency")
-        .eq("id", userRole.company_id)
-        .single();
-
-      if (companyData) {
-        setCompany(companyData);
+      if (settings) {
+        setCompany({
+          id: settings.company_id || '',
+          name: settings.company_name,
+          country: settings.country,
+          currency: 'EUR' // Default currency
+        });
       }
     } catch (error) {
       console.error("Error loading company:", error);
