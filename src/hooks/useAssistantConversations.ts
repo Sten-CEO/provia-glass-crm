@@ -255,6 +255,49 @@ export const useAssistantConversations = () => {
     };
   }, [activeConversationId]);
 
+  // Delete a conversation permanently
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      // Delete all messages first
+      const { error: msgError } = await supabase
+        .from("support_messages" as any)
+        .delete()
+        .eq("conversation_id", conversationId);
+
+      if (msgError) throw msgError;
+
+      // Delete conversation
+      const { error: convError } = await supabase
+        .from("support_conversations" as any)
+        .delete()
+        .eq("id", conversationId);
+
+      if (convError) throw convError;
+
+      // If this was the active conversation, clear it
+      if (activeConversationId === conversationId) {
+        setActiveConversationId(null);
+        setMessages([]);
+        localStorage.removeItem("assistant_active_conversation");
+      }
+
+      // Refresh conversations list
+      await fetchConversations();
+
+      toast({
+        title: "Conversation supprimée",
+        description: "La conversation a été supprimée définitivement."
+      });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la conversation.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Start a new conversation (clear active state)
   const startNewConversation = () => {
     setActiveConversationId(null);
@@ -271,6 +314,7 @@ export const useAssistantConversations = () => {
     sendMessage,
     closeConversation,
     switchConversation,
-    startNewConversation
+    startNewConversation,
+    deleteConversation
   };
 };
