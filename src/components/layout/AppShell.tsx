@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { AuthGuard } from "./AuthGuard";
+import { AssistantBubble } from "@/components/assistant/AssistantBubble";
 
 const AdminLayout = () => {
   const { toggleCollapsed } = useSidebarCollapsed();
@@ -19,6 +20,9 @@ const AdminLayout = () => {
             <Outlet />
           </main>
         </div>
+        
+        {/* Assistant bulle visible sur toutes les pages CRM */}
+        <AssistantBubble />
       </div>
     </AuthGuard>
   );
