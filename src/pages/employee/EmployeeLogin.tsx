@@ -25,9 +25,8 @@ export const EmployeeLogin = () => {
 
       if (error) throw error;
 
-      // Check user role - for now, redirect all to interventions
-      // Role checking will be implemented with RLS
-      navigate("/employee/interventions");
+      // Redirect to employee dashboard
+      navigate("/employee");
       toast.success("Connexion réussie");
     } catch (error: any) {
       toast.error(error.message || "Erreur de connexion");
