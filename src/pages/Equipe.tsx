@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useCompany } from "@/hooks/useCompany";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,7 @@ interface TeamMember {
 }
 
 const Equipe = () => {
+  const { company } = useCompany();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -124,6 +126,7 @@ const Equipe = () => {
         competences: newMember.competences,
         note: newMember.note,
         access_controls: newMember.access_controls,
+        company_id: company?.id,
       },
     ]);
 
