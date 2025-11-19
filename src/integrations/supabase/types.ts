@@ -2203,7 +2203,7 @@ export type Database = {
       }
       material_reservations: {
         Row: {
-          company_id: string | null
+          company_id: string
           created_at: string
           id: string
           job_id: string | null
@@ -2216,7 +2216,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string | null
+          company_id: string
           created_at?: string
           id?: string
           job_id?: string | null
@@ -2229,7 +2229,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          company_id?: string | null
+          company_id?: string
           created_at?: string
           id?: string
           job_id?: string | null
@@ -2457,7 +2457,7 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
-          company_id: string | null
+          company_id: string
           created_at: string
           expected_date: string | null
           files: Json | null
@@ -2472,7 +2472,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          company_id?: string | null
+          company_id: string
           created_at?: string
           expected_date?: string | null
           files?: Json | null
@@ -2487,7 +2487,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          company_id?: string | null
+          company_id?: string
           created_at?: string
           expected_date?: string | null
           files?: Json | null
