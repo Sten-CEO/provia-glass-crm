@@ -15,13 +15,13 @@ export function useCompany() {
   useEffect(() => {
     loadCompany();
 
-    // Listen for real-time changes
+    // Listen for real-time changes on company_settings
     const channel = supabase
       .channel('company-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'companies'
+        table: 'company_settings'
       }, () => {
         loadCompany();
       })
