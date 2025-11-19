@@ -155,7 +155,7 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <>
-      <Card className="fixed bottom-24 right-6 w-[700px] h-[600px] glass-card shadow-2xl z-50 flex flex-col">
+      <Card className="fixed bottom-6 right-6 w-[700px] max-h-[calc(100vh-120px)] h-[600px] glass-card shadow-2xl z-50 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
