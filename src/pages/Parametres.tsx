@@ -144,6 +144,10 @@ const Parametres = () => {
       }
 
       toast.success("Paramètres enregistrés avec succès");
+      
+      // Déclencher la mise à jour du nom de l'entreprise dans le header
+      window.dispatchEvent(new Event('company-updated'));
+      
       // Recharger pour vérifier
       await loadCompanySettings();
     } catch (error: any) {

@@ -15,6 +15,10 @@ export function useCompany() {
   useEffect(() => {
     loadCompany();
 
+    // Listen for manual refresh events
+    const handleRefresh = () => loadCompany();
+    window.addEventListener('company-updated', handleRefresh);
+
     // Listen for real-time changes on company_settings
     const channel = supabase
       .channel('company-changes')
@@ -28,6 +32,7 @@ export function useCompany() {
       .subscribe();
 
     return () => {
+      window.removeEventListener('company-updated', handleRefresh);
       supabase.removeChannel(channel);
     };
   }, []);
