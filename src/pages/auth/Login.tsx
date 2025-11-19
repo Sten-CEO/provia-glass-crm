@@ -105,14 +105,7 @@ const Login = () => {
         return;
       }
 
-      // Create admin role for first user
-      if (data.user) {
-        await supabase.from('user_roles').insert({
-          user_id: data.user.id,
-          role: 'admin',
-        });
-      }
-
+      // Le trigger handle_new_user() crée automatiquement la company et le role admin
       toast.success("Compte créé avec succès");
       setIsSignUp(false);
       setPassword("");

@@ -36,15 +36,21 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Vérifier le rôle admin
-    const { data: roles } = await supabaseAdmin
+    // Récupérer le company_id de l'admin qui crée l'employé
+    const { data: adminRole } = await supabaseAdmin
       .from('user_roles')
-      .select('role')
+      .select('role, company_id')
       .eq('user_id', callingUser.id)
-      .in('role', ['admin', 'manager']);
+      .in('role', ['admin', 'owner'])
+      .single();
 
-    if (!roles || roles.length === 0) {
-      throw new Error('Insufficient permissions');
+    if (!adminRole) {
+      throw new Error('Insufficient permissions - admin role required');
+    }
+
+    const adminCompanyId = adminRole.company_id;
+    if (!adminCompanyId) {
+      throw new Error('Admin has no company assigned');
     }
 
     const { employeeId, email, password, firstName, lastName, phone, sendEmail } = await req.json();
@@ -53,7 +59,7 @@ serve(async (req) => {
       throw new Error('Missing required fields');
     }
 
-    // Créer l'utilisateur Supabase
+    // Créer l'utilisateur Supabase (ne déclenche PAS handle_new_user car c'est admin.createUser)
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: password || undefined,
@@ -61,6 +67,7 @@ serve(async (req) => {
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
+        is_employee: true, // Flag pour éviter création company
       },
     });
 
@@ -71,15 +78,17 @@ serve(async (req) => {
 
     console.log('User created:', newUser.user.id);
 
-      const { error: updateError } = await supabaseAdmin
-        .from('equipe')
-        .update({ 
-          user_id: newUser.user.id,
-          phone: phone || null,
-          status: 'active',
-          app_access_status: 'active'
-        })
-        .eq('id', employeeId);
+    // Lier l'utilisateur à l'équipe avec le même company_id que l'admin
+    const { error: updateError } = await supabaseAdmin
+      .from('equipe')
+      .update({ 
+        user_id: newUser.user.id,
+        phone: phone || null,
+        status: 'active',
+        app_access_status: 'active',
+        company_id: adminCompanyId, // Même company que l'admin
+      })
+      .eq('id', employeeId);
 
     if (updateError) {
       console.error('Error updating equipe:', updateError);
@@ -88,16 +97,18 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Créer le rôle employee
+    // Créer le rôle employee avec le company_id de l'admin
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
+        company_id: adminCompanyId, // Même company que l'admin
         role: 'employee',
       });
 
     if (roleError) {
       console.error('Error creating role:', roleError);
+      // Ne pas fail complètement, juste logger
     }
 
     // TODO: Envoyer l'email d'invitation si sendEmail === true
