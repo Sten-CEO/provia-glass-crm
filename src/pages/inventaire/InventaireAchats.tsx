@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useCompany } from "@/hooks/useCompany";
 
 interface PurchaseOrder {
   id: string;
@@ -56,6 +57,7 @@ interface InventoryItem {
 
 const InventaireAchats = () => {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [search, setSearch] = useState("");
@@ -258,6 +260,7 @@ const InventaireAchats = () => {
     }
 
     const orderData = {
+      company_id: company?.id,
       number: formData.number,
       supplier: formData.supplier,
       expected_date: formData.expected_date || null,

@@ -65,6 +65,7 @@ export const MaterialReservationsCard = () => {
 
   const loadReservations = async () => {
     try {
+      // RLS policies automatically filter by company_id
       const { data, error } = await supabase
         .from("material_reservations")
         .select(
