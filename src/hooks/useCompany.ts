@@ -40,16 +40,28 @@ export function useCompany() {
         return;
       }
 
-      // Get company settings which includes company_name
+      // Get company_id from user_roles (single source of truth)
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!userRole?.company_id) {
+        setLoading(false);
+        return;
+      }
+
+      // Get company settings using the company_id from user_roles
       const { data: settings } = await supabase
         .from("company_settings")
-        .select("company_name, country, company_id")
-        .limit(1)
+        .select("company_name, country")
+        .eq("company_id", userRole.company_id)
         .single();
 
       if (settings) {
         setCompany({
-          id: settings.company_id || '',
+          id: userRole.company_id,
           name: settings.company_name,
           country: settings.country,
           currency: 'EUR' // Default currency
