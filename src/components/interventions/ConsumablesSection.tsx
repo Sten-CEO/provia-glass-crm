@@ -346,18 +346,30 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell>
-                    <Select 
-                      key={`${line.id}-${itemCategory}`}
-                      value={line.inventory_item_id || "none"} 
-                      onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
-                      disabled={isLoadingItems}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder={isLoadingItems ? "Chargement..." : "Sélectionner un produit"} />
-                      </SelectTrigger>
+              {lines.map((line) => {
+                // If line already has a product name, display it directly instead of Select
+                const hasProduct = line.product_name && line.product_name.trim() !== "";
+                
+                return (
+                  <TableRow key={line.id}>
+                    <TableCell>
+                      {hasProduct ? (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md">
+                          <span className="font-medium">{line.product_name}</span>
+                          {line.product_ref && (
+                            <span className="text-xs text-muted-foreground">· {line.product_ref}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <Select 
+                          key={`${line.id}-${itemCategory}`}
+                          value={line.inventory_item_id || "none"} 
+                          onValueChange={(v) => v !== "none" && selectInventoryItem(line.id, v)}
+                          disabled={isLoadingItems}
+                        >
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder={isLoadingItems ? "Chargement..." : "Sélectionner un produit"} />
+                          </SelectTrigger>
                       <SelectContent className="z-[100] bg-popover max-h-[300px] overflow-y-auto">
                         <SelectItem value="none" disabled>Sélectionner un produit</SelectItem>
                         {isLoadingItems ? (
@@ -405,8 +417,9 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                               );
                             })
                         )}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Input 
@@ -450,7 +463,8 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+            })}
             </TableBody>
           </Table>
         )}
