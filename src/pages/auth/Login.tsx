@@ -40,6 +40,8 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login attempt started");
+    
     if (!email || !password) {
       toast.error("Veuillez remplir tous les champs");
       return;
@@ -47,12 +49,16 @@ const Login = () => {
 
     setLoading(true);
     try {
+      console.log("Signing in with Supabase...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log("Sign in response:", { data: !!data, error });
+
       if (error) {
+        console.error("Sign in error:", error);
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Email ou mot de passe incorrect");
         } else {
@@ -63,12 +69,15 @@ const Login = () => {
       }
 
       if (data.session) {
+        console.log("Session established, fetching role...");
         // Fetch role immediately after login
         const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", data.session.user.id)
           .single();
+
+        console.log("Role fetch result:", { userRole, roleError });
 
         if (roleError) {
           console.error("Role fetch error:", roleError);
@@ -77,18 +86,17 @@ const Login = () => {
           return;
         }
 
+        console.log("Role found:", userRole?.role);
         toast.success("Connexion réussie");
         
         // Redirect based on role
-        if (userRole?.role === 'employe_terrain') {
-          navigate("/employee");
-        } else {
-          navigate("/tableau-de-bord");
-        }
+        const targetPath = userRole?.role === 'employe_terrain' ? "/employee" : "/tableau-de-bord";
+        console.log("Navigating to:", targetPath);
+        navigate(targetPath);
       }
     } catch (error: any) {
+      console.error("Login error:", error);
       toast.error("Erreur de connexion");
-      console.error(error);
       setLoading(false);
     }
   };
