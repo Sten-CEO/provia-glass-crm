@@ -27,8 +27,11 @@ const Parametres = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.error("No user found");
+        toast.error("Session expirée, veuillez vous reconnecter");
         return;
       }
+
+      console.log("User ID:", user.id);
 
       // 2. Récupérer le company_id depuis user_roles
       const { data: userRole, error: roleError } = await supabase
@@ -37,17 +40,22 @@ const Parametres = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
+      console.log("User role data:", userRole);
+      console.log("Role error:", roleError);
+
       if (roleError) {
         console.error("Error fetching user role:", roleError);
+        toast.error("Erreur lors du chargement de votre rôle");
         return;
       }
 
       if (!userRole?.company_id) {
         console.error("No company_id found for user");
-        toast.error("Aucune société associée à votre compte");
+        toast.error("Aucune société associée à votre compte. Veuillez contacter l'administrateur.");
         return;
       }
 
+      console.log("Company ID found:", userRole.company_id);
       setCompanyId(userRole.company_id);
 
       // 3. Charger les paramètres de la société
@@ -57,8 +65,12 @@ const Parametres = () => {
         .eq("company_id", userRole.company_id)
         .maybeSingle();
 
+      console.log("Company settings data:", data);
+      console.log("Settings error:", error);
+
       if (error) {
         console.error("Error fetching company settings:", error);
+        toast.error("Erreur lors du chargement des paramètres");
         return;
       }
 
@@ -67,17 +79,24 @@ const Parametres = () => {
         setSiret(data.siret || "");
         setTva(data.tva_intracom || "");
         setSettingsId(data.id);
+        console.log("Settings loaded successfully");
       } else {
         console.log("No company settings found, will create on save");
+        // Même s'il n'y a pas de settings, on peut créer lors de la sauvegarde
+        toast.info("Aucun paramètre existant. Vous pouvez les créer en enregistrant.");
       }
     } catch (error) {
       console.error("Error loading company settings:", error);
+      toast.error("Erreur inattendue lors du chargement");
     }
   };
 
   const handleSave = async () => {
+    console.log("HandleSave called, companyId:", companyId);
+    
     if (!companyId) {
-      toast.error("Impossible de sauvegarder : société non trouvée");
+      console.error("No companyId available for save");
+      toast.error("Impossible de sauvegarder : société non trouvée. Rechargez la page.");
       return;
     }
 
@@ -86,6 +105,7 @@ const Parametres = () => {
     try {
       if (settingsId) {
         // Mise à jour
+        console.log("Updating existing settings:", settingsId);
         const { error } = await supabase
           .from("company_settings")
           .update({
@@ -100,8 +120,10 @@ const Parametres = () => {
           console.error("Erreur update:", error);
           throw error;
         }
+        console.log("Update successful");
       } else {
         // Création
+        console.log("Creating new settings for company:", companyId);
         const { data, error } = await supabase
           .from("company_settings")
           .insert({
@@ -117,6 +139,7 @@ const Parametres = () => {
           console.error("Erreur insert:", error);
           throw error;
         }
+        console.log("Insert successful:", data);
         if (data) setSettingsId(data.id);
       }
 
