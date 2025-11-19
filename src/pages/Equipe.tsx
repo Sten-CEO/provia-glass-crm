@@ -271,27 +271,29 @@ const Equipe = () => {
                   className="glass-card"
                 />
               </div>
-              <div>
-                <Label className="mb-2 block">Accès UI (restrictions UI uniquement)</Label>
-                <div className="space-y-2 glass-card p-4 rounded-lg">
-                  {Object.entries(newMember.access_controls).map(([key, value]) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) =>
-                          setNewMember({
-                            ...newMember,
-                            access_controls: { ...newMember.access_controls, [key]: e.target.checked },
-                          })
-                        }
-                        className="w-4 h-4"
-                      />
-                      <span className="capitalize text-sm">{key}</span>
-                    </label>
-                  ))}
+              {newMember.role !== "Employé terrain" && (
+                <div>
+                  <Label className="mb-2 block">Accès UI (restrictions UI uniquement)</Label>
+                  <div className="space-y-2 glass-card p-4 rounded-lg">
+                    {Object.entries(newMember.access_controls).map(([key, value]) => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={value}
+                          onChange={(e) =>
+                            setNewMember({
+                              ...newMember,
+                              access_controls: { ...newMember.access_controls, [key]: e.target.checked },
+                            })
+                          }
+                          className="w-4 h-4"
+                        />
+                        <span className="capitalize text-sm">{key}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <Button onClick={handleAddMember} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Inviter
               </Button>
