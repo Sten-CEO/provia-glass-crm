@@ -54,7 +54,8 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
     createConversation,
     sendMessage,
     closeConversation,
-    switchConversation
+    switchConversation,
+    startNewConversation
   } = useAssistantConversations();
 
   const [input, setInput] = useState("");
@@ -148,9 +149,9 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleNewConversation = () => {
-    // Clear active conversation to start fresh
-    localStorage.removeItem("assistant_active_conversation");
-    window.location.reload();
+    // Start a fresh conversation
+    startNewConversation();
+    setShowCategories(true);
   };
 
   return (
@@ -159,6 +160,7 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
+            <img src="/src/assets/logo.jpg" alt="Provia BASE" className="h-8 w-8 rounded object-cover" />
             <h3 className="font-semibold text-foreground">Assistant Provia Base</h3>
             {activeConversation && (
               <Badge variant={activeConversation.status === "open" ? "default" : "secondary"}>

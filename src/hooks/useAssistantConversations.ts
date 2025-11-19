@@ -255,6 +255,13 @@ export const useAssistantConversations = () => {
     };
   }, [activeConversationId]);
 
+  // Start a new conversation (clear active state)
+  const startNewConversation = () => {
+    setActiveConversationId(null);
+    setMessages([]);
+    localStorage.removeItem("assistant_active_conversation");
+  };
+
   return {
     conversations,
     activeConversationId,
@@ -263,6 +270,7 @@ export const useAssistantConversations = () => {
     createConversation,
     sendMessage,
     closeConversation,
-    switchConversation
+    switchConversation,
+    startNewConversation
   };
 };
