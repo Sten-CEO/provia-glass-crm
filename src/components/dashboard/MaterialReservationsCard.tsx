@@ -92,7 +92,9 @@ export const MaterialReservationsCard = () => {
     }
   };
 
-  const totalReservations = reservations.length;
+  // Only count valid reservations (with material AND job linked)
+  const validReservations = reservations.filter(r => r.material && r.job);
+  const totalReservations = validReservations.length;
 
   if (totalReservations === 0) {
     return null;
@@ -111,7 +113,7 @@ export const MaterialReservationsCard = () => {
           {totalReservations} réservation{totalReservations > 1 ? "s" : ""}
         </div>
         <div className="space-y-3">
-          {reservations.filter(r => r.material && r.job).map((reservation) => {
+          {validReservations.map((reservation) => {
             const start = parseDateSafe(reservation.scheduled_start);
             const end = parseDateSafe(reservation.scheduled_end);
             const hasJobTimes = Boolean(reservation.job?.date && reservation.job?.heure_debut && reservation.job?.heure_fin);
