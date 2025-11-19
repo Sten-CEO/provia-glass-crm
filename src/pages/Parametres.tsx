@@ -15,27 +15,72 @@ const Parametres = () => {
   const [tva, setTva] = useState("");
   const [loading, setLoading] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCompanySettings();
   }, []);
 
   const loadCompanySettings = async () => {
-    const { data, error } = await supabase
-      .from("company_settings")
-      .select("*")
-      .limit(1)
-      .single();
+    try {
+      // 1. Récupérer l'utilisateur actuel
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("No user found");
+        return;
+      }
 
-    if (data) {
-      setCompanyName(data.company_name || "");
-      setSiret(data.siret || "");
-      setTva(data.tva_intracom || "");
-      setSettingsId(data.id);
+      // 2. Récupérer le company_id depuis user_roles
+      const { data: userRole, error: roleError } = await supabase
+        .from("user_roles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error("Error fetching user role:", roleError);
+        return;
+      }
+
+      if (!userRole?.company_id) {
+        console.error("No company_id found for user");
+        toast.error("Aucune société associée à votre compte");
+        return;
+      }
+
+      setCompanyId(userRole.company_id);
+
+      // 3. Charger les paramètres de la société
+      const { data, error } = await supabase
+        .from("company_settings")
+        .select("*")
+        .eq("company_id", userRole.company_id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching company settings:", error);
+        return;
+      }
+
+      if (data) {
+        setCompanyName(data.company_name || "");
+        setSiret(data.siret || "");
+        setTva(data.tva_intracom || "");
+        setSettingsId(data.id);
+      } else {
+        console.log("No company settings found, will create on save");
+      }
+    } catch (error) {
+      console.error("Error loading company settings:", error);
     }
   };
 
   const handleSave = async () => {
+    if (!companyId) {
+      toast.error("Impossible de sauvegarder : société non trouvée");
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -60,6 +105,7 @@ const Parametres = () => {
         const { data, error } = await supabase
           .from("company_settings")
           .insert({
+            company_id: companyId,
             company_name: companyName,
             siret: siret,
             tva_intracom: tva,
