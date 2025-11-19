@@ -110,7 +110,7 @@ export const MaterialReservationsCard = () => {
           {totalReservations} réservation{totalReservations > 1 ? "s" : ""}
         </div>
         <div className="space-y-3">
-          {reservations.map((reservation) => {
+          {reservations.filter(r => r.material && r.job).map((reservation) => {
             const start = parseDateSafe(reservation.scheduled_start);
             const end = parseDateSafe(reservation.scheduled_end);
             const hasJobTimes = Boolean(reservation.job?.date && reservation.job?.heure_debut && reservation.job?.heure_fin);
