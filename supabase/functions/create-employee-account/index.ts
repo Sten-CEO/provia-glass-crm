@@ -97,13 +97,13 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Créer le rôle employee avec le company_id de l'admin
+    // Créer le rôle employe_terrain avec le company_id de l'admin
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
         company_id: adminCompanyId, // Même company que l'admin
-        role: 'employee',
+        role: 'employe_terrain',
       });
 
     if (roleError) {
