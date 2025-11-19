@@ -55,13 +55,16 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
     sendMessage,
     closeConversation,
     switchConversation,
-    startNewConversation
+    startNewConversation,
+    deleteConversation
   } = useAssistantConversations();
 
   const [input, setInput] = useState("");
   const [showCategories, setShowCategories] = useState(true);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [conversationToClose, setConversationToClose] = useState<string | null>(null);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -148,6 +151,19 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
     setCloseDialogOpen(false);
   };
 
+  const handleDeleteConversation = (convId: string) => {
+    setConversationToDelete(convId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteConversation = async () => {
+    if (conversationToDelete) {
+      await deleteConversation(conversationToDelete);
+      setConversationToDelete(null);
+    }
+    setDeleteDialogOpen(false);
+  };
+
   const handleNewConversation = () => {
     // Start a fresh conversation
     startNewConversation();
@@ -190,6 +206,7 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
                     isActive={conv.id === activeConversationId}
                     onClick={() => switchConversation(conv.id)}
                     onClose={() => handleCloseConversation(conv.id)}
+                    onDelete={() => handleDeleteConversation(conv.id)}
                   />
                 ))}
               </div>
@@ -299,6 +316,7 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
         </div>
       </Card>
 
+      {/* Close Conversation Dialog */}
       <AlertDialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -310,6 +328,27 @@ export const AssistantChat = ({ onClose }: { onClose: () => void }) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={confirmCloseConversation}>Clôturer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Conversation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la conversation ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement cette conversation ? Cette action est irréversible et supprimera tous les messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteConversation}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

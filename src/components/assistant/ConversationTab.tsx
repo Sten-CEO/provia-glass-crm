@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,9 +9,10 @@ interface ConversationTabProps {
   isActive: boolean;
   onClick: () => void;
   onClose: () => void;
+  onDelete: () => void;
 }
 
-export const ConversationTab = ({ conversation, isActive, onClick, onClose }: ConversationTabProps) => {
+export const ConversationTab = ({ conversation, isActive, onClick, onClose, onDelete }: ConversationTabProps) => {
   return (
     <div
       className={cn(
@@ -39,19 +40,32 @@ export const ConversationTab = ({ conversation, isActive, onClick, onClose }: Co
             </Badge>
           </div>
         </div>
-        {conversation.status === "open" && (
+        <div className="flex items-center gap-0.5">
+          {conversation.status === "open" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
-              onClose();
+              onDelete();
             }}
           >
-            <X className="h-3 w-3" />
+            <Trash2 className="h-3 w-3" />
           </Button>
-        )}
+        </div>
       </div>
     </div>
   );
