@@ -42,21 +42,29 @@ export const EmployeeLogin = () => {
           .single();
 
         if (roleError) {
+          console.error("❌ Role fetch error:", roleError);
           toast.error("Erreur lors de la vérification du compte");
           await supabase.auth.signOut();
           setLoading(false);
           return;
         }
 
+        console.log("Role found:", userRole?.role);
+
         // Employee App Login: Block non-employee accounts
         if (userRole?.role !== 'employe_terrain') {
-          toast.error("Identifiants incorrects");
+          console.log("❌ Non-employee account attempted employee login - BLOCKING");
+          console.log("Account role:", userRole?.role, "- Should use CRM login instead");
+          toast.error("Ce compte est réservé au CRM. Veuillez utiliser la page de connexion CRM à /auth/login.", {
+            duration: 5000,
+          });
           await supabase.auth.signOut();
           setLoading(false);
           return;
         }
 
         // Valid employee account - redirect to employee dashboard
+        console.log("✅ Employee access granted");
         toast.success("Connexion réussie");
         navigate("/employee");
       }

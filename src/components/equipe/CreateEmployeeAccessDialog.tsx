@@ -28,6 +28,8 @@ export const CreateEmployeeAccessDialog = ({
   const [loading, setLoading] = useState(false);
   const [method, setMethod] = useState<"password" | "email">("password");
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [createdRole, setCreatedRole] = useState<string | null>(null);
+  const [createdEmail, setCreatedEmail] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: employee.email,
     firstName: employee.nom.split(" ")[0] || "",
@@ -80,8 +82,8 @@ export const CreateEmployeeAccessDialog = ({
 
       if (response.error) {
         console.error("Edge function error:", response.error);
-        
-        if (response.error.message?.includes('Unauthorized') || 
+
+        if (response.error.message?.includes('Unauthorized') ||
             response.error.message?.includes('Insufficient permissions')) {
           toast.error("Vous n'avez pas les permissions nécessaires");
         } else if (response.error.message?.includes('already registered')) {
@@ -92,8 +94,12 @@ export const CreateEmployeeAccessDialog = ({
         return;
       }
 
+      console.log("Edge function response data:", response.data);
+
       if (method === "password" && password) {
         setGeneratedPassword(password);
+        setCreatedRole(response.data?.role || null);
+        setCreatedEmail(response.data?.email || formData.email);
         toast.success("Accès créé avec succès");
       } else {
         toast.success("Invitation envoyée par email");
@@ -117,6 +123,8 @@ export const CreateEmployeeAccessDialog = ({
 
   const handleClose = () => {
     setGeneratedPassword(null);
+    setCreatedRole(null);
+    setCreatedEmail(null);
     onSuccess();
     onOpenChange(false);
   };
@@ -130,28 +138,99 @@ export const CreateEmployeeAccessDialog = ({
 
         {generatedPassword ? (
           <div className="space-y-4">
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">
-                Mot de passe temporaire généré :
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
+              <p className="text-sm font-semibold text-green-900 dark:text-green-200 mb-2">
+                ✅ Compte créé avec succès dans Supabase Auth!
               </p>
+              <p className="text-xs text-green-800 dark:text-green-300">
+                L'utilisateur peut maintenant se connecter.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Email de connexion</Label>
+              <div className="p-2 bg-muted rounded font-mono text-sm">
+                {createdEmail}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Mot de passe temporaire</Label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 p-2 bg-background rounded font-mono text-sm">
+                <code className="flex-1 p-2 bg-muted rounded font-mono text-sm break-all">
                   {generatedPassword}
                 </code>
                 <Button
                   size="icon"
                   variant="outline"
                   onClick={copyPassword}
+                  title="Copier le mot de passe"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              ⚠️ Ce mot de passe ne sera plus visible. Copiez-le maintenant et communiquez-le à l'employé de manière sécurisée.
-            </p>
+
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-500">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                🔐 Page de connexion à utiliser:
+              </p>
+              {createdRole === 'employe_terrain' ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
+                    Cet employé doit se connecter sur l'<strong>application employé</strong>:
+                  </p>
+                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-xs break-all">
+                    {window.location.origin}/employee/login
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/employee/login`);
+                      toast.success("URL copiée!");
+                    }}
+                    className="w-full"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copier l'URL de connexion
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
+                    Cet employé doit se connecter sur le <strong>CRM</strong> (pas l'app employé):
+                  </p>
+                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-xs break-all">
+                    {window.location.origin}/auth/login
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/auth/login`);
+                      toast.success("URL copiée!");
+                    }}
+                    className="w-full"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copier l'URL de connexion
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-500">
+              <p className="text-sm text-yellow-900 dark:text-yellow-200">
+                ⚠️ <strong>Important:</strong> Ce mot de passe ne sera plus visible après fermeture.
+                Copiez-le maintenant et transmettez-le de manière sécurisée à l'employé.
+              </p>
+            </div>
+
             <DialogFooter>
-              <Button onClick={handleClose}>Fermer</Button>
+              <Button onClick={handleClose} className="w-full">
+                J'ai copié les informations
+              </Button>
             </DialogFooter>
           </div>
         ) : (
