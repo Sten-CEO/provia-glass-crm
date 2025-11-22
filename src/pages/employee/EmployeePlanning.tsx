@@ -23,7 +23,7 @@ interface Job {
 
 export const EmployeePlanning = () => {
   const navigate = useNavigate();
-  const { employeeId, loading: contextLoading } = useEmployee();
+  const { employeeId, companyId, loading: contextLoading } = useEmployee();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { locale: fr }));
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -76,7 +76,7 @@ export const EmployeePlanning = () => {
   };
 
   const loadPlanning = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !companyId) return;
 
     try {
       const weekEnd = endOfWeek(currentWeekStart, { locale: fr });
@@ -94,6 +94,7 @@ export const EmployeePlanning = () => {
         const { data, error } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .in("id", interventionIds)
           .not("statut", "in", '("Brouillon","À planifier")');
         if (error) throw error;
@@ -103,12 +104,14 @@ export const EmployeePlanning = () => {
         const { data: byArray } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .contains("assigned_employee_ids", [employeeId])
           .not("statut", "in", '("Brouillon","À planifier")');
 
         const { data: byLegacy } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .eq("employe_id", employeeId)
           .not("statut", "in", '("Brouillon","À planifier")');
 

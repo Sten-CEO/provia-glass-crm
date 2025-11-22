@@ -6,6 +6,7 @@ import { toast } from "sonner";
 interface EmployeeContextType {
   employeeId: string | null;
   employeeName: string;
+  companyId: string | null;
   loading: boolean;
 }
 
@@ -14,6 +15,7 @@ const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined
 export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [employeeName, setEmployeeName] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -33,7 +35,7 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
       // Récupérer l'employé via user_id
       const { data: employee, error } = await supabase
         .from("equipe")
-        .select("id, nom")
+        .select("id, nom, company_id")
         .eq("user_id", user.id)
         .single();
 
@@ -45,6 +47,7 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
 
       setEmployeeId(employee.id);
       setEmployeeName(employee.nom);
+      setCompanyId(employee.company_id);
     } catch (error) {
       console.error(error);
       toast.error("Erreur de chargement du profil");
@@ -54,7 +57,7 @@ export const EmployeeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <EmployeeContext.Provider value={{ employeeId, employeeName, loading }}>
+    <EmployeeContext.Provider value={{ employeeId, employeeName, companyId, loading }}>
       {children}
     </EmployeeContext.Provider>
   );

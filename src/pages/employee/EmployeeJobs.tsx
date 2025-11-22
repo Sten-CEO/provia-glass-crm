@@ -24,7 +24,7 @@ type FilterType = "today" | "week" | "all";
 
 export const EmployeeJobs = () => {
   const navigate = useNavigate();
-  const { employeeId, loading: contextLoading } = useEmployee();
+  const { employeeId, companyId, loading: contextLoading } = useEmployee();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -76,7 +76,7 @@ export const EmployeeJobs = () => {
   };
 
   const loadJobs = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !companyId) return;
 
     try {
       // 1) Affectations formelles
@@ -92,6 +92,7 @@ export const EmployeeJobs = () => {
         const { data, error } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .in("id", interventionIds)
           .not("statut", "in", '("Brouillon","À planifier")')
           .order("date", { ascending: false });
@@ -102,12 +103,14 @@ export const EmployeeJobs = () => {
         const { data: byArray } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .contains("assigned_employee_ids", [employeeId])
           .not("statut", "in", '("Brouillon","À planifier")');
 
         const { data: byLegacy } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .eq("employe_id", employeeId)
           .not("statut", "in", '("Brouillon","À planifier")');
 
