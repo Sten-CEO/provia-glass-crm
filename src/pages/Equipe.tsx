@@ -53,6 +53,10 @@ interface TeamMember {
     timesheets?: boolean;
     paiements?: boolean;
     parametres?: boolean;
+    equipe?: boolean;
+    inventaire?: boolean;
+    agenda?: boolean;
+    dashboard?: boolean;
   };
 }
 
@@ -80,6 +84,10 @@ const Equipe = () => {
       timesheets: true,
       paiements: true,
       parametres: false,
+      equipe: false,
+      inventaire: true,
+      agenda: true,
+      dashboard: true,
     },
   });
 
@@ -156,6 +164,10 @@ const Equipe = () => {
         timesheets: true,
         paiements: true,
         parametres: false,
+        equipe: false,
+        inventaire: true,
+        agenda: true,
+        dashboard: true,
       },
     });
     setOpen(false);

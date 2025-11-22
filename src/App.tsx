@@ -9,6 +9,7 @@ import Login from "./pages/auth/Login";
 import AdminLayout from "./components/layout/AppShell";
 import { EmployeeLayout } from "./components/employee/EmployeeLayout";
 import { EmployeeLogin } from "./pages/employee/EmployeeLogin";
+import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { EmployeeDashboard } from "./pages/employee/EmployeeDashboard";
 import { EmployeeJobs } from "./pages/employee/EmployeeJobs";
 import { EmployeeInterventionDetail } from "./pages/employee/EmployeeInterventionDetail";
@@ -89,53 +90,53 @@ const App = () => {
           
           {/* Admin CRM Routes */}
           <Route element={<AdminLayout />}>
-            <Route path="/tableau-de-bord" element={<Dashboard />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/clients/:id" element={<ClientDetail />} />
-            <Route path="/contracts" element={<Contracts />} />
-            <Route path="/contracts/:id" element={<ContractDetail />} />
-            <Route path="/planning" element={<Planning />} />
-          <Route path="/devis" element={<Devis />} />
-          <Route path="/devis/new" element={<DevisEditor />} />
-          <Route path="/devis/:id" element={<DevisEditor />} />
-          <Route path="/factures" element={<Factures />} />
-            <Route path="/factures/new" element={<FactureEditor />} />
-            <Route path="/factures/:id" element={<FactureDetail />} />
-            <Route path="/factures/:id/edit" element={<FactureEditor />} />
+            <Route path="/tableau-de-bord" element={<ProtectedRoute requiredAccess="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute requiredAccess="clients"><Clients /></ProtectedRoute>} />
+            <Route path="/clients/:id" element={<ProtectedRoute requiredAccess="clients"><ClientDetail /></ProtectedRoute>} />
+            <Route path="/contracts" element={<ProtectedRoute requiredAccess="clients"><Contracts /></ProtectedRoute>} />
+            <Route path="/contracts/:id" element={<ProtectedRoute requiredAccess="clients"><ContractDetail /></ProtectedRoute>} />
+            <Route path="/planning" element={<ProtectedRoute requiredAccess="planning"><Planning /></ProtectedRoute>} />
+          <Route path="/devis" element={<ProtectedRoute requiredAccess="devis"><Devis /></ProtectedRoute>} />
+          <Route path="/devis/new" element={<ProtectedRoute requiredAccess="devis"><DevisEditor /></ProtectedRoute>} />
+          <Route path="/devis/:id" element={<ProtectedRoute requiredAccess="devis"><DevisEditor /></ProtectedRoute>} />
+          <Route path="/factures" element={<ProtectedRoute requiredAccess="factures"><Factures /></ProtectedRoute>} />
+            <Route path="/factures/new" element={<ProtectedRoute requiredAccess="factures"><FactureEditor /></ProtectedRoute>} />
+            <Route path="/factures/:id" element={<ProtectedRoute requiredAccess="factures"><FactureDetail /></ProtectedRoute>} />
+            <Route path="/factures/:id/edit" element={<ProtectedRoute requiredAccess="factures"><FactureEditor /></ProtectedRoute>} />
             
             {/* Interventions routes (renamed from jobs) */}
-            <Route path="/interventions" element={<Interventions />} />
-            <Route path="/interventions/nouvelle" element={<InterventionEditor />} />
-            <Route path="/interventions/history" element={<InterventionsHistory />} />
-            <Route path="/interventions/:id/report" element={<InterventionDetail />} />
-            <Route path="/interventions/:id/editer" element={<InterventionEditor />} />
-            
+            <Route path="/interventions" element={<ProtectedRoute requiredAccess="jobs"><Interventions /></ProtectedRoute>} />
+            <Route path="/interventions/nouvelle" element={<ProtectedRoute requiredAccess="jobs"><InterventionEditor /></ProtectedRoute>} />
+            <Route path="/interventions/history" element={<ProtectedRoute requiredAccess="jobs"><InterventionsHistory /></ProtectedRoute>} />
+            <Route path="/interventions/:id/report" element={<ProtectedRoute requiredAccess="jobs"><InterventionDetail /></ProtectedRoute>} />
+            <Route path="/interventions/:id/editer" element={<ProtectedRoute requiredAccess="jobs"><InterventionEditor /></ProtectedRoute>} />
+
             {/* Legacy routes redirect to new interventions routes */}
             <Route path="/jobs" element={<Navigate to="/interventions" replace />} />
             <Route path="/jobs/:id" element={<Navigate to="/interventions/:id/report" replace />} />
-            
+
             {/* Inventaire routes */}
             <Route path="/inventaire" element={<Navigate to="/inventaire/consommables" replace />} />
-            <Route path="/inventaire/consommables" element={<InventaireConsommables />} />
-            <Route path="/inventaire/materiels" element={<InventaireMateriels />} />
-            <Route path="/inventaire/items/:id" element={<InventaireItemDetail />} />
-            <Route path="/inventaire/mouvements" element={<InventaireMouvements />} />
-            <Route path="/inventaire/achats" element={<InventaireAchats />} />
-            <Route path="/inventaire/achats/nouveau" element={<AchatEditor />} />
-            <Route path="/inventaire/achats/:id" element={<AchatEditor />} />
-            
-            <Route path="/equipe" element={<Equipe />} />
-            <Route path="/equipe/:id" element={<EmployeeDetail />} />
-          <Route path="/timesheets" element={<Timesheets />} />
-          <Route path="/pointage/employes" element={<Employes />} />
-          <Route path="/pointage/employes/:id" element={<EmployeePointageDetail />} />
-          <Route path="/paiements" element={<Paiements />} />
-          <Route path="/agenda" element={<Agenda />} />
-          <Route path="/agenda/:id" element={<AgendaDetail />} />
-          <Route path="/dashboard/ca" element={<CADetail />} />
+            <Route path="/inventaire/consommables" element={<ProtectedRoute requiredAccess="inventaire"><InventaireConsommables /></ProtectedRoute>} />
+            <Route path="/inventaire/materiels" element={<ProtectedRoute requiredAccess="inventaire"><InventaireMateriels /></ProtectedRoute>} />
+            <Route path="/inventaire/items/:id" element={<ProtectedRoute requiredAccess="inventaire"><InventaireItemDetail /></ProtectedRoute>} />
+            <Route path="/inventaire/mouvements" element={<ProtectedRoute requiredAccess="inventaire"><InventaireMouvements /></ProtectedRoute>} />
+            <Route path="/inventaire/achats" element={<ProtectedRoute requiredAccess="inventaire"><InventaireAchats /></ProtectedRoute>} />
+            <Route path="/inventaire/achats/nouveau" element={<ProtectedRoute requiredAccess="inventaire"><AchatEditor /></ProtectedRoute>} />
+            <Route path="/inventaire/achats/:id" element={<ProtectedRoute requiredAccess="inventaire"><AchatEditor /></ProtectedRoute>} />
+
+            <Route path="/equipe" element={<ProtectedRoute requiredAccess="equipe"><Equipe /></ProtectedRoute>} />
+            <Route path="/equipe/:id" element={<ProtectedRoute requiredAccess="equipe"><EmployeeDetail /></ProtectedRoute>} />
+          <Route path="/timesheets" element={<ProtectedRoute requiredAccess="timesheets"><Timesheets /></ProtectedRoute>} />
+          <Route path="/pointage/employes" element={<ProtectedRoute requiredAccess="timesheets"><Employes /></ProtectedRoute>} />
+          <Route path="/pointage/employes/:id" element={<ProtectedRoute requiredAccess="timesheets"><EmployeePointageDetail /></ProtectedRoute>} />
+          <Route path="/paiements" element={<ProtectedRoute requiredAccess="paiements"><Paiements /></ProtectedRoute>} />
+          <Route path="/agenda" element={<ProtectedRoute requiredAccess="agenda"><Agenda /></ProtectedRoute>} />
+          <Route path="/agenda/:id" element={<ProtectedRoute requiredAccess="agenda"><AgendaDetail /></ProtectedRoute>} />
+          <Route path="/dashboard/ca" element={<ProtectedRoute requiredAccess="dashboard"><CADetail /></ProtectedRoute>} />
           <Route path="/profil" element={<Profil />} />
           <Route path="/notifications" element={<Notifications />} />
-            <Route path="/parametres" element={<Parametres />} />
+            <Route path="/parametres" element={<ProtectedRoute requiredAccess="parametres"><Parametres /></ProtectedRoute>} />
             <Route path="/support" element={<Support />} />
           </Route>
 
