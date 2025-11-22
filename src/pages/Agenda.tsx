@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ interface AgendaEvent {
 }
 
 export default function Agenda() {
+  const { companyId } = useCurrentCompany();
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [view, setView] = useState<'day' | 'week' | 'month' | 'custom'>('day');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -40,33 +42,38 @@ export default function Agenda() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Mettre à jour les événements expirés au chargement
-    updateExpiredAgendaEvents();
-    loadEvents();
+    if (companyId) {
+      // Mettre à jour les événements expirés au chargement
+      updateExpiredAgendaEvents();
+      loadEvents();
 
-    const channel = supabase
-      .channel('agenda-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agenda_events'
-      }, () => {
-        loadEvents();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel('agenda-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'agenda_events'
+        }, () => {
+          loadEvents();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [companyId]);
 
   const loadEvents = async () => {
+    if (!companyId) return;
+
     // Update statuses first based on dates
     await supabase.rpc('update_agenda_event_statuses');
 
     const { data } = await supabase
       .from('agenda_events' as any)
       .select('*')
+      .eq('company_id', companyId)
       .order('start_at', { ascending: true });
 
     if (data) {
