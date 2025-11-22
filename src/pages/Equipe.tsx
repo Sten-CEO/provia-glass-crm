@@ -191,9 +191,27 @@ const Equipe = () => {
         return;
       }
 
+      const mappedRole = mapRoleToDbRole(newMember.role);
+
       console.log("📝 Creating account for:", newMember.email);
       console.log("🔑 Generated password:", tempPassword);
-      console.log("👤 Role:", mapRoleToDbRole(newMember.role));
+      console.log("👤 Role mapping:", {
+        originalRole: newMember.role,
+        mappedRole: mappedRole,
+      });
+
+      const requestBody = {
+        employeeId: newEmployeeData.id,
+        email: newMember.email,
+        password: tempPassword,
+        firstName: newMember.nom.split(" ")[0],
+        lastName: newMember.nom.split(" ").slice(1).join(" "),
+        phone: null,
+        sendEmail: false,
+        role: mappedRole,
+      };
+
+      console.log("📤 Sending request to edge function:", requestBody);
 
       const response = await fetch(
         `${supabase.supabaseUrl}/functions/v1/create-employee-account`,
@@ -203,16 +221,7 @@ const Equipe = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${sessionData.session.access_token}`,
           },
-          body: JSON.stringify({
-            employeeId: newEmployeeData.id,
-            email: newMember.email,
-            password: tempPassword,
-            firstName: newMember.nom.split(" ")[0],
-            lastName: newMember.nom.split(" ").slice(1).join(" "),
-            phone: null,
-            sendEmail: false,
-            role: mapRoleToDbRole(newMember.role),
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -356,9 +365,11 @@ const Equipe = () => {
                     <SelectValue />
                   </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Employé terrain">Employé terrain</SelectItem>
-                          <SelectItem value="Admin">Admin</SelectItem>
-                          <SelectItem value="Owner">Owner</SelectItem>
+                          <SelectItem value="Employé terrain">Employé terrain (App uniquement)</SelectItem>
+                          <SelectItem value="Owner">Owner (CRM + App optionnel)</SelectItem>
+                          <SelectItem value="Admin">Admin (CRM + App optionnel)</SelectItem>
+                          <SelectItem value="Manager">Manager (CRM + App optionnel)</SelectItem>
+                          <SelectItem value="Backoffice">Backoffice (CRM + App optionnel)</SelectItem>
                         </SelectContent>
                 </Select>
               </div>

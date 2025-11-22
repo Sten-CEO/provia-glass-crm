@@ -59,6 +59,15 @@ serve(async (req) => {
 
     const { employeeId, email, password, firstName, lastName, phone, sendEmail, role } = await req.json();
 
+    console.log('📥 Received request data:', {
+      employeeId,
+      email,
+      role,
+      firstName,
+      lastName,
+      passwordLength: password?.length
+    });
+
     if (!employeeId || !email) {
       throw new Error('Missing required fields: employeeId and email are required');
     }
@@ -67,7 +76,7 @@ serve(async (req) => {
       throw new Error('Password is required and must be at least 6 characters');
     }
 
-    console.log('Creating user account:', { email, role, employeeId });
+    console.log('✅ Validation passed, creating user account...');
 
     // Créer l'utilisateur Supabase (ne déclenche PAS handle_new_user car c'est admin.createUser)
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -117,6 +126,13 @@ serve(async (req) => {
     const validRoles = ['owner', 'admin', 'manager', 'backoffice', 'employe_terrain'];
     const memberRole = validRoles.includes(role) ? role : 'employe_terrain';
 
+    console.log('🎭 Role determination:', {
+      receivedRole: role,
+      isValidRole: validRoles.includes(role),
+      finalRole: memberRole,
+      validRoles
+    });
+
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
@@ -126,9 +142,13 @@ serve(async (req) => {
       });
 
     if (roleError) {
-      console.error('Error creating role:', roleError);
-      // Ne pas fail complètement, juste logger
+      console.error('❌ Error creating role:', roleError);
+      // Supprimer l'utilisateur créé si la création du rôle échoue
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+      throw new Error('Failed to create user role: ' + roleError.message);
     }
+
+    console.log('✅ User role created successfully:', memberRole);
 
     // TODO: Envoyer l'email d'invitation si sendEmail === true
     // Nécessite l'intégration Resend
