@@ -60,8 +60,14 @@ serve(async (req) => {
     const { employeeId, email, password, firstName, lastName, phone, sendEmail, role } = await req.json();
 
     if (!employeeId || !email) {
-      throw new Error('Missing required fields');
+      throw new Error('Missing required fields: employeeId and email are required');
     }
+
+    if (!password || password.trim().length < 6) {
+      throw new Error('Password is required and must be at least 6 characters');
+    }
+
+    console.log('Creating user account:', { email, role, employeeId });
 
     // Créer l'utilisateur Supabase (ne déclenche PAS handle_new_user car c'est admin.createUser)
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -72,6 +78,11 @@ serve(async (req) => {
         first_name: firstName,
         last_name: lastName,
         is_employee: true, // Flag pour éviter création company
+        role: role || 'employe_terrain',
+      },
+      app_metadata: {
+        provider: 'email',
+        role: role || 'employe_terrain',
       },
     });
 
