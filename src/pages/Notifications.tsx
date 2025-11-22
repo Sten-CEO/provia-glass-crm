@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Bell, CheckCheck } from "lucide-react";
@@ -20,33 +21,39 @@ interface Notification {
 }
 
 export default function Notifications() {
+  const { companyId } = useCurrentCompany();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'today' | '7days' | '30days'>('all');
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadNotifications();
+    if (companyId) {
+      loadNotifications();
 
-    const channel = supabase
-      .channel('notifications-page')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications'
-      }, () => {
-        loadNotifications();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel('notifications-page')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        }, () => {
+          loadNotifications();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [filter]);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [filter, companyId]);
 
   const loadNotifications = async () => {
+    if (!companyId) return;
+
     let query = supabase
       .from('notifications')
       .select('*')
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false });
 
     const now = new Date();

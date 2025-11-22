@@ -7,6 +7,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -26,6 +27,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const Planning = () => {
+  const { companyId } = useCurrentCompany();
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [allJobs, setAllJobs] = useState<any[]>([]);
@@ -69,24 +71,31 @@ const Planning = () => {
   );
 
   useEffect(() => {
-    loadJobs();
-    loadEmployes();
-    loadClients();
+    if (companyId) {
+      loadJobs();
+      loadEmployes();
+      loadClients();
 
-    const channel = supabase
-      .channel("planning-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
-        loadJobs();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel("planning-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+          loadJobs();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [companyId]);
 
   const loadJobs = async () => {
-    const { data } = await supabase.from("jobs").select("*");
+    if (!companyId) return;
+
+    const { data } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("company_id", companyId);
     if (data) {
       setAllJobs(data);
       applyFilters(data);
@@ -123,7 +132,12 @@ const Planning = () => {
   }, [filters]);
 
   const loadEmployes = async () => {
-    const { data } = await supabase.from("equipe").select("*");
+    if (!companyId) return;
+
+    const { data } = await supabase
+      .from("equipe")
+      .select("*")
+      .eq("company_id", companyId);
     if (data) {
       const formattedResources = data.map((emp) => ({
         id: emp.id,
@@ -134,7 +148,12 @@ const Planning = () => {
   };
 
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("*");
+    if (!companyId) return;
+
+    const { data } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("company_id", companyId);
     setClients(data || []);
   };
 
