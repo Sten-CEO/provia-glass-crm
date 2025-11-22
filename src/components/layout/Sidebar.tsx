@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
+import { useAccessControls } from "@/hooks/useAccessControls";
 import logo from "@/assets/logo.jpg";
 
 interface SidebarProps {
@@ -42,21 +43,23 @@ const navSections = [
   {
     label: "OPÉRATIONS",
     items: [
-      { title: "Tableau de bord", icon: LayoutDashboard, path: "/tableau-de-bord" },
-      { title: "Planning", icon: Calendar, path: "/planning" },
-      { title: "Agenda", icon: Calendar, path: "/agenda" },
-      { 
-        title: "Interventions", 
-        icon: Briefcase, 
+      { title: "Tableau de bord", icon: LayoutDashboard, path: "/tableau-de-bord", accessKey: "dashboard" },
+      { title: "Planning", icon: Calendar, path: "/planning", accessKey: "planning" },
+      { title: "Agenda", icon: Calendar, path: "/agenda", accessKey: "agenda" },
+      {
+        title: "Interventions",
+        icon: Briefcase,
         path: "/interventions",
+        accessKey: "jobs",
         subFunctions: [
           { label: "Historique & rapport", path: "/interventions/history" },
         ]
       },
-      { 
-        title: "Pointage", 
-        icon: Clock, 
+      {
+        title: "Pointage",
+        icon: Clock,
         path: "/timesheets",
+        accessKey: "timesheets",
         subFunctions: [
           { label: "Employés", path: "/pointage/employes" },
         ]
@@ -66,26 +69,28 @@ const navSections = [
   {
     label: "RELATIONNEL",
     items: [
-      { 
-        title: "Clients", 
-        icon: Users, 
+      {
+        title: "Clients",
+        icon: Users,
         path: "/clients",
+        accessKey: "clients",
         subFunctions: [
           { label: "Contrats", path: "/contracts" },
         ]
       },
-      { title: "Devis", icon: FileText, path: "/devis" },
-      { title: "Factures", icon: Receipt, path: "/factures" },
-      { title: "Paiements", icon: Receipt, path: "/paiements" },
+      { title: "Devis", icon: FileText, path: "/devis", accessKey: "devis" },
+      { title: "Factures", icon: Receipt, path: "/factures", accessKey: "factures" },
+      { title: "Paiements", icon: Receipt, path: "/paiements", accessKey: "paiements" },
     ],
   },
   {
     label: "RESSOURCES",
     items: [
-      { 
-        title: "Inventaire", 
-        icon: Package, 
+      {
+        title: "Inventaire",
+        icon: Package,
         path: "/inventaire",
+        accessKey: "inventaire",
         subFunctions: [
           { label: "Consommables", path: "/inventaire/consommables" },
           { label: "Matériels", path: "/inventaire/materiels" },
@@ -98,9 +103,9 @@ const navSections = [
   {
     label: "CONFIGURATION",
     items: [
-      { title: "Équipe", icon: UserCog, path: "/equipe" },
-      { title: "Paramètres", icon: Settings, path: "/parametres" },
-      { title: "Support", icon: HelpCircle, path: "/support" },
+      { title: "Équipe", icon: UserCog, path: "/equipe", accessKey: "equipe" },
+      { title: "Paramètres", icon: Settings, path: "/parametres", accessKey: "parametres" },
+      { title: "Support", icon: HelpCircle, path: "/support" }, // No access control for support
     ],
   },
 ];
@@ -108,6 +113,7 @@ const navSections = [
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const { isCollapsed, toggleCollapsed } = useSidebarCollapsed();
+  const { hasAccess, userRole } = useAccessControls();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem("pv_sidebar_expanded");
     return saved ? JSON.parse(saved) : {};
@@ -174,7 +180,19 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
       <div className="p-4 space-y-1 overflow-y-auto flex-1">
         {/* Navigation Sections */}
-        {navSections.map((section, idx) => (
+        {navSections.map((section, idx) => {
+          // Filter items based on access controls
+          const filteredItems = section.items.filter((item: any) => {
+            // If item has no accessKey, always show (like Support)
+            if (!item.accessKey) return true;
+            // Otherwise check if user has access
+            return hasAccess(item.accessKey);
+          });
+
+          // Don't render section if no items left after filtering
+          if (filteredItems.length === 0) return null;
+
+          return (
           <div key={section.label}>
             {!isCollapsed && (
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground/60 px-3 mt-4 mb-2 font-medium">
@@ -182,12 +200,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               </div>
             )}
             {isCollapsed && idx > 0 && <div className="my-3 border-t border-border/50" />}
-            
+
             <div className="space-y-1">
-              {section.items.map((item) => {
+              {filteredItems.map((item: any) => {
                 const hasSubFunctions = item.subFunctions && item.subFunctions.length > 0;
                 const isExpanded = expandedSections[item.path];
-                
+
                 return (
                   <div key={item.path}>
                     <div className="flex items-center gap-1">
@@ -280,7 +298,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               <div className="my-3 border-t border-border/50" />
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
     </aside>

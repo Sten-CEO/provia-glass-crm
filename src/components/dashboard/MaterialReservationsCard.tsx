@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 interface MaterialReservation {
   id: string;
@@ -28,6 +29,7 @@ export const MaterialReservationsCard = () => {
   const navigate = useNavigate();
   const [reservations, setReservations] = useState<MaterialReservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const { companyId } = useCurrentCompany();
 
   const parseDateSafe = (input?: string | null) => {
     if (!input) return null as Date | null;
@@ -40,6 +42,8 @@ export const MaterialReservationsCard = () => {
   };
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadReservations();
 
     // Subscribe to real-time updates
@@ -61,11 +65,13 @@ export const MaterialReservationsCard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadReservations = async () => {
+    if (!companyId) return;
+
     try {
-      // RLS policies automatically filter by company_id
+      // Explicit company_id filter for multi-tenant isolation
       const { data, error } = await supabase
         .from("material_reservations")
         .select(
@@ -78,6 +84,7 @@ export const MaterialReservationsCard = () => {
           job:jobs!material_reservations_job_id_fkey(id, titre, employe_nom, date, heure_debut, heure_fin)
         `
         )
+        .eq("company_id", companyId)
         .in("status", ["planned", "active"])
         .gte("scheduled_start", new Date().toISOString())
         .order("scheduled_start", { ascending: true })

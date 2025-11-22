@@ -7,14 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus, MapPin, Users, Clock } from "lucide-react";
 import { format, isToday, isTomorrow, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 export const AgendaColumn = () => {
   const [todayEvents, setTodayEvents] = useState<any[]>([]);
   const [tomorrowEvents, setTomorrowEvents] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const navigate = useNavigate();
+  const { companyId } = useCurrentCompany();
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadEvents();
 
     const channel = supabase
@@ -31,9 +35,11 @@ export const AgendaColumn = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadEvents = async () => {
+    if (!companyId) return;
+
     // Update statuses first based on dates
     await supabase.rpc('update_agenda_event_statuses');
 
@@ -44,6 +50,7 @@ export const AgendaColumn = () => {
     const { data } = await supabase
       .from('agenda_events' as any)
       .select('*')
+      .eq('company_id', companyId)
       .gte('start_at', now.toISOString())
       .lte('start_at', nextWeek.toISOString())
       .order('start_at');
