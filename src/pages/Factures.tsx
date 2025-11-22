@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ interface Client {
 
 const Factures = () => {
   const navigate = useNavigate();
+  const { companyId, loading: companyLoading } = useCurrentCompany();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [open, setOpen] = useState(false);
@@ -85,9 +87,12 @@ const Factures = () => {
   } = useBulkSelection(invoices);
 
   const loadInvoices = async () => {
+    if (!companyId) return;
+
     const { data, error } = await supabase
       .from("factures")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -99,25 +104,32 @@ const Factures = () => {
   };
 
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("id, nom");
+    if (!companyId) return;
+
+    const { data } = await supabase
+      .from("clients")
+      .select("id, nom")
+      .eq("company_id", companyId);
     setClients(data || []);
   };
 
   useEffect(() => {
-    loadInvoices();
-    loadClients();
+    if (companyId) {
+      loadInvoices();
+      loadClients();
 
-    const channel = supabase
-      .channel("factures-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
-        loadInvoices();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel("factures-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
+          loadInvoices();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [companyId]);
 
   const handleAddInvoice = async () => {
     if (!newInvoice.client_id || !newInvoice.montant) {
@@ -254,6 +266,32 @@ const Factures = () => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("fr-FR");
   };
+
+  // Show loading state while company is loading
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no company
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center glass-card p-8 max-w-md">
+          <h2 className="text-xl font-bold mb-4">Aucune société associée</h2>
+          <p className="text-muted-foreground mb-4">
+            Votre compte n'est pas associé à une société. Veuillez contacter un administrateur.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

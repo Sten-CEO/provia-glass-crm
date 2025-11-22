@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,7 @@ interface Quote {
 
 const Devis = () => {
   const navigate = useNavigate();
+  const { companyId, loading: companyLoading } = useCurrentCompany();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -62,9 +64,12 @@ const Devis = () => {
   } = useBulkSelection(quotes);
 
   const loadQuotes = async () => {
+    if (!companyId) return;
+
     const { data, error } = await supabase
       .from("devis")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -82,28 +87,31 @@ const Devis = () => {
     if (filter === "to_schedule") {
       setFilterStatus("to_schedule");
     }
-    loadQuotes();
 
-    const channel = supabase
-      .channel("devis-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "devis" }, () => {
-        loadQuotes();
-      })
-      .subscribe();
+    if (companyId) {
+      loadQuotes();
 
-    const handleDataChanged = (data: any) => {
-      if (data?.scope === "quotes") {
-        loadQuotes();
-      }
-    };
+      const channel = supabase
+        .channel("devis-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "devis" }, () => {
+          loadQuotes();
+        })
+        .subscribe();
 
-    eventBus.on(EVENTS.DATA_CHANGED, handleDataChanged);
+      const handleDataChanged = (data: any) => {
+        if (data?.scope === "quotes") {
+          loadQuotes();
+        }
+      };
 
-    return () => {
-      supabase.removeChannel(channel);
-      eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
-    };
-  }, []);
+      eventBus.on(EVENTS.DATA_CHANGED, handleDataChanged);
+
+      return () => {
+        supabase.removeChannel(channel);
+        eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
+      };
+    }
+  }, [companyId]);
 
   const handleDeleteQuote = async () => {
     if (!selectedQuote) return;
@@ -177,6 +185,32 @@ const Devis = () => {
       return dateStr;
     }
   };
+
+  // Show loading state while company is loading
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no company
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center glass-card p-8 max-w-md">
+          <h2 className="text-xl font-bold mb-4">Aucune société associée</h2>
+          <p className="text-muted-foreground mb-4">
+            Votre compte n'est pas associé à une société. Veuillez contacter un administrateur.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

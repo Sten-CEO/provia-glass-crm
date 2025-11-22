@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ interface Job {
 }
 
 const Jobs = () => {
+  const { companyId, loading: companyLoading } = useCurrentCompany();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [employes, setEmployes] = useState<any[]>([]);
@@ -85,9 +87,12 @@ const Jobs = () => {
   } = useBulkSelection(jobs);
 
   const loadJobs = async () => {
+    if (!companyId) return;
+
     const { data, error } = await supabase
       .from("jobs")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -99,36 +104,46 @@ const Jobs = () => {
   };
 
   const loadData = async () => {
-    const { data: clientsData } = await supabase.from("clients").select("id, nom");
-    const { data: employesData } = await supabase.from("equipe").select("id, nom");
+    if (!companyId) return;
+
+    const { data: clientsData } = await supabase
+      .from("clients")
+      .select("id, nom")
+      .eq("company_id", companyId);
+    const { data: employesData } = await supabase
+      .from("equipe")
+      .select("id, nom")
+      .eq("company_id", companyId);
     setClients(clientsData || []);
     setEmployes(employesData || []);
   };
 
   useEffect(() => {
-    loadJobs();
-    loadData();
+    if (companyId) {
+      loadJobs();
+      loadData();
 
-    const channel = supabase
-      .channel("jobs-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
-        loadJobs();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel("jobs-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
+          loadJobs();
+        })
+        .subscribe();
 
-    const handleDataChanged = (data: any) => {
-      if (data?.scope === 'jobs' || data?.scope === 'planning') {
-        loadJobs();
-      }
-    };
+      const handleDataChanged = (data: any) => {
+        if (data?.scope === 'jobs' || data?.scope === 'planning') {
+          loadJobs();
+        }
+      };
 
-    eventBus.on(EVENTS.DATA_CHANGED, handleDataChanged);
+      eventBus.on(EVENTS.DATA_CHANGED, handleDataChanged);
 
-    return () => {
-      supabase.removeChannel(channel);
-      eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+        eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
+      };
+    }
+  }, [companyId]);
 
   const handleAddJob = async () => {
     if (!newJob.titre || !newJob.client_id || !newJob.employe_id) {
@@ -265,6 +280,32 @@ const Jobs = () => {
     const matchesStatus = filterStatus === "all" || job.statut === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  // Show loading state while company is loading
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no company
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center glass-card p-8 max-w-md">
+          <h2 className="text-xl font-bold mb-4">Aucune société associée</h2>
+          <p className="text-muted-foreground mb-4">
+            Votre compte n'est pas associé à une société. Veuillez contacter un administrateur.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
