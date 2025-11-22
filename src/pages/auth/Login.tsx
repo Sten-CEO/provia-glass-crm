@@ -82,17 +82,25 @@ const Login = () => {
         if (roleError) {
           console.error("Role fetch error:", roleError);
           toast.error("Erreur lors de la récupération du rôle");
+          await supabase.auth.signOut();
           setLoading(false);
           return;
         }
 
         console.log("Role found:", userRole?.role);
+
+        // CRM Login: Block employee accounts
+        if (userRole?.role === 'employe_terrain') {
+          console.log("Employee account attempted CRM login");
+          toast.error("Identifiants incorrects");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
         toast.success("Connexion réussie");
-        
-        // Redirect based on role
-        const targetPath = userRole?.role === 'employe_terrain' ? "/employee" : "/tableau-de-bord";
-        console.log("Navigating to:", targetPath);
-        navigate(targetPath);
+        console.log("Navigating to: /tableau-de-bord");
+        navigate("/tableau-de-bord");
       }
     } catch (error: any) {
       console.error("Login error:", error);

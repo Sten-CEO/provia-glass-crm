@@ -36,24 +36,28 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Récupérer le company_id de l'admin qui crée l'employé
-    const { data: adminRole } = await supabaseAdmin
+    // Récupérer le company_id et role de l'utilisateur qui crée le membre
+    const { data: callerRole } = await supabaseAdmin
       .from('user_roles')
       .select('role, company_id')
       .eq('user_id', callingUser.id)
-      .eq('role', 'admin')
       .single();
 
-    if (!adminRole) {
-      throw new Error('Insufficient permissions - admin role required');
+    if (!callerRole) {
+      throw new Error('User role not found');
     }
 
-    const adminCompanyId = adminRole.company_id;
-    if (!adminCompanyId) {
-      throw new Error('Admin has no company assigned');
+    // Only owner, admin, and manager can create team members
+    if (!['owner', 'admin', 'manager'].includes(callerRole.role)) {
+      throw new Error('Insufficient permissions - owner, admin, or manager role required');
     }
 
-    const { employeeId, email, password, firstName, lastName, phone, sendEmail } = await req.json();
+    const companyId = callerRole.company_id;
+    if (!companyId) {
+      throw new Error('User has no company assigned');
+    }
+
+    const { employeeId, email, password, firstName, lastName, phone, sendEmail, role } = await req.json();
 
     if (!employeeId || !email) {
       throw new Error('Missing required fields');
@@ -78,15 +82,15 @@ serve(async (req) => {
 
     console.log('User created:', newUser.user.id);
 
-    // Lier l'utilisateur à l'équipe avec le même company_id que l'admin
+    // Lier l'utilisateur à l'équipe avec le même company_id
     const { error: updateError } = await supabaseAdmin
       .from('equipe')
-      .update({ 
+      .update({
         user_id: newUser.user.id,
         phone: phone || null,
         status: 'active',
-        app_access_status: 'active',
-        company_id: adminCompanyId, // Même company que l'admin
+        app_access_status: role === 'employe_terrain' ? 'active' : 'none',
+        company_id: companyId,
       })
       .eq('id', employeeId);
 
@@ -97,13 +101,17 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Créer le rôle employe_terrain avec le company_id de l'admin
+    // Créer le rôle avec le company_id et le rôle spécifié
+    // Valid roles: owner, admin, manager, backoffice, employe_terrain
+    const validRoles = ['owner', 'admin', 'manager', 'backoffice', 'employe_terrain'];
+    const memberRole = validRoles.includes(role) ? role : 'employe_terrain';
+
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
-        company_id: adminCompanyId, // Même company que l'admin
-        role: 'employe_terrain',
+        company_id: companyId,
+        role: memberRole,
       });
 
     if (roleError) {

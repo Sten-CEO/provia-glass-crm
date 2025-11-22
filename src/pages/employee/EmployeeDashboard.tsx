@@ -37,7 +37,7 @@ interface Notification {
 
 export const EmployeeDashboard = () => {
   const navigate = useNavigate();
-  const { employeeId, employeeName, loading: contextLoading } = useEmployee();
+  const { employeeId, employeeName, companyId, loading: contextLoading } = useEmployee();
   const [todayJobs, setTodayJobs] = useState<Intervention[]>([]);
   const [activeTimesheet, setActiveTimesheet] = useState<DayTimesheet | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -104,7 +104,7 @@ export const EmployeeDashboard = () => {
   };
 
   const loadDashboardData = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !companyId) return;
 
     try {
       // 1) Récupère les affectations formelles
@@ -122,6 +122,7 @@ export const EmployeeDashboard = () => {
         const { data, error } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .in("id", interventionIds)
           .not("statut", "in", '("Brouillon","À planifier")');
         if (error) throw error;
@@ -131,12 +132,14 @@ export const EmployeeDashboard = () => {
         const { data: jobsByArray } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .contains("assigned_employee_ids", [employeeId])
           .not("statut", "in", '("Brouillon","À planifier")');
 
         const { data: jobsByLegacy } = await supabase
           .from("jobs")
           .select("*")
+          .eq("company_id", companyId)
           .eq("employe_id", employeeId)
           .not("statut", "in", '("Brouillon","À planifier")');
 
@@ -172,11 +175,13 @@ export const EmployeeDashboard = () => {
       // @ts-ignore - avoid deep type instantiation from Supabase types here
       setActiveTimesheet((timesheetRow as any) ?? null);
 
-      // Charger les notifications non lues (simplified)
+      // Charger les notifications non lues pour cet employé dans cette société
       const { data: notifs } = await supabase
         .from("notifications")
         .select("*")
-        .eq("read", false)
+        .eq("company_id", companyId)
+        .eq("employee_id", employeeId)
+        .is("read_at", null)
         .order("created_at", { ascending: false })
         .limit(5);
 

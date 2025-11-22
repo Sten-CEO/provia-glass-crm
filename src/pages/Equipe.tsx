@@ -69,6 +69,9 @@ const Equipe = () => {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<TeamMember | null>(null);
+  const [tempPasswordDialogOpen, setTempPasswordDialogOpen] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string>("");
+  const [createdMemberEmail, setCreatedMemberEmail] = useState<string>("");
   const [newMember, setNewMember] = useState({
     nom: "",
     role: "Employé terrain" as const,
@@ -125,52 +128,126 @@ const Equipe = () => {
     }
   }, [company?.id]);
 
+  const generateTemporaryPassword = (): string => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * charset.length);
+      password += charset[randomIndex];
+    }
+    return password;
+  };
+
+  const mapRoleToDbRole = (role: string): string => {
+    // Map UI role names to database role names
+    const roleMapping: Record<string, string> = {
+      "Employé terrain": "employe_terrain",
+      "Owner": "owner",
+      "Admin": "admin",
+      "Manager": "manager",
+      "Backoffice": "backoffice",
+    };
+    return roleMapping[role] || "employe_terrain";
+  };
+
   const handleAddMember = async () => {
     if (!newMember.nom || !newMember.email) {
       toast.error("Nom et email requis");
       return;
     }
 
-    const { error} = await supabase.from("equipe").insert([
-      {
-        nom: newMember.nom,
-        role: newMember.role,
-        email: newMember.email,
-        competences: newMember.competences,
-        note: newMember.note,
-        access_controls: newMember.access_controls,
-        company_id: company?.id,
-      },
-    ]);
+    try {
+      // Step 1: Create entry in equipe table
+      const { data: newEmployeeData, error: insertError } = await supabase
+        .from("equipe")
+        .insert([
+          {
+            nom: newMember.nom,
+            role: newMember.role,
+            email: newMember.email,
+            competences: newMember.competences,
+            note: newMember.note,
+            access_controls: newMember.access_controls,
+            company_id: company?.id,
+          },
+        ])
+        .select()
+        .single();
 
-    if (error) {
-      toast.error("Échec de création");
-      return;
+      if (insertError || !newEmployeeData) {
+        toast.error("Échec de création");
+        return;
+      }
+
+      // Step 2: Generate temporary password
+      const tempPassword = generateTemporaryPassword();
+
+      // Step 3: Call edge function to create auth account
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast.error("Session expirée");
+        return;
+      }
+
+      const response = await fetch(
+        `${supabase.supabaseUrl}/functions/v1/create-employee-account`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({
+            employeeId: newEmployeeData.id,
+            email: newMember.email,
+            password: tempPassword,
+            firstName: newMember.nom.split(" ")[0],
+            lastName: newMember.nom.split(" ").slice(1).join(" "),
+            phone: null,
+            sendEmail: false,
+            role: mapRoleToDbRole(newMember.role),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la création du compte");
+      }
+
+      // Step 4: Show temporary password to user
+      setCreatedMemberEmail(newMember.email);
+      setTemporaryPassword(tempPassword);
+      setTempPasswordDialogOpen(true);
+
+      toast.success("Membre créé avec succès");
+      setNewMember({
+        nom: "",
+        role: "Employé terrain",
+        email: "",
+        competences: [],
+        note: "",
+        access_controls: {
+          devis: true,
+          planning: true,
+          factures: true,
+          clients: true,
+          jobs: true,
+          timesheets: true,
+          paiements: true,
+          parametres: false,
+          equipe: false,
+          inventaire: true,
+          agenda: true,
+          dashboard: true,
+        },
+      });
+      setOpen(false);
+    } catch (error: any) {
+      console.error("Error creating member:", error);
+      toast.error(error.message || "Erreur lors de la création du membre");
     }
-
-    toast.success("Employé invité avec succès");
-    setNewMember({
-      nom: "",
-      role: "Employé terrain",
-      email: "",
-      competences: [],
-      note: "",
-      access_controls: {
-        devis: true,
-        planning: true,
-        factures: true,
-        clients: true,
-        jobs: true,
-        timesheets: true,
-        paiements: true,
-        parametres: false,
-        equipe: false,
-        inventaire: true,
-        agenda: true,
-        dashboard: true,
-      },
-    });
-    setOpen(false);
   };
 
   const handleEditMember = async () => {
@@ -520,6 +597,62 @@ const Equipe = () => {
           onSuccess={loadTeam}
         />
       )}
+
+      {/* Temporary Password Dialog */}
+      <Dialog open={tempPasswordDialogOpen} onOpenChange={setTempPasswordDialogOpen}>
+        <DialogContent className="glass-modal">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Compte créé avec succès!</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border-2 border-yellow-500">
+              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200 mb-2">
+                ⚠️ Important: Notez bien ce mot de passe temporaire
+              </p>
+              <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                Ce mot de passe ne sera affiché qu'une seule fois. Assurez-vous de le copier avant de fermer cette fenêtre.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Email de connexion:</Label>
+              <div className="p-3 bg-muted rounded-lg font-mono text-sm">
+                {createdMemberEmail}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Mot de passe temporaire:</Label>
+              <div className="p-3 bg-muted rounded-lg font-mono text-lg font-bold break-all">
+                {temporaryPassword}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(temporaryPassword);
+                  toast.success("Mot de passe copié!");
+                }}
+                className="w-full"
+              >
+                📋 Copier le mot de passe
+              </Button>
+            </div>
+
+            <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-500">
+              <p className="text-sm text-blue-900 dark:text-blue-200">
+                💡 Le nouveau membre peut maintenant se connecter avec ces identifiants.
+                Il est recommandé de lui demander de changer son mot de passe après la première connexion.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setTempPasswordDialogOpen(false)} className="bg-primary hover:bg-primary/90">
+              J'ai noté le mot de passe
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
