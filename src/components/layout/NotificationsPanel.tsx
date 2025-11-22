@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 interface Notification {
   id: string;
@@ -24,8 +25,11 @@ export const NotificationsPanel = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
+  const { companyId } = useCurrentCompany();
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadNotifications();
 
     const channel = supabase
@@ -42,12 +46,15 @@ export const NotificationsPanel = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadNotifications = async () => {
+    if (!companyId) return;
+
     const { data } = await supabase
       .from('notifications')
       .select('*')
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -66,9 +73,12 @@ export const NotificationsPanel = () => {
   };
 
   const markAllAsRead = async () => {
+    if (!companyId) return;
+
     await supabase
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
+      .eq('company_id', companyId)
       .is('read_at', null);
     loadNotifications();
     toast.success("Toutes les notifications marquées comme lues");

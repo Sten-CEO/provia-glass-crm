@@ -6,6 +6,7 @@ import { Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 interface QuoteToPlan {
   id: string;
@@ -20,8 +21,11 @@ export const ToPlanCard = () => {
   const [quotesToPlan, setQuotesToPlan] = useState<QuoteToPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { companyId } = useCurrentCompany();
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadQuotesToPlan();
 
     // Subscribe to changes
@@ -34,14 +38,17 @@ export const ToPlanCard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadQuotesToPlan = async () => {
+    if (!companyId) return;
+
     try {
       // Get accepted/signed quotes
       const { data: quotes } = await supabase
         .from("devis")
         .select("id, numero, client_nom, total_ttc, planned_date, statut")
+        .eq("company_id", companyId)
         .in("statut", ["Accepté", "Signé"])
         .order("created_at", { ascending: false });
 
@@ -53,11 +60,12 @@ export const ToPlanCard = () => {
 
       // Check which ones don't have an intervention yet
       const quotesWithoutJobs: QuoteToPlan[] = [];
-      
+
       for (const quote of quotes) {
         const { data: job } = await supabase
           .from("jobs")
           .select("id")
+          .eq("company_id", companyId)
           .eq("quote_id", quote.id)
           .maybeSingle();
 

@@ -3,13 +3,17 @@ import { AlertCircle, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 export function InvoicingAlertsCard() {
   const [toInvoiceCount, setToInvoiceCount] = useState(0);
   const [awaitingPaymentCount, setAwaitingPaymentCount] = useState(0);
   const navigate = useNavigate();
+  const { companyId } = useCurrentCompany();
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadStats();
 
     const channel = supabase
@@ -21,13 +25,16 @@ export function InvoicingAlertsCard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadStats = async () => {
+    if (!companyId) return;
+
     // Interventions terminées sans facture liée = À facturer
     const { data: completedJobs } = await supabase
       .from("jobs")
       .select("id")
+      .eq("company_id", companyId)
       .eq("statut", "Terminée");
 
     if (!completedJobs) {
@@ -42,6 +49,7 @@ export function InvoicingAlertsCard() {
     const { data: linkedInvoices } = await supabase
       .from("factures")
       .select("id, intervention_id, sent_at, paid_at")
+      .eq("company_id", companyId)
       .in("intervention_id", jobIds);
 
     // Interventions terminées sans facture = À facturer

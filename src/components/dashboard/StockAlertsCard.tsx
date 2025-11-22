@@ -3,13 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { AlertCircle, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 export const StockAlertsCard = () => {
   const navigate = useNavigate();
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { companyId } = useCurrentCompany();
 
   useEffect(() => {
+    if (!companyId) return;
+
     loadStockAlerts();
 
     const channel = supabase
@@ -21,14 +25,17 @@ export const StockAlertsCard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [companyId]);
 
   const loadStockAlerts = async () => {
+    if (!companyId) return;
+
     try {
       // Get items with qty_reserved
       const { data: items, error } = await supabase
         .from("inventory_items")
         .select("*")
+        .eq("company_id", companyId)
         .order("name");
 
       if (error) throw error;
