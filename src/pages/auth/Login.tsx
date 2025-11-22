@@ -91,13 +91,16 @@ const Login = () => {
 
         // CRM Login: Block employee accounts
         if (userRole?.role === 'employe_terrain') {
-          console.log("Employee account attempted CRM login");
-          toast.error("Identifiants incorrects");
+          console.log("❌ Employee account attempted CRM login - BLOCKING");
+          toast.error("Ce compte est réservé à l'application employé. Veuillez utiliser la page de connexion employé.", {
+            duration: 5000,
+          });
           await supabase.auth.signOut();
           setLoading(false);
           return;
         }
 
+        console.log("✅ CRM access granted for role:", userRole?.role);
         toast.success("Connexion réussie");
         console.log("Navigating to: /tableau-de-bord");
         navigate("/tableau-de-bord");
