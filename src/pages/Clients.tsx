@@ -5,6 +5,7 @@ import { Plus, Search, Edit, Trash2, Download, Upload, X, ChevronDown, ChevronRi
 import { DisplayOptionsPanel } from "@/components/clients/DisplayOptionsPanel";
 import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +82,7 @@ interface SortConfig {
 type QuickFilter = "actifs" | "factures_encaisser" | "en_retard" | "devis_acceptes" | "jobs_cours" | "echeance_semaine" | "sans_activite";
 
 // Component for expanded row view
-const ExpandedClientView = ({ clientId }: { clientId: string }) => {
+const ExpandedClientView = ({ clientId, companyId }: { clientId: string; companyId: string }) => {
   const [data, setData] = useState<{
     devis: any[];
     factures: any[];
@@ -100,9 +101,9 @@ const ExpandedClientView = ({ clientId }: { clientId: string }) => {
 
     const loadData = async () => {
       const [devisRes, facturesRes, jobsRes] = await Promise.all([
-        supabase.from("devis").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
-        supabase.from("factures").select("numero, statut, created_at").eq("client_id", clientId).order("created_at", { ascending: false }).limit(2),
-        supabase.from("jobs").select("titre, date, statut").eq("client_id", clientId).in("statut", ["En cours", "À faire", "Assigné"]).limit(2),
+        supabase.from("devis").select("numero, statut, created_at").eq("client_id", clientId).eq("company_id", companyId).order("created_at", { ascending: false }).limit(2),
+        supabase.from("factures").select("numero, statut, created_at").eq("client_id", clientId).eq("company_id", companyId).order("created_at", { ascending: false }).limit(2),
+        supabase.from("jobs").select("titre, date, statut").eq("client_id", clientId).eq("company_id", companyId).in("statut", ["En cours", "À faire", "Assigné"]).limit(2),
       ]);
 
       if (mounted) {
@@ -121,7 +122,7 @@ const ExpandedClientView = ({ clientId }: { clientId: string }) => {
       mounted = false;
       clearTimeout(timeout);
     };
-  }, [clientId]);
+  }, [clientId, companyId]);
 
   if (data.loading) {
     return (
@@ -213,6 +214,7 @@ const ExpandedClientView = ({ clientId }: { clientId: string }) => {
 };
 
 const Clients = () => {
+  const { companyId, loading: companyLoading } = useCurrentCompany();
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsSummary, setClientsSummary] = useState<Map<string, ClientSummary>>(new Map());
   const [search, setSearch] = useState("");
@@ -335,9 +337,12 @@ const Clients = () => {
 
   // Load clients and their summaries
   const loadClients = async () => {
+    if (!companyId) return;
+
     const { data, error } = await supabase
       .from("clients")
       .select("*")
+      .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -346,17 +351,17 @@ const Clients = () => {
     }
 
     setClients(data || []);
-    
+
     // Load detailed summaries for all clients
     if (data) {
       const summaries = new Map<string, ClientSummary>();
-      
+
       for (const client of data) {
         const [devisData, facturesData, jobsData, planningData] = await Promise.all([
-          supabase.from("devis").select("statut, created_at, numero").eq("client_id", client.id).order("created_at", { ascending: false }),
-          supabase.from("factures").select("statut, total_ttc, created_at, numero, date_paiement, echeance").eq("client_id", client.id).order("created_at", { ascending: false }),
-          supabase.from("jobs").select("statut, created_at, titre").eq("client_id", client.id).order("created_at", { ascending: false }),
-          supabase.from("jobs").select("date, heure_debut, employe_nom").eq("client_id", client.id).gte("date", new Date().toISOString().split("T")[0]).order("date", { ascending: true }).limit(1),
+          supabase.from("devis").select("statut, created_at, numero").eq("client_id", client.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+          supabase.from("factures").select("statut, total_ttc, created_at, numero, date_paiement, echeance").eq("client_id", client.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+          supabase.from("jobs").select("statut, created_at, titre").eq("client_id", client.id).eq("company_id", companyId).order("created_at", { ascending: false }),
+          supabase.from("jobs").select("date, heure_debut, employe_nom").eq("client_id", client.id).eq("company_id", companyId).gte("date", new Date().toISOString().split("T")[0]).order("date", { ascending: true }).limit(1),
         ]);
 
         // Devis status priority
@@ -452,28 +457,30 @@ const Clients = () => {
   };
 
   useEffect(() => {
-    loadClients();
+    if (companyId) {
+      loadClients();
 
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel("clients-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "clients",
-        },
-        () => {
-          loadClients();
-        }
-      )
-      .subscribe();
+      // Subscribe to realtime changes
+      const channel = supabase
+        .channel("clients-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "clients",
+          },
+          () => {
+            loadClients();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [companyId]);
 
   const handleAddClient = async () => {
     if (!newClient.nom || (!newClient.email && !newClient.telephone)) {
@@ -846,6 +853,32 @@ const Clients = () => {
     };
     return statusMap[statut || "nouveau"] || statusMap.nouveau;
   };
+
+  // Show loading state while company is loading
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no company
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center glass-card p-8 max-w-md">
+          <h2 className="text-xl font-bold mb-4">Aucune société associée</h2>
+          <p className="text-muted-foreground mb-4">
+            Votre compte n'est pas associé à une société. Veuillez contacter un administrateur.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -1503,10 +1536,10 @@ const Clients = () => {
                         </div>
                       </td>
                     </tr>
-                    {isExpanded && (
+                    {isExpanded && companyId && (
                       <tr key={`${client.id}-expanded`} className="border-b border-white/5 bg-muted/10">
                         <td colSpan={14} className="p-4">
-                          <ExpandedClientView clientId={client.id} />
+                          <ExpandedClientView clientId={client.id} companyId={companyId} />
                         </td>
                       </tr>
                     )}
