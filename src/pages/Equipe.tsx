@@ -84,9 +84,12 @@ const Equipe = () => {
   });
 
   const loadTeam = async () => {
+    if (!company?.id) return;
+
     const { data, error } = await supabase
       .from("equipe")
       .select("*")
+      .eq("company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -98,19 +101,21 @@ const Equipe = () => {
   };
 
   useEffect(() => {
-    loadTeam();
+    if (company?.id) {
+      loadTeam();
 
-    const channel = supabase
-      .channel("equipe-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "equipe" }, () => {
-        loadTeam();
-      })
-      .subscribe();
+      const channel = supabase
+        .channel("equipe-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "equipe" }, () => {
+          loadTeam();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [company?.id]);
 
   const handleAddMember = async () => {
     if (!newMember.nom || !newMember.email) {

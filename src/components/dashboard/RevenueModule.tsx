@@ -9,12 +9,14 @@ import { CalendarIcon, Eye, EyeOff } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 import { cn } from "@/lib/utils";
 
 type Period = "jour" | "semaine" | "30jours" | "personnalise";
 type DisplayMode = "brut" | "net";
 
 export const RevenueModule = () => {
+  const { companyId } = useCurrentCompany();
   const [visible, setVisible] = useState(true);
   const [period, setPeriod] = useState<Period>("30jours");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("brut");
@@ -33,20 +35,22 @@ export const RevenueModule = () => {
   }, []);
 
   useEffect(() => {
-    loadRevenueData();
+    if (companyId) {
+      loadRevenueData();
 
-    // Subscribe to real-time changes on factures
-    const channel = supabase
-      .channel("revenue-factures-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
-        loadRevenueData();
-      })
-      .subscribe();
+      // Subscribe to real-time changes on factures
+      const channel = supabase
+        .channel("revenue-factures-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "factures" }, () => {
+          loadRevenueData();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [period, displayMode, dateRange]);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [period, displayMode, dateRange, companyId]);
 
   const loadRevenueData = async () => {
     let startDate: Date;
@@ -71,9 +75,12 @@ export const RevenueModule = () => {
         break;
     }
 
+    if (!companyId) return;
+
     const { data: factures } = await supabase
       .from("factures")
       .select("*")
+      .eq("company_id", companyId)
       .eq("statut", "Payée")
       .gte("date_paiement", startDate.toISOString())
       .lte("date_paiement", endDate.toISOString());
