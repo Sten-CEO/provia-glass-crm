@@ -36,7 +36,7 @@ import { CreateEmployeeAccessDialog } from "@/components/equipe/CreateEmployeeAc
 interface TeamMember {
   id: string;
   nom: string;
-  role: "Owner" | "Admin" | "Employé terrain";
+  role: "Owner" | "Admin" | "Manager" | "Backoffice" | "Employé terrain";
   email: string;
   competences: string[];
   note: string | null;
