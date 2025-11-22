@@ -72,6 +72,11 @@ serve(async (req) => {
         first_name: firstName,
         last_name: lastName,
         is_employee: true, // Flag pour éviter création company
+        role: role || 'employe_terrain',
+      },
+      app_metadata: {
+        provider: 'email',
+        role: role || 'employe_terrain',
       },
     });
 

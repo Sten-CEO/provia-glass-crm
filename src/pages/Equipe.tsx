@@ -190,6 +190,10 @@ const Equipe = () => {
         return;
       }
 
+      console.log("📝 Creating account for:", newMember.email);
+      console.log("🔑 Generated password:", tempPassword);
+      console.log("👤 Role:", mapRoleToDbRole(newMember.role));
+
       const response = await fetch(
         `${supabase.supabaseUrl}/functions/v1/create-employee-account`,
         {
@@ -211,10 +215,16 @@ const Equipe = () => {
         }
       );
 
+      console.log("📡 Edge function response status:", response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("❌ Edge function error:", errorData);
         throw new Error(errorData.error || "Erreur lors de la création du compte");
       }
+
+      const result = await response.json();
+      console.log("✅ Account created successfully:", result);
 
       // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
