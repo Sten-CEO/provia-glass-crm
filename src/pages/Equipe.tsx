@@ -72,6 +72,7 @@ const Equipe = () => {
   const [tempPasswordDialogOpen, setTempPasswordDialogOpen] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string>("");
   const [createdMemberEmail, setCreatedMemberEmail] = useState<string>("");
+  const [createdMemberRole, setCreatedMemberRole] = useState<string>("");
   const [newMember, setNewMember] = useState({
     nom: "",
     role: "Employé terrain" as const,
@@ -229,6 +230,7 @@ const Equipe = () => {
       // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
       setTemporaryPassword(tempPassword);
+      setCreatedMemberRole(newMember.role);
       setTempPasswordDialogOpen(true);
 
       toast.success("Membre créé avec succès");
@@ -610,7 +612,7 @@ const Equipe = () => {
 
       {/* Temporary Password Dialog */}
       <Dialog open={tempPasswordDialogOpen} onOpenChange={setTempPasswordDialogOpen}>
-        <DialogContent className="glass-modal">
+        <DialogContent className="glass-modal max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Compte créé avec succès!</DialogTitle>
           </DialogHeader>
@@ -650,9 +652,55 @@ const Equipe = () => {
             </div>
 
             <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-500">
-              <p className="text-sm text-blue-900 dark:text-blue-200">
-                💡 Le nouveau membre peut maintenant se connecter avec ces identifiants.
-                Il est recommandé de lui demander de changer son mot de passe après la première connexion.
+              <p className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-2">
+                🔐 Page de connexion à utiliser:
+              </p>
+              {createdMemberRole === "Employé terrain" ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
+                    Ce membre doit se connecter sur l'<strong>application employé</strong>:
+                  </p>
+                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-sm break-all">
+                    {window.location.origin}/employee/login
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/employee/login`);
+                      toast.success("URL copiée!");
+                    }}
+                    className="w-full"
+                  >
+                    📋 Copier l'URL de connexion
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-900 dark:text-blue-200">
+                    Ce membre doit se connecter sur le <strong>CRM</strong> (pas l'app employé):
+                  </p>
+                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-sm break-all">
+                    {window.location.origin}/auth/login
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/auth/login`);
+                      toast.success("URL copiée!");
+                    }}
+                    className="w-full"
+                  >
+                    📋 Copier l'URL de connexion
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-500">
+              <p className="text-sm text-green-900 dark:text-green-200">
+                💡 Il est recommandé de demander au nouveau membre de changer son mot de passe après la première connexion.
               </p>
             </div>
           </div>
