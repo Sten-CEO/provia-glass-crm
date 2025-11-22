@@ -23,11 +23,43 @@ export const EmployeeLogin = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Identifiants incorrects");
+        } else {
+          toast.error(error.message || "Erreur de connexion");
+        }
+        setLoading(false);
+        return;
+      }
 
-      // Redirect to employee dashboard
-      navigate("/employee");
-      toast.success("Connexion réussie");
+      if (data.session) {
+        // Verify that this is an employee account
+        const { data: userRole, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.session.user.id)
+          .single();
+
+        if (roleError) {
+          toast.error("Erreur lors de la vérification du compte");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Employee App Login: Block non-employee accounts
+        if (userRole?.role !== 'employe_terrain') {
+          toast.error("Identifiants incorrects");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Valid employee account - redirect to employee dashboard
+        toast.success("Connexion réussie");
+        navigate("/employee");
+      }
     } catch (error: any) {
       toast.error(error.message || "Erreur de connexion");
     } finally {
