@@ -283,6 +283,7 @@ const Equipe = () => {
         competences: selectedMember.competences,
         note: selectedMember.note,
         access_controls: selectedMember.access_controls,
+        app_access_status: selectedMember.app_access_status,
       })
       .eq("id", selectedMember.id);
 
@@ -294,6 +295,7 @@ const Equipe = () => {
     toast.success("Employé modifié avec succès");
     setEditOpen(false);
     setSelectedMember(null);
+    loadTeam(); // Reload to show updated status
   };
 
   const handleDeleteMember = async () => {
@@ -451,10 +453,21 @@ const Equipe = () => {
                   <td className="p-4 text-muted-foreground">{member.email}</td>
                   <td className="p-4">
                     {member.user_id ? (
-                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                        <Smartphone className="h-3 w-3 mr-1" />
-                        {member.app_access_status === 'suspended' ? 'Suspendu' : 'Actif'}
-                      </Badge>
+                      member.app_access_status === 'active' ? (
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                          <Smartphone className="h-3 w-3 mr-1" />
+                          Actif
+                        </Badge>
+                      ) : member.app_access_status === 'suspended' ? (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                          <Smartphone className="h-3 w-3 mr-1" />
+                          Suspendu
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">
+                          CRM seulement
+                        </Badge>
+                      )
                     ) : (
                       <Badge variant="outline" className="bg-muted text-muted-foreground">
                         Aucun
@@ -564,6 +577,24 @@ const Equipe = () => {
                   className="glass-card"
                 />
               </div>
+              {selectedMember.user_id && (
+                <div>
+                  <Label>Accès Application Mobile</Label>
+                  <Select
+                    value={selectedMember.app_access_status || 'none'}
+                    onValueChange={(v: any) => setSelectedMember({ ...selectedMember, app_access_status: v })}
+                  >
+                    <SelectTrigger className="glass-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun (CRM seulement)</SelectItem>
+                      <SelectItem value="active">Actif</SelectItem>
+                      <SelectItem value="suspended">Suspendu</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label className="mb-2 block">Accès UI</Label>
                 <div className="space-y-2 glass-card p-4 rounded-lg">

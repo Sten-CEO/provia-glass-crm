@@ -14,7 +14,7 @@
 
 3. Link to your Supabase project:
    ```bash
-   supabase link --project-ref orsshwehenldhlvrhfin
+   supabase link --project-ref rryjcqcxhpccgzkhgdqr
    ```
 
 ## Deploy the create-employee-account Edge Function

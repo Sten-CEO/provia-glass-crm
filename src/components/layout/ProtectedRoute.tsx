@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAccessControls, type AccessControls } from "@/hooks/useAccessControls";
+import { toast } from "sonner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -21,13 +22,21 @@ export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps
 
     // Check if user has required access
     if (!hasAccess(requiredAccess)) {
+      console.log(`❌ Access denied to ${requiredAccess} for role ${userRole}`);
+
+      // Show error toast
+      toast.error("Accès refusé", {
+        description: "Vous n'avez pas les autorisations nécessaires pour accéder à cette section.",
+        duration: 5000,
+      });
+
       // Redirect to dashboard with error message
       navigate("/tableau-de-bord", {
         replace: true,
         state: { from: location, accessDenied: true }
       });
     }
-  }, [requiredAccess, hasAccess, loading, navigate, location]);
+  }, [requiredAccess, hasAccess, loading, navigate, location, userRole]);
 
   // Show loading while checking permissions
   if (loading) {
