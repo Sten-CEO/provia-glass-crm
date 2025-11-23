@@ -7,6 +7,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // VERSION CHECK - This log proves which version is deployed
+  console.log('🚀 EDGE FUNCTION VERSION: 2025-11-23-FINAL');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
