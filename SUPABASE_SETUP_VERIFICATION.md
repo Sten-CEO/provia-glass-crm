@@ -40,7 +40,7 @@ npm install -g supabase
 supabase login
 
 # 3. Lier votre projet
-supabase link --project-ref orsshwehenldhlvrhfin
+supabase link --project-ref rryjcqcxhpccgzkhgdqr
 
 # 4. Déployer la fonction
 supabase functions deploy create-employee-account
