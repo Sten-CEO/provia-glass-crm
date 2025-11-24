@@ -86,32 +86,10 @@ export function useAccessControls() {
           console.log('   role:', role);
           console.log('   access_controls:', JSON.stringify(userData.access_controls, null, 2));
           console.log('   access_controls_keys:', userData.access_controls ? Object.keys(userData.access_controls) : 'NULL');
-          console.log('   is_owner_or_admin:', role === 'Owner' || role === 'Admin');
-          console.log('   access_controls is empty?', !userData.access_controls || Object.keys(userData.access_controls).length === 0);
 
-          // Use access_controls from database
-          // Owner and Admin get full access only if access_controls is not explicitly set
-          if ((role === 'Owner' || role === 'Admin') && (!userData.access_controls || Object.keys(userData.access_controls).length === 0)) {
-            console.log('✅ Owner/Admin with no explicit access_controls → Full access granted');
-            setAccessControls({
-              dashboard: true,
-              devis: true,
-              planning: true,
-              agenda: true,
-              jobs: true,
-              timesheets: true,
-              clients: true,
-              factures: true,
-              paiements: true,
-              inventaire: true,
-              equipe: true,
-              parametres: true,
-            });
-          } else {
-            // For all roles, use access_controls from database (even Owner/Admin if set)
-            console.log('✅ Using access_controls from database:', JSON.stringify(userData.access_controls, null, 2));
-            setAccessControls(userData.access_controls || {});
-          }
+          // ALWAYS use access_controls from database - NO automatic full access
+          console.log('✅ Using EXACT access_controls from database');
+          setAccessControls(userData.access_controls || {});
         }
 
         setLoading(false);
@@ -146,25 +124,9 @@ export function useAccessControls() {
 
           setUserRole(newData.role);
 
-          // Same logic as above: use access_controls from database
-          if ((newData.role === 'Owner' || newData.role === 'Admin') && (!newData.access_controls || Object.keys(newData.access_controls).length === 0)) {
-            setAccessControls({
-              dashboard: true,
-              devis: true,
-              planning: true,
-              agenda: true,
-              jobs: true,
-              timesheets: true,
-              clients: true,
-              factures: true,
-              paiements: true,
-              inventaire: true,
-              equipe: true,
-              parametres: true,
-            });
-          } else {
-            setAccessControls(newData.access_controls || {});
-          }
+          // ALWAYS use EXACT access_controls from database
+          console.log('✅ Real-time: Using EXACT access_controls from database');
+          setAccessControls(newData.access_controls || {});
         }
       )
       .subscribe();
