@@ -29,6 +29,7 @@ export function useAccessControls() {
   const [accessControls, setAccessControls] = useState<AccessControls>({});
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAccessControls = async () => {
@@ -40,6 +41,8 @@ export function useAccessControls() {
           setLoading(false);
           return;
         }
+
+        setUserId(session.user.id);
 
         // Fetch user's role and access_controls from equipe table
         const { data: userData, error } = await supabase
@@ -73,8 +76,9 @@ export function useAccessControls() {
           const role = userData.role;
           setUserRole(role);
 
-          // Owner and Admin have full access by default
-          if (role === 'Owner' || role === 'Admin') {
+          // Use access_controls from database
+          // Owner and Admin get full access only if access_controls is not explicitly set
+          if ((role === 'Owner' || role === 'Admin') && (!userData.access_controls || Object.keys(userData.access_controls).length === 0)) {
             setAccessControls({
               dashboard: true,
               devis: true,
@@ -88,10 +92,9 @@ export function useAccessControls() {
               inventaire: true,
               equipe: true,
               parametres: true,
-              ...userData.access_controls, // Allow override via access_controls
             });
           } else {
-            // For other roles, use access_controls from database
+            // For all roles, use access_controls from database (even Owner/Admin if set)
             setAccessControls(userData.access_controls || {});
           }
         }
@@ -105,6 +108,57 @@ export function useAccessControls() {
 
     fetchAccessControls();
   }, []);
+
+  // Real-time listener for access_controls changes
+  useEffect(() => {
+    if (!userId) return;
+
+    console.log('🔄 Setting up real-time listener for access controls changes');
+
+    const channel = supabase
+      .channel(`access_controls_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'equipe',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('🔄 Access controls updated in real-time:', payload.new);
+          const newData = payload.new as any;
+
+          setUserRole(newData.role);
+
+          // Same logic as above: use access_controls from database
+          if ((newData.role === 'Owner' || newData.role === 'Admin') && (!newData.access_controls || Object.keys(newData.access_controls).length === 0)) {
+            setAccessControls({
+              dashboard: true,
+              devis: true,
+              planning: true,
+              agenda: true,
+              jobs: true,
+              timesheets: true,
+              clients: true,
+              factures: true,
+              paiements: true,
+              inventaire: true,
+              equipe: true,
+              parametres: true,
+            });
+          } else {
+            setAccessControls(newData.access_controls || {});
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time listener');
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   /**
    * Check if user has access to a specific feature
