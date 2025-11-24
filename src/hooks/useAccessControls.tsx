@@ -45,29 +45,30 @@ export function useAccessControls() {
         setUserId(session.user.id);
 
         // Fetch user's role and access_controls from equipe table
-        const { data: userData, error } = await supabase
+        // Order by updated_at DESC to get the most recent entry
+        // This handles cases where there might be duplicate rows
+        const { data: userDataArray, error } = await supabase
           .from('equipe')
-          .select('role, access_controls')
+          .select('role, access_controls, updated_at')
           .eq('user_id', session.user.id)
-          .single();
+          .order('updated_at', { ascending: false });
+
+        // Take the first (most recent) entry
+        const userData = userDataArray && userDataArray.length > 0 ? userDataArray[0] : null;
+
+        console.log(`📊 Found ${userDataArray?.length || 0} row(s) in equipe table for user ${session.user.id}`);
+        if (userDataArray && userDataArray.length > 1) {
+          console.warn('⚠️ Multiple rows found! Using the most recent one:', userData);
+        }
 
         if (error) {
           console.error('Error fetching access controls:', error);
-          // Default: grant all access if error (fail-open for Owner/Admin)
-          setAccessControls({
-            dashboard: true,
-            devis: true,
-            planning: true,
-            agenda: true,
-            jobs: true,
-            timesheets: true,
-            clients: true,
-            factures: true,
-            paiements: true,
-            inventaire: true,
-            equipe: true,
-            parametres: true,
-          });
+          setLoading(false);
+          return;
+        }
+
+        if (!userData) {
+          console.warn('No user data found in equipe table');
           setLoading(false);
           return;
         }
