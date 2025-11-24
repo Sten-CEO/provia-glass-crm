@@ -1,7 +1,6 @@
-import { ReactNode, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { ReactNode } from "react";
 import { useAccessControls, type AccessControls } from "@/hooks/useAccessControls";
-import { toast } from "sonner";
+import { AccessDeniedOverlay } from "./AccessDeniedOverlay";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,34 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps) => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { hasAccess, loading, userRole } = useAccessControls();
-
-  useEffect(() => {
-    // Wait for loading to complete
-    if (loading) return;
-
-    // If no specific access required, allow access
-    if (!requiredAccess) return;
-
-    // Check if user has required access
-    if (!hasAccess(requiredAccess)) {
-      console.log(`❌ Access denied to ${requiredAccess} for role ${userRole}`);
-
-      // Show error toast
-      toast.error("Accès refusé", {
-        description: "Vous n'avez pas les autorisations nécessaires pour accéder à cette section.",
-        duration: 5000,
-      });
-
-      // Redirect to dashboard with error message
-      navigate("/tableau-de-bord", {
-        replace: true,
-        state: { from: location, accessDenied: true }
-      });
-    }
-  }, [requiredAccess, hasAccess, loading, navigate, location, userRole]);
 
   // Show loading while checking permissions
   if (loading) {
@@ -47,11 +19,23 @@ export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps
     );
   }
 
-  // If no access required or user has access, render children
+  // If no access required or user has access, render children normally
   if (!requiredAccess || hasAccess(requiredAccess)) {
     return <>{children}</>;
   }
 
-  // While redirecting, show nothing
-  return null;
+  // If access is denied, show the page with overlay (no redirect)
+  console.log(`❌ Access denied to ${requiredAccess} for role ${userRole}`);
+
+  return (
+    <div className="relative">
+      {/* Render the page content (will be blurred by overlay) */}
+      <div className="pointer-events-none select-none">
+        {children}
+      </div>
+
+      {/* Show access denied overlay on top */}
+      <AccessDeniedOverlay />
+    </div>
+  );
 };

@@ -63,8 +63,29 @@ export function useAccessControls() {
       setUserRole(userRoleData.role);
       console.log('👤 [useAccessControls.TS] User role:', userRoleData.role);
 
-      // Get access_controls from equipe table for ALL roles (including owner/admin)
-      // NO automatic full access anymore
+      // OWNER has automatic full access (accounts created via signup)
+      if (userRoleData.role === 'owner') {
+        console.log('✅ [useAccessControls.TS] Owner detected - granting full access');
+        setAccessControls({
+          devis: true,
+          planning: true,
+          factures: true,
+          clients: true,
+          jobs: true,
+          timesheets: true,
+          paiements: true,
+          parametres: true,
+          equipe: true,
+          inventaire: true,
+          agenda: true,
+          dashboard: true,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // For all other roles (admin, manager, backoffice, employe_terrain)
+      // Get access_controls from equipe table
       const { data: equipeData, error: equipeError } = await supabase
         .from("equipe")
         .select("access_controls")
@@ -93,8 +114,12 @@ export function useAccessControls() {
   };
 
   const hasAccess = (feature: keyof AccessControls): boolean => {
-    // NO automatic access for any role - always check access_controls
-    // If no access controls defined, deny access
+    // Owner always has access to everything
+    if (userRole === 'owner') {
+      return true;
+    }
+
+    // For all other roles, check access_controls
     if (!accessControls) {
       return false;
     }

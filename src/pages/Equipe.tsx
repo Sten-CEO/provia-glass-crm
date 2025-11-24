@@ -376,7 +376,35 @@ const Equipe = () => {
               </div>
               <div>
                 <Label>Rôle</Label>
-                <Select value={newMember.role} onValueChange={(v: any) => setNewMember({ ...newMember, role: v })}>
+                <Select
+                  value={newMember.role}
+                  onValueChange={(v: any) => {
+                    // If Owner is selected, set all access_controls to true
+                    if (v === "Owner") {
+                      setNewMember({
+                        ...newMember,
+                        role: v,
+                        access_controls: {
+                          devis: true,
+                          planning: true,
+                          factures: true,
+                          clients: true,
+                          jobs: true,
+                          timesheets: true,
+                          paiements: true,
+                          parametres: true,
+                          equipe: true,
+                          inventaire: true,
+                          agenda: true,
+                          dashboard: true,
+                        }
+                      });
+                    } else {
+                      // For other roles, keep existing access_controls
+                      setNewMember({ ...newMember, role: v });
+                    }
+                  }}
+                >
                   <SelectTrigger className="glass-card">
                     <SelectValue />
                   </SelectTrigger>
@@ -409,13 +437,19 @@ const Equipe = () => {
               </div>
               {newMember.role !== "Employé terrain" && (
                 <div>
-                  <Label className="mb-2 block">Accès UI (restrictions UI uniquement)</Label>
+                  <Label className="mb-2 block">
+                    Accès UI (restrictions UI uniquement)
+                    {newMember.role === "Owner" && (
+                      <span className="text-xs text-muted-foreground ml-2">(Owner a accès à tout par défaut)</span>
+                    )}
+                  </Label>
                   <div className="space-y-2 glass-card p-4 rounded-lg">
                     {Object.entries(newMember.access_controls).map(([key, value]) => (
                       <label key={key} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={value}
+                          disabled={newMember.role === "Owner"}
                           onChange={(e) =>
                             setNewMember({
                               ...newMember,
@@ -424,7 +458,7 @@ const Equipe = () => {
                           }
                           className="w-4 h-4"
                         />
-                        <span className="capitalize text-sm">{key}</span>
+                        <span className={`capitalize text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{key}</span>
                       </label>
                     ))}
                   </div>
