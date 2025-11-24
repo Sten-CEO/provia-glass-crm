@@ -160,13 +160,12 @@ const Equipe = () => {
 
     try {
       console.log("🔵 STEP 1: Creating member in equipe table");
-      console.log("📝 Data being sent:", {
-        nom: newMember.nom,
-        role: newMember.role,
-        email: newMember.email,
-        access_controls: newMember.access_controls,
-        company_id: company?.id,
-      });
+      console.log("📝 Data being sent:");
+      console.log("   nom:", newMember.nom);
+      console.log("   role:", newMember.role);
+      console.log("   email:", newMember.email);
+      console.log("   access_controls:", JSON.stringify(newMember.access_controls, null, 2));
+      console.log("   company_id:", company?.id);
 
       // Step 1: Create entry in equipe table
       const { data: newEmployeeData, error: insertError } = await supabase
@@ -191,11 +190,10 @@ const Equipe = () => {
         return;
       }
 
-      console.log("✅ Member created in DB:", {
-        id: newEmployeeData.id,
-        role: newEmployeeData.role,
-        access_controls: newEmployeeData.access_controls,
-      });
+      console.log("✅ Member created in DB:");
+      console.log("   id:", newEmployeeData.id);
+      console.log("   role:", newEmployeeData.role);
+      console.log("   access_controls:", JSON.stringify(newEmployeeData.access_controls, null, 2));
 
       // Step 2: Generate temporary password
       const tempPassword = generateTemporaryPassword();

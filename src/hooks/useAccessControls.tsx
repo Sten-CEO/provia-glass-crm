@@ -78,12 +78,12 @@ export function useAccessControls() {
           const role = userData.role;
           setUserRole(role);
 
-          console.log('👤 User data loaded:', {
-            role,
-            access_controls: userData.access_controls,
-            access_controls_keys: userData.access_controls ? Object.keys(userData.access_controls) : 'NULL',
-            is_owner_or_admin: role === 'Owner' || role === 'Admin'
-          });
+          console.log('👤 User data loaded:');
+          console.log('   role:', role);
+          console.log('   access_controls:', JSON.stringify(userData.access_controls, null, 2));
+          console.log('   access_controls_keys:', userData.access_controls ? Object.keys(userData.access_controls) : 'NULL');
+          console.log('   is_owner_or_admin:', role === 'Owner' || role === 'Admin');
+          console.log('   access_controls is empty?', !userData.access_controls || Object.keys(userData.access_controls).length === 0);
 
           // Use access_controls from database
           // Owner and Admin get full access only if access_controls is not explicitly set
