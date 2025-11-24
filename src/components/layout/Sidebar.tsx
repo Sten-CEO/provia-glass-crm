@@ -113,11 +113,17 @@ const navSections = [
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const { isCollapsed, toggleCollapsed } = useSidebarCollapsed();
-  const { hasAccess, userRole } = useAccessControls();
+  const { hasAccess, userRole, accessControls } = useAccessControls();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem("pv_sidebar_expanded");
     return saved ? JSON.parse(saved) : {};
   });
+
+  // Debug: Log access controls when they change
+  useEffect(() => {
+    console.log('🔒 Sidebar - Access Controls:', accessControls);
+    console.log('👤 Sidebar - User Role:', userRole);
+  }, [accessControls, userRole]);
 
   // Don't use effectiveCollapsed, use isCollapsed directly
 

@@ -76,9 +76,17 @@ export function useAccessControls() {
           const role = userData.role;
           setUserRole(role);
 
+          console.log('👤 User data loaded:', {
+            role,
+            access_controls: userData.access_controls,
+            access_controls_keys: userData.access_controls ? Object.keys(userData.access_controls) : 'NULL',
+            is_owner_or_admin: role === 'Owner' || role === 'Admin'
+          });
+
           // Use access_controls from database
           // Owner and Admin get full access only if access_controls is not explicitly set
           if ((role === 'Owner' || role === 'Admin') && (!userData.access_controls || Object.keys(userData.access_controls).length === 0)) {
+            console.log('✅ Owner/Admin with no explicit access_controls → Full access granted');
             setAccessControls({
               dashboard: true,
               devis: true,
@@ -95,6 +103,7 @@ export function useAccessControls() {
             });
           } else {
             // For all roles, use access_controls from database (even Owner/Admin if set)
+            console.log('✅ Using access_controls from database:', userData.access_controls);
             setAccessControls(userData.access_controls || {});
           }
         }
