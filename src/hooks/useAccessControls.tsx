@@ -32,16 +32,20 @@ export function useAccessControls() {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🟢 useAccessControls useEffect STARTED');
     const fetchAccessControls = async () => {
       try {
+        console.log('🔵 Fetching access controls...');
         // Get current user session
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session?.user) {
+          console.log('❌ No session found');
           setLoading(false);
           return;
         }
 
+        console.log('✅ Session found, user ID:', session.user.id);
         setUserId(session.user.id);
 
         // Fetch user's role and access_controls from equipe table
@@ -105,7 +109,7 @@ export function useAccessControls() {
             });
           } else {
             // For all roles, use access_controls from database (even Owner/Admin if set)
-            console.log('✅ Using access_controls from database:', userData.access_controls);
+            console.log('✅ Using access_controls from database:', JSON.stringify(userData.access_controls, null, 2));
             setAccessControls(userData.access_controls || {});
           }
         }
