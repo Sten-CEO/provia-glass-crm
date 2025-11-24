@@ -34,13 +34,16 @@ export function useAccessControls() {
 
   const loadAccessControls = async () => {
     try {
+      console.log('🟢 [useAccessControls.TS] Loading access controls...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log('❌ [useAccessControls.TS] No user found');
         setAccessControls(null);
         setUserRole(null);
         setLoading(false);
         return;
       }
+      console.log('✅ [useAccessControls.TS] User found:', user.id);
 
       // Get user's role and access_controls from user_roles table
       const { data: userRoleData, error: roleError } = await supabase
@@ -58,28 +61,10 @@ export function useAccessControls() {
       }
 
       setUserRole(userRoleData.role);
+      console.log('👤 [useAccessControls.TS] User role:', userRoleData.role);
 
-      // owner and admin have full access to everything
-      if (userRoleData.role === 'owner' || userRoleData.role === 'admin') {
-        setAccessControls({
-          devis: true,
-          planning: true,
-          factures: true,
-          clients: true,
-          jobs: true,
-          timesheets: true,
-          paiements: true,
-          parametres: true,
-          equipe: true,
-          inventaire: true,
-          agenda: true,
-          dashboard: true,
-        });
-        setLoading(false);
-        return;
-      }
-
-      // For other roles (manager, backoffice), get access_controls from equipe table
+      // Get access_controls from equipe table for ALL roles (including owner/admin)
+      // NO automatic full access anymore
       const { data: equipeData, error: equipeError } = await supabase
         .from("equipe")
         .select("access_controls")
@@ -87,27 +72,16 @@ export function useAccessControls() {
         .maybeSingle();
 
       if (equipeError) {
-        console.error("Error fetching access controls:", equipeError);
+        console.error("❌ [useAccessControls.TS] Error fetching access controls:", equipeError);
       }
 
       if (equipeData?.access_controls) {
+        console.log('✅ [useAccessControls.TS] Access controls loaded:', JSON.stringify(equipeData.access_controls, null, 2));
         setAccessControls(equipeData.access_controls as AccessControls);
       } else {
-        // Default access for users without specific controls
-        setAccessControls({
-          devis: true,
-          planning: true,
-          factures: true,
-          clients: true,
-          jobs: true,
-          timesheets: true,
-          paiements: false,
-          parametres: false,
-          equipe: false,
-          inventaire: true,
-          agenda: true,
-          dashboard: true,
-        });
+        console.log('⚠️ [useAccessControls.TS] No access_controls found, setting empty object');
+        // NO default access - if no access_controls defined, user has NO access
+        setAccessControls({});
       }
     } catch (error) {
       console.error("Error loading access controls:", error);
@@ -119,11 +93,7 @@ export function useAccessControls() {
   };
 
   const hasAccess = (feature: keyof AccessControls): boolean => {
-    // owner and admin always have access
-    if (userRole === 'owner' || userRole === 'admin') {
-      return true;
-    }
-
+    // NO automatic access for any role - always check access_controls
     // If no access controls defined, deny access
     if (!accessControls) {
       return false;
