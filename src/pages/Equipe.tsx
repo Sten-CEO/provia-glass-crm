@@ -159,6 +159,15 @@ const Equipe = () => {
     }
 
     try {
+      console.log("🔵 STEP 1: Creating member in equipe table");
+      console.log("📝 Data being sent:", {
+        nom: newMember.nom,
+        role: newMember.role,
+        email: newMember.email,
+        access_controls: newMember.access_controls,
+        company_id: company?.id,
+      });
+
       // Step 1: Create entry in equipe table
       const { data: newEmployeeData, error: insertError } = await supabase
         .from("equipe")
@@ -177,9 +186,16 @@ const Equipe = () => {
         .single();
 
       if (insertError || !newEmployeeData) {
+        console.error("❌ Insert error:", insertError);
         toast.error("Échec de création");
         return;
       }
+
+      console.log("✅ Member created in DB:", {
+        id: newEmployeeData.id,
+        role: newEmployeeData.role,
+        access_controls: newEmployeeData.access_controls,
+      });
 
       // Step 2: Generate temporary password
       const tempPassword = generateTemporaryPassword();
