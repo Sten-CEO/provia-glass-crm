@@ -96,9 +96,14 @@ const Equipe = () => {
     },
   });
 
-  const loadTeam = async () => {
+  const loadTeam = async (forceLog = false) => {
     if (!company?.id) {
-      console.log('⚠️ [Equipe] No company ID, skipping load');
+      if (forceLog) {
+        console.error('❌ [Equipe] FORCE RELOAD: Still no company ID available!');
+        console.error('❌ [Equipe] Company state:', company);
+      } else {
+        console.log('⚠️ [Equipe] No company ID, skipping load');
+      }
       return;
     }
 
@@ -120,6 +125,7 @@ const Equipe = () => {
   };
 
   useEffect(() => {
+    console.log('🟡 [Equipe] useEffect triggered, company:', company);
     if (company?.id) {
       console.log('🟢 [Equipe] Setting up team loading for company:', company.id);
       loadTeam();
@@ -136,6 +142,8 @@ const Equipe = () => {
         console.log('🔄 [Equipe] Cleaning up channel');
         supabase.removeChannel(channel);
       };
+    } else {
+      console.log('⚠️ [Equipe] Company not loaded yet, company:', company);
     }
   }, [company?.id]);
 
@@ -168,6 +176,12 @@ const Equipe = () => {
       return;
     }
 
+    if (!company?.id) {
+      console.error("❌ [Equipe] Cannot create member: company is undefined", company);
+      toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
+      return;
+    }
+
     try {
       console.log("🔵 STEP 1: Creating member in equipe table");
       console.log("📝 Data being sent:");
@@ -175,7 +189,7 @@ const Equipe = () => {
       console.log("   role:", newMember.role);
       console.log("   email:", newMember.email);
       console.log("   access_controls:", JSON.stringify(newMember.access_controls, null, 2));
-      console.log("   company_id:", company?.id);
+      console.log("   company_id:", company.id);
 
       // Step 1: Create entry in equipe table
       const { data: newEmployeeData, error: insertError } = await supabase
@@ -188,7 +202,7 @@ const Equipe = () => {
             competences: newMember.competences,
             note: newMember.note,
             access_controls: newMember.access_controls,
-            company_id: company?.id,
+            company_id: company.id,
           },
         ])
         .select()
@@ -261,7 +275,18 @@ const Equipe = () => {
       console.log("✅ Account created successfully:", result);
 
       // Reload team list to show the new member
+      console.log("🔄 [Equipe] Reloading team list immediately...");
       await loadTeam();
+
+      // Force company to reload and then reload team list again after a delay
+      console.log("🔄 [Equipe] Dispatching company-updated event...");
+      window.dispatchEvent(new Event('company-updated'));
+
+      // Wait a bit and force reload again to ensure we catch the new member
+      setTimeout(async () => {
+        console.log("🔄 [Equipe] Force reloading team list after 1 second...");
+        await loadTeam(true);
+      }, 1000);
 
       // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
@@ -378,7 +403,11 @@ const Equipe = () => {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
+            <Button
+              className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide"
+              disabled={!company?.id}
+              title={!company?.id ? "Chargement de l'entreprise..." : ""}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Inviter un employé
             </Button>
@@ -387,6 +416,13 @@ const Equipe = () => {
             <DialogHeader>
               <DialogTitle className="uppercase tracking-wide">Inviter un employé</DialogTitle>
             </DialogHeader>
+            {!company?.id && (
+              <div className="p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg border-2 border-yellow-500">
+                <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
+                  ⚠️ Chargement de l'entreprise en cours... Veuillez patienter.
+                </p>
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <Label>Nom *</Label>
@@ -498,8 +534,12 @@ const Equipe = () => {
                   </div>
                 </div>
               )}
-              <Button onClick={handleAddMember} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
-                Inviter
+              <Button
+                onClick={handleAddMember}
+                className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
+                disabled={!company?.id}
+              >
+                {!company?.id ? "Chargement..." : "Inviter"}
               </Button>
             </div>
           </DialogContent>
@@ -507,19 +547,43 @@ const Equipe = () => {
       </div>
 
       <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-white/10">
-              <tr>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Nom</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Rôle</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Email</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Accès App</th>
-                <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {team.map((member) => (
+        {!company?.id ? (
+          <div className="p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 mb-4">
+              <svg className="animate-spin h-8 w-8 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Chargement de l'entreprise...</h3>
+            <p className="text-muted-foreground text-sm">
+              Veuillez patienter pendant que nous chargeons les informations de votre entreprise.
+            </p>
+            <p className="text-muted-foreground text-xs mt-2">
+              Si ce message persiste, veuillez rafraîchir la page.
+            </p>
+          </div>
+        ) : team.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-muted-foreground">Aucun membre dans l'équipe pour le moment.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Entreprise ID: {company.id}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-white/10">
+                <tr>
+                  <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Nom</th>
+                  <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Rôle</th>
+                  <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Email</th>
+                  <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Accès App</th>
+                  <th className="text-left p-4 font-semibold uppercase tracking-wide text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {team.map((member) => (
                 <tr key={member.id} className="border-b border-white/5 hover:bg-muted/30 transition-colors">
                   <td className="p-4 font-medium">
                     <button 
@@ -595,10 +659,11 @@ const Equipe = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Edit Dialog */}
