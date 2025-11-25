@@ -338,6 +338,25 @@ const Equipe = () => {
     setSelectedMember(null);
   };
 
+  const getAccessControlLabel = (key: string): string => {
+    const labels: Record<string, string> = {
+      devis: "Devis",
+      planning: "Planning",
+      factures: "Factures",
+      clients: "Clients",
+      jobs: "Interventions",
+      timesheets: "Pointage",
+      paiements: "Paiements",
+      parametres: "Paramètres",
+      equipe: "Équipe",
+      inventaire: "Inventaire",
+      agenda: "Agenda",
+      tableau_de_bord: "Tableau de bord",
+      chiffre_affaire: "Chiffre d'affaire",
+    };
+    return labels[key] || key;
+  };
+
   const getRoleColor = (role: TeamMember["role"]) => {
     switch (role) {
       case "Owner":
@@ -470,7 +489,7 @@ const Equipe = () => {
                           }
                           className="w-4 h-4"
                         />
-                        <span className={`capitalize text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{key}</span>
+                        <span className={`text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{getAccessControlLabel(key)}</span>
                       </label>
                     ))}
                   </div>
@@ -671,7 +690,7 @@ const Equipe = () => {
                         }
                         className="w-4 h-4"
                       />
-                      <span className="capitalize text-sm">{key}</span>
+                      <span className="text-sm">{getAccessControlLabel(key)}</span>
                     </label>
                   ))}
                 </div>
