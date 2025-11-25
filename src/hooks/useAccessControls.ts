@@ -13,7 +13,8 @@ export interface AccessControls {
   equipe?: boolean;
   inventaire?: boolean;
   agenda?: boolean;
-  dashboard?: boolean;
+  tableau_de_bord?: boolean;  // Access to view the dashboard page
+  chiffre_affaire?: boolean;   // Access to view revenue/CA on dashboard (formerly "dashboard")
 }
 
 export function useAccessControls() {
@@ -78,7 +79,8 @@ export function useAccessControls() {
           equipe: true,
           inventaire: true,
           agenda: true,
-          dashboard: true,
+          tableau_de_bord: true,
+          chiffre_affaire: true,
         });
         setLoading(false);
         return;

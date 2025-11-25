@@ -13,11 +13,13 @@ import { AlertsColumn } from "@/components/dashboard/AlertsColumn";
 import { AgendaColumn } from "@/components/dashboard/AgendaColumn";
 import { AlertsConfigModal } from "@/components/dashboard/AlertsConfigModal";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccessControls } from "@/hooks/useAccessControls";
 
 const Dashboard = () => {
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [firstName, setFirstName] = useState<string>("");
   const navigate = useNavigate();
+  const { hasAccess } = useAccessControls();
 
   useEffect(() => {
     loadUserProfile();
@@ -54,14 +56,16 @@ const Dashboard = () => {
             <Settings2 className="h-4 w-4 mr-2" />
             Modifier les alertes
           </Button>
-          <Button variant="outline" onClick={() => navigate('/dashboard/ca')}>
-            Vue précise CA
-          </Button>
+          {hasAccess("chiffre_affaire") && (
+            <Button variant="outline" onClick={() => navigate('/dashboard/ca')}>
+              Vue précise CA
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Module Chiffre d'Affaires */}
-      <RevenueModule />
+      {/* Module Chiffre d'Affaires - only show if user has access */}
+      {hasAccess("chiffre_affaire") && <RevenueModule />}
 
       {/* Layout 2 colonnes: Alertes à gauche, Agenda à droite */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

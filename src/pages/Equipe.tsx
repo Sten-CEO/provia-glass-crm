@@ -91,7 +91,8 @@ const Equipe = () => {
       equipe: false,
       inventaire: false,
       agenda: false,
-      dashboard: false,
+      tableau_de_bord: false,
+      chiffre_affaire: false,
     },
   });
 
@@ -284,7 +285,8 @@ const Equipe = () => {
           equipe: false,
           inventaire: false,
           agenda: false,
-          dashboard: false,
+          tableau_de_bord: false,
+          chiffre_affaire: false,
         },
       });
       setOpen(false);
@@ -405,7 +407,8 @@ const Equipe = () => {
                           equipe: true,
                           inventaire: true,
                           agenda: true,
-                          dashboard: true,
+                          tableau_de_bord: true,
+                          chiffre_affaire: true,
                         }
                       });
                     } else {
