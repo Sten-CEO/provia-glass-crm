@@ -4,6 +4,7 @@ import { AlertCircle, FileText, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { eventBus, EVENTS } from "@/lib/eventBus";
+import { useCompany } from "@/hooks/useCompany";
 
 interface AlertsData {
   unpaidInvoices: { count: number; total: number };
@@ -16,6 +17,7 @@ interface AlertsData {
 
 export const AlertsStrip = () => {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [alerts, setAlerts] = useState<AlertsData>({
     unpaidInvoices: { count: 0, total: 0 },
     overdueQuotes: 0,
@@ -26,6 +28,8 @@ export const AlertsStrip = () => {
   });
 
   const loadAlerts = async () => {
+    if (!company?.id) return;
+
     const today = new Date().toISOString().split("T")[0];
     const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
@@ -33,6 +37,7 @@ export const AlertsStrip = () => {
     const { data: unpaidInvoicesData } = await supabase
       .from("factures")
       .select("*")
+      .eq("company_id", company.id)
       .neq("statut", "Payée")
       .or(`echeance.is.null,echeance.gte.${today}`);
 
@@ -44,6 +49,7 @@ export const AlertsStrip = () => {
     const { data: overdueQuotesData } = await supabase
       .from("devis")
       .select("*")
+      .eq("company_id", company.id)
       .in("statut", ["Envoyé", "Brouillon"])
       .lt("expiry_date", today);
 
@@ -51,6 +57,7 @@ export const AlertsStrip = () => {
     const { data: upcomingInvoicesData } = await supabase
       .from("factures")
       .select("*")
+      .eq("company_id", company.id)
       .neq("statut", "Payée")
       .gte("echeance", today)
       .lte("echeance", in7Days);
@@ -58,12 +65,14 @@ export const AlertsStrip = () => {
     const { data: upcomingJobsScheduled } = await supabase
       .from("jobs")
       .select("id, scheduled_start")
+      .eq("company_id", company.id)
       .gte("scheduled_start", today)
       .lte("scheduled_start", in7Days);
 
     const { data: upcomingJobsByDate } = await supabase
       .from("jobs")
       .select("id, date")
+      .eq("company_id", company.id)
       .gte("date", today)
       .lte("date", in7Days);
 
@@ -75,6 +84,7 @@ export const AlertsStrip = () => {
     const { data: acceptedQuotes } = await supabase
       .from("devis")
       .select("id")
+      .eq("company_id", company.id)
       .in("statut", ["Accepté", "Signé"]);
 
     let quotesToSchedule = 0;
@@ -83,6 +93,7 @@ export const AlertsStrip = () => {
       const { data: linkedJobs } = await supabase
         .from("jobs")
         .select("quote_id")
+        .eq("company_id", company.id)
         .in("quote_id", quoteIds)
         .not("statut", "eq", "Annulé");
 
@@ -94,6 +105,7 @@ export const AlertsStrip = () => {
     const { data: failedOrPostponedData } = await supabase
       .from("jobs")
       .select("id")
+      .eq("company_id", company.id)
       .or(`statut.eq.Échouée,statut.eq.Reportée`);
 
     setAlerts({
@@ -107,6 +119,8 @@ export const AlertsStrip = () => {
   };
 
   useEffect(() => {
+    if (!company?.id) return;
+
     loadAlerts();
 
     // Subscribe to changes
@@ -130,7 +144,7 @@ export const AlertsStrip = () => {
       supabase.removeChannel(channel);
       eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
     };
-  }, []);
+  }, [company?.id]);
 
   const alertChips = [
     {

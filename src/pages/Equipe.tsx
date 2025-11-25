@@ -121,16 +121,19 @@ const Equipe = () => {
 
   useEffect(() => {
     if (company?.id) {
+      console.log('🟢 [Equipe] Setting up team loading for company:', company.id);
       loadTeam();
 
       const channel = supabase
         .channel("equipe-changes")
-        .on("postgres_changes", { event: "*", schema: "public", table: "equipe" }, () => {
+        .on("postgres_changes", { event: "*", schema: "public", table: "equipe" }, (payload) => {
+          console.log('🔄 [Equipe] Real-time update received:', payload);
           loadTeam();
         })
         .subscribe();
 
       return () => {
+        console.log('🔄 [Equipe] Cleaning up channel');
         supabase.removeChannel(channel);
       };
     }
