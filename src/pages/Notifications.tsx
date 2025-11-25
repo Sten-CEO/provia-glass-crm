@@ -87,11 +87,14 @@ export default function Notifications() {
   };
 
   const markAllAsRead = async () => {
+    if (!companyId) return;
+
     await supabase
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
+      .eq('company_id', companyId)
       .is('read_at', null);
-    
+
     loadNotifications();
   };
 

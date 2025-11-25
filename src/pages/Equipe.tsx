@@ -91,13 +91,18 @@ const Equipe = () => {
       equipe: false,
       inventaire: false,
       agenda: false,
-      dashboard: false,
+      tableau_de_bord: false,
+      chiffre_affaire: false,
     },
   });
 
   const loadTeam = async () => {
-    if (!company?.id) return;
+    if (!company?.id) {
+      console.log('⚠️ [Equipe] No company ID, skipping load');
+      return;
+    }
 
+    console.log('🔵 [Equipe] Loading team for company:', company.id);
     const { data, error } = await supabase
       .from("equipe")
       .select("*")
@@ -105,10 +110,12 @@ const Equipe = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error('❌ [Equipe] Error loading team:', error);
       toast.error("Erreur de chargement");
       return;
     }
 
+    console.log('✅ [Equipe] Loaded', data?.length || 0, 'team members');
     setTeam((data || []) as TeamMember[]);
   };
 
@@ -250,6 +257,9 @@ const Equipe = () => {
       const result = await response.json();
       console.log("✅ Account created successfully:", result);
 
+      // Reload team list to show the new member
+      await loadTeam();
+
       // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
       setTemporaryPassword(tempPassword);
@@ -275,7 +285,8 @@ const Equipe = () => {
           equipe: false,
           inventaire: false,
           agenda: false,
-          dashboard: false,
+          tableau_de_bord: false,
+          chiffre_affaire: false,
         },
       });
       setOpen(false);
@@ -325,6 +336,25 @@ const Equipe = () => {
     toast.success("Employé supprimé avec succès");
     setDeleteOpen(false);
     setSelectedMember(null);
+  };
+
+  const getAccessControlLabel = (key: string): string => {
+    const labels: Record<string, string> = {
+      devis: "Devis",
+      planning: "Planning",
+      factures: "Factures",
+      clients: "Clients",
+      jobs: "Interventions",
+      timesheets: "Pointage",
+      paiements: "Paiements",
+      parametres: "Paramètres",
+      equipe: "Équipe",
+      inventaire: "Inventaire",
+      agenda: "Agenda",
+      tableau_de_bord: "Tableau de bord",
+      chiffre_affaire: "Chiffre d'affaire",
+    };
+    return labels[key] || key;
   };
 
   const getRoleColor = (role: TeamMember["role"]) => {
@@ -396,7 +426,8 @@ const Equipe = () => {
                           equipe: true,
                           inventaire: true,
                           agenda: true,
-                          dashboard: true,
+                          tableau_de_bord: true,
+                          chiffre_affaire: true,
                         }
                       });
                     } else {
@@ -458,7 +489,7 @@ const Equipe = () => {
                           }
                           className="w-4 h-4"
                         />
-                        <span className={`capitalize text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{key}</span>
+                        <span className={`text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{getAccessControlLabel(key)}</span>
                       </label>
                     ))}
                   </div>
@@ -659,7 +690,7 @@ const Equipe = () => {
                         }
                         className="w-4 h-4"
                       />
-                      <span className="capitalize text-sm">{key}</span>
+                      <span className="text-sm">{getAccessControlLabel(key)}</span>
                     </label>
                   ))}
                 </div>

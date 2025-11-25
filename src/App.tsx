@@ -90,7 +90,7 @@ const App = () => {
           
           {/* Admin CRM Routes */}
           <Route element={<AdminLayout />}>
-            <Route path="/tableau-de-bord" element={<ProtectedRoute requiredAccess="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="/tableau-de-bord" element={<ProtectedRoute requiredAccess="tableau_de_bord"><Dashboard /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute requiredAccess="clients"><Clients /></ProtectedRoute>} />
             <Route path="/clients/:id" element={<ProtectedRoute requiredAccess="clients"><ClientDetail /></ProtectedRoute>} />
             <Route path="/contracts" element={<ProtectedRoute requiredAccess="clients"><Contracts /></ProtectedRoute>} />
@@ -133,7 +133,7 @@ const App = () => {
           <Route path="/paiements" element={<ProtectedRoute requiredAccess="paiements"><Paiements /></ProtectedRoute>} />
           <Route path="/agenda" element={<ProtectedRoute requiredAccess="agenda"><Agenda /></ProtectedRoute>} />
           <Route path="/agenda/:id" element={<ProtectedRoute requiredAccess="agenda"><AgendaDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/ca" element={<ProtectedRoute requiredAccess="dashboard"><CADetail /></ProtectedRoute>} />
+          <Route path="/dashboard/ca" element={<ProtectedRoute requiredAccess="chiffre_affaire"><CADetail /></ProtectedRoute>} />
           <Route path="/profil" element={<Profil />} />
           <Route path="/notifications" element={<Notifications />} />
             <Route path="/parametres" element={<ProtectedRoute requiredAccess="parametres"><Parametres /></ProtectedRoute>} />

@@ -43,7 +43,7 @@ const navSections = [
   {
     label: "OPÉRATIONS",
     items: [
-      { title: "Tableau de bord", icon: LayoutDashboard, path: "/tableau-de-bord", accessKey: "dashboard" },
+      { title: "Tableau de bord", icon: LayoutDashboard, path: "/tableau-de-bord", accessKey: "tableau_de_bord" },
       { title: "Planning", icon: Calendar, path: "/planning", accessKey: "planning" },
       { title: "Agenda", icon: Calendar, path: "/agenda", accessKey: "agenda" },
       {
