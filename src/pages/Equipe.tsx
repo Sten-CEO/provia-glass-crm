@@ -96,8 +96,12 @@ const Equipe = () => {
   });
 
   const loadTeam = async () => {
-    if (!company?.id) return;
+    if (!company?.id) {
+      console.log('⚠️ [Equipe] No company ID, skipping load');
+      return;
+    }
 
+    console.log('🔵 [Equipe] Loading team for company:', company.id);
     const { data, error } = await supabase
       .from("equipe")
       .select("*")
@@ -105,10 +109,12 @@ const Equipe = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error('❌ [Equipe] Error loading team:', error);
       toast.error("Erreur de chargement");
       return;
     }
 
+    console.log('✅ [Equipe] Loaded', data?.length || 0, 'team members');
     setTeam((data || []) as TeamMember[]);
   };
 
@@ -249,6 +255,9 @@ const Equipe = () => {
 
       const result = await response.json();
       console.log("✅ Account created successfully:", result);
+
+      // Reload team list to show the new member
+      await loadTeam();
 
       // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
