@@ -458,11 +458,7 @@ const AchatEditor = () => {
       }
       
       toast.success("Commande enregistrée");
-      if (!isEditing && savedData) {
-        navigate(`/inventaire/achats/${savedData.id}`, { replace: true });
-      } else {
-        navigate("/inventaire/achats");
-      }
+      navigate("/inventaire/achats");
     }
     setLoading(false);
   };
