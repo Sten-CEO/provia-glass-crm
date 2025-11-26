@@ -158,7 +158,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             alt="Provia Base" 
             className={cn(
               "object-contain rounded-lg",
-              isCollapsed ? "w-8 h-8" : "w-7 h-7"
+              isCollapsed ? "w-10 h-10" : "w-12 h-12"
             )} 
           />
         </div>
@@ -177,9 +177,9 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="absolute -right-3 top-3 h-6 w-6 rounded-full border border-border bg-background shadow-sm"
+            className="absolute -right-3 top-4 h-7 w-7 rounded-full border border-border bg-background shadow-md z-10 hover:scale-110 transition-transform"
           >
-            <ChevronRight className="h-3 w-3" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         )}
       </div>

@@ -493,6 +493,17 @@ const AchatEditor = () => {
         .update({ status: "reçue", items: formData.items as any })
         .eq("id", id);
 
+      // Créer une notification (CRM uniquement, pas pour l'app mobile)
+      if (company?.id) {
+        await supabase.from("notifications").insert({
+          kind: "purchase_received",
+          title: "Achat reçu",
+          message: `La commande ${formData.number} de ${formData.supplier} a été reçue`,
+          company_id: company.id,
+          link: `/inventaire/achats/${id}`,
+        });
+      }
+
       toast.success("Commande enregistrée et stock mis à jour.");
       navigate("/inventaire/achats");
     } catch (error) {
