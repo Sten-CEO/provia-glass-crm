@@ -63,26 +63,29 @@ const Templates = () => {
   const handleSave = async () => {
     if (!selectedTemplate) return;
 
+    // Validation: content_html est requis et ne peut pas être vide
+    const contentHtml = selectedTemplate.content_html?.trim() || '<div style="padding: 20px;">Contenu du document</div>';
+
     const templateData = {
       type: selectedTemplate.type,
       name: selectedTemplate.name,
-      theme: selectedTemplate.theme,
-      header_logo: selectedTemplate.header_logo,
+      theme: selectedTemplate.theme || 'classique',
+      header_logo: selectedTemplate.header_logo || null,
       logo_position: selectedTemplate.logo_position || 'left',
       logo_size: selectedTemplate.logo_size || 'medium',
-      main_color: selectedTemplate.main_color,
-      font_family: selectedTemplate.font_family,
-      show_vat: selectedTemplate.show_vat,
-      show_discounts: selectedTemplate.show_discounts,
-      show_remaining_balance: selectedTemplate.show_remaining_balance,
-      signature_enabled: selectedTemplate.signature_enabled,
-      email_subject: selectedTemplate.email_subject,
-      email_body: selectedTemplate.email_body,
-      content_html: selectedTemplate.content_html,
-      header_html: selectedTemplate.header_html,
-      footer_html: selectedTemplate.footer_html,
-      css: selectedTemplate.css,
-      is_default: selectedTemplate.is_default,
+      main_color: selectedTemplate.main_color || '#3b82f6',
+      font_family: selectedTemplate.font_family || 'Arial',
+      show_vat: selectedTemplate.show_vat ?? true,
+      show_discounts: selectedTemplate.show_discounts ?? true,
+      show_remaining_balance: selectedTemplate.show_remaining_balance ?? false,
+      signature_enabled: selectedTemplate.signature_enabled ?? false,
+      email_subject: selectedTemplate.email_subject || null,
+      email_body: selectedTemplate.email_body || null,
+      content_html: contentHtml,
+      header_html: selectedTemplate.header_html || null,
+      footer_html: selectedTemplate.footer_html || null,
+      css: selectedTemplate.css || null,
+      is_default: selectedTemplate.is_default ?? false,
     };
 
     const { error } = selectedTemplate.id === "new"
@@ -90,8 +93,8 @@ const Templates = () => {
       : await supabase.from("doc_templates").update(templateData).eq("id", selectedTemplate.id);
 
     if (error) {
-      toast.error("Erreur lors de la sauvegarde");
-      console.error(error);
+      console.error("Erreur détaillée:", error);
+      toast.error(`Erreur lors de la sauvegarde: ${error.message || 'Erreur inconnue'}`);
     } else {
       toast.success("Modèle sauvegardé avec succès");
       setIsEditing(false);
@@ -153,10 +156,10 @@ const Templates = () => {
                 signature_enabled: false,
                 email_subject: null,
                 email_body: null,
-                content_html: "",
-                header_html: "",
-                footer_html: "",
-                css: "",
+                content_html: '<div style="padding: 20px; font-family: Arial, sans-serif;"><h1>Contenu du document</h1><p>Modifiez ce contenu selon vos besoins.</p></div>',
+                header_html: '<div style="text-align: center; padding: 20px;"><h2>{company_name}</h2></div>',
+                footer_html: '<div style="text-align: center; padding: 10px; font-size: 12px; color: #666;">Page {page_number}</div>',
+                css: "body { font-family: Arial, sans-serif; }",
               });
             }}>
               <Plus className="mr-2 h-4 w-4" />
