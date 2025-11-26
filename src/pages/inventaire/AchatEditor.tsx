@@ -687,29 +687,29 @@ const AchatEditor = () => {
                     <Select
                       value={item.item_id || undefined}
                       onValueChange={(value) => selectInventoryItem(index, value)}
+                      disabled={inventoryItems.filter((i) => i.type === item.type && i.id).length === 0}
                     >
                       <SelectTrigger className={!item.item_id ? "border-destructive" : ""}>
                         <SelectValue placeholder="Sélectionner depuis l'inventaire..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {inventoryItems.filter((i) => i.type === item.type && i.id).length === 0 ? (
-                          <div className="p-4 text-center text-sm text-muted-foreground">
-                            {inventoryItems.length === 0
-                              ? "Aucun article dans l'inventaire. Allez dans Inventaire > Consommables ou Matériels pour créer des articles."
-                              : `Aucun ${item.type} trouvé. ${inventoryItems.length} article(s) au total mais aucun de type "${item.type}". Changez le type ci-dessus.`}
-                          </div>
-                        ) : (
-                          inventoryItems
-                            .filter((i) => i.type === item.type && i.id)
-                            .map((i) => (
-                              <SelectItem key={i.id} value={i.id}>
-                                {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
-                              </SelectItem>
-                            ))
-                        )}
+                        {inventoryItems
+                          .filter((i) => i.type === item.type && i.id)
+                          .map((i) => (
+                            <SelectItem key={i.id} value={i.id}>
+                              {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
-                    {!item.item_id && (
+                    {inventoryItems.filter((i) => i.type === item.type && i.id).length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        {inventoryItems.length === 0
+                          ? "⚠️ Aucun article dans l'inventaire. Créez des articles dans Inventaire > Consommables ou Matériels."
+                          : `⚠️ Aucun ${item.type} disponible. Créez un ${item.type} dans l'inventaire ou changez le type ci-dessus.`}
+                      </p>
+                    )}
+                    {!item.item_id && inventoryItems.filter((i) => i.type === item.type && i.id).length > 0 && (
                       <p className="text-xs text-destructive mt-1">Article requis</p>
                     )}
                   </div>
