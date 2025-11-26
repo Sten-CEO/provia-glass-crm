@@ -692,30 +692,21 @@ const AchatEditor = () => {
                         <SelectValue placeholder="Sélectionner depuis l'inventaire..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {(() => {
-                          const filtered = inventoryItems.filter((i) => i.type === item.type && i.id);
-                          console.log(`[AchatEditor] Filtering items for type "${item.type}":`, {
-                            totalItems: inventoryItems.length,
-                            filteredItems: filtered.length,
-                            filtered
-                          });
-
-                          if (filtered.length === 0) {
-                            return (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                {inventoryItems.length === 0
-                                  ? "Aucun article dans l'inventaire. Créez des articles d'abord."
-                                  : `Aucun ${item.type} dans l'inventaire. Changez le type ou créez des ${item.type}s.`}
-                              </div>
-                            );
-                          }
-
-                          return filtered.map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
-                            </SelectItem>
-                          ));
-                        })()}
+                        {inventoryItems.filter((i) => i.type === item.type && i.id).length === 0 ? (
+                          <div className="p-4 text-center text-sm text-muted-foreground">
+                            {inventoryItems.length === 0
+                              ? "Aucun article dans l'inventaire. Allez dans Inventaire > Consommables ou Matériels pour créer des articles."
+                              : `Aucun ${item.type} trouvé. ${inventoryItems.length} article(s) au total mais aucun de type "${item.type}". Changez le type ci-dessus.`}
+                          </div>
+                        ) : (
+                          inventoryItems
+                            .filter((i) => i.type === item.type && i.id)
+                            .map((i) => (
+                              <SelectItem key={i.id} value={i.id}>
+                                {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
+                              </SelectItem>
+                            ))
+                        )}
                       </SelectContent>
                     </Select>
                     {!item.item_id && (
