@@ -47,6 +47,8 @@ const AchatEditor = () => {
   const isEditing = !!id;
   const { company } = useCompany();
 
+  console.log("🚀 [AchatEditor] Component render. company:", company);
+
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
