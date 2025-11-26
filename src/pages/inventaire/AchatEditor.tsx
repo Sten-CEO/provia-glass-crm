@@ -424,6 +424,24 @@ const AchatEditor = () => {
       } catch (e) {
         console.error("Sync mouvements achat:", e);
       }
+      
+      // Créer notification si statut en_attente avec date prévue
+      if (formData.status === "en_attente" && formData.expected_date && company?.id) {
+        const dateFormatted = new Date(formData.expected_date).toLocaleDateString('fr-FR');
+        const { error: notifError } = await supabase.from("notifications").insert({
+          kind: "purchase_pending",
+          type: "purchase_pending",
+          title: "Commande en cours de livraison",
+          message: `La commande ${formData.number} de ${formData.supplier} est en cours de livraison. Réception prévue le ${dateFormatted}`,
+          company_id: company.id,
+          link: `/inventaire/achats/${refId}`,
+          level: "info",
+        });
+        if (notifError) {
+          console.error("Erreur création notification pending:", notifError);
+        }
+      }
+      
       toast.success("Commande enregistrée");
       if (!isEditing && savedData) {
         navigate(`/inventaire/achats/${savedData.id}`, { replace: true });
@@ -495,13 +513,20 @@ const AchatEditor = () => {
 
       // Créer une notification (CRM uniquement, pas pour l'app mobile)
       if (company?.id) {
-        await supabase.from("notifications").insert({
+        const { error: notifError } = await supabase.from("notifications").insert({
           kind: "purchase_received",
+          type: "purchase_received",
           title: "Achat reçu",
           message: `La commande ${formData.number} de ${formData.supplier} a été reçue`,
           company_id: company.id,
           link: `/inventaire/achats/${id}`,
+          level: "success",
         });
+        if (notifError) {
+          console.error("Erreur création notification received:", notifError);
+        } else {
+          console.log("Notification créée avec succès");
+        }
       }
 
       toast.success("Commande enregistrée et stock mis à jour.");
