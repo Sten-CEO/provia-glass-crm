@@ -63,13 +63,18 @@ const AchatEditor = () => {
   });
 
   useEffect(() => {
-    loadInventoryItems();
     if (isEditing) {
       loadPurchaseOrder();
     } else {
       generateOrderNumber();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (company?.id) {
+      loadInventoryItems();
+    }
+  }, [company?.id]);
 
   const loadInventoryItems = async () => {
     if (!company?.id) return;
