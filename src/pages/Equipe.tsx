@@ -75,7 +75,7 @@ const Equipe = () => {
   const [createdMemberRole, setCreatedMemberRole] = useState<string>("");
   const [newMember, setNewMember] = useState({
     nom: "",
-    role: "Employé terrain" as const,
+    role: "Employé terrain",
     email: "",
     competences: [] as string[],
     note: "",
@@ -252,7 +252,7 @@ const Equipe = () => {
       console.log("📤 Sending request to edge function:", requestBody);
 
       const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/create-employee-account`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-employee-account`,
         {
           method: "POST",
           headers: {
@@ -519,7 +519,7 @@ const Equipe = () => {
                         <input
                           type="checkbox"
                           checked={value}
-                          disabled={newMember.role === "Owner"}
+                          disabled={newMember.role === "Owner" || newMember.role === "Employé terrain"}
                           onChange={(e) =>
                             setNewMember({
                               ...newMember,
@@ -528,7 +528,7 @@ const Equipe = () => {
                           }
                           className="w-4 h-4"
                         />
-                        <span className={`text-sm ${newMember.role === "Owner" ? "opacity-50" : ""}`}>{getAccessControlLabel(key)}</span>
+                        <span className={`text-sm ${(newMember.role === "Owner" || newMember.role === "Employé terrain") ? "opacity-50" : ""}`}>{getAccessControlLabel(key)}</span>
                       </label>
                     ))}
                   </div>

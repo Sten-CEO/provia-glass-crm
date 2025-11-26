@@ -154,7 +154,7 @@ export async function cancelInterventionStock(
     if (movement.type === "reserve") {
       const { data: item } = await supabase
         .from("inventory_items")
-        .select("qty_reserved")
+        .select("qty_reserved, company_id")
         .eq("id", movement.item_id)
         .single();
 
@@ -165,11 +165,22 @@ export async function cancelInterventionStock(
             qty_reserved: Math.max(0, (item.qty_reserved || 0) - movement.qty),
           })
           .eq("id", movement.item_id);
+        
+        // Update stock calculations
+        await updateItemStock(movement.item_id, item.company_id);
+      }
+    } else {
+      // For other types, get company_id from item
+      const { data: item } = await supabase
+        .from("inventory_items")
+        .select("company_id")
+        .eq("id", movement.item_id)
+        .single();
+      
+      if (item) {
+        await updateItemStock(movement.item_id, item.company_id);
       }
     }
-
-    // Update stock calculations
-    await updateItemStock(movement.item_id);
   }
 }
 
