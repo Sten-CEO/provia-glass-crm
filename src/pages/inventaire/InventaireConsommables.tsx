@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Item {
   id: string;
@@ -42,13 +43,14 @@ interface Item {
 
 const InventaireConsommables = () => {
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
-  
+
   // Type is ALWAYS consommable for this page
   const type = 'consommable';
   
@@ -66,10 +68,13 @@ const InventaireConsommables = () => {
   });
 
   const loadItems = async () => {
+    if (!company?.id) return;
+
     const { data, error } = await supabase
       .from("inventory_items")
       .select("*")
       .eq("type", type)
+      .eq("company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -81,7 +86,9 @@ const InventaireConsommables = () => {
   };
 
   useEffect(() => {
-    loadItems();
+    if (company?.id) {
+      loadItems();
+    }
 
     const channel = supabase
       .channel(`inventory_items_${type}`)
@@ -93,7 +100,7 @@ const InventaireConsommables = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [type]);
+  }, [company?.id, type]);
 
   const handleAddItem = async () => {
     if (!newItem.name) {
@@ -103,6 +110,7 @@ const InventaireConsommables = () => {
 
     const { error } = await supabase.from("inventory_items").insert([
       {
+        company_id: company?.id,
         type: type,
         name: newItem.name,
         sku: newItem.sku || null,

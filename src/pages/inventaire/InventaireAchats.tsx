@@ -203,9 +203,15 @@ const InventaireAchats = () => {
   };
 
   const createMovements = async (orderId: string, orderNumber: string, items: OrderItem[]) => {
+    if (!company?.id) {
+      console.error("Cannot create movements without company_id");
+      return;
+    }
+
     const movements = items
       .filter((item) => item.qty_received > 0 && item.item_id)
       .map((item) => ({
+        company_id: company.id,
         item_id: item.item_id,
         type: "in",
         source: "achat",
@@ -219,6 +225,7 @@ const InventaireAchats = () => {
 
     if (movements.length === 0) return;
 
+    console.log("Creating movements:", movements);
     const { error } = await supabase.from("inventory_movements").insert(movements);
 
     if (error) {
@@ -226,6 +233,8 @@ const InventaireAchats = () => {
       toast.error("Erreur lors de la création des mouvements");
       return;
     }
+
+    console.log(`✅ ${movements.length} movements created successfully`);
 
     // Update stock quantities
     for (const item of items.filter((i) => i.qty_received > 0 && i.item_id)) {
@@ -236,12 +245,17 @@ const InventaireAchats = () => {
         .single();
 
       if (currentItem) {
+        const newQty = currentItem.qty_on_hand + item.qty_received;
+        console.log(`Updating stock for item ${item.item_id}: ${currentItem.qty_on_hand} + ${item.qty_received} = ${newQty}`);
+
         await supabase
           .from("inventory_items")
-          .update({ qty_on_hand: currentItem.qty_on_hand + item.qty_received })
+          .update({ qty_on_hand: newQty })
           .eq("id", item.item_id);
       }
     }
+
+    toast.success(`Stock mis à jour: ${movements.length} mouvements créés`);
   };
 
   const handleSave = async () => {

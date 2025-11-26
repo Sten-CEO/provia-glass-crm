@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Movement {
   id: string;
@@ -23,6 +24,7 @@ interface Movement {
 }
 
 const InventaireMouvements = () => {
+  const { company } = useCompany();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -30,12 +32,15 @@ const InventaireMouvements = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const loadMovements = async () => {
+    if (!company?.id) return;
+
     const { data, error } = await supabase
       .from("inventory_movements")
       .select(`
         *,
         inventory_items (name, type)
       `)
+      .eq("company_id", company.id)
       .order("date", { ascending: false })
       .limit(200);
 
@@ -48,7 +53,9 @@ const InventaireMouvements = () => {
   };
 
   useEffect(() => {
-    loadMovements();
+    if (company?.id) {
+      loadMovements();
+    }
 
     const channel = supabase
       .channel("inventory_movements_changes")
@@ -60,7 +67,7 @@ const InventaireMouvements = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [company?.id]);
 
   const getTypeLabel = (type: string, status?: string) => {
     const labels: Record<string, string> = {
