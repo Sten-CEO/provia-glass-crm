@@ -173,14 +173,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           </Button>
         )}
         {isCollapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={toggleCollapsed}
-            className="absolute -right-4 top-4 h-7 w-7 rounded-full border border-border bg-background shadow-md z-10 hover:scale-110 transition-transform"
+            className="absolute -right-2 top-5 z-10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            <ChevronRight className="h-5 w-5" />
+          </button>
         )}
       </div>
 
