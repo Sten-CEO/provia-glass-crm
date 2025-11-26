@@ -52,7 +52,6 @@ import Employes from "./pages/pointage/Employes";
 import EmployeePointageDetail from "./pages/pointage/EmployeeDetail";
 import Agenda from "./pages/Agenda";
 import AgendaDetail from "./pages/AgendaDetail";
-import CADetail from "./pages/dashboard/CADetail";
 import Profil from "./pages/Profil";
 import Notifications from "./pages/Notifications";
 
@@ -133,7 +132,6 @@ const App = () => {
           <Route path="/paiements" element={<ProtectedRoute requiredAccess="paiements"><Paiements /></ProtectedRoute>} />
           <Route path="/agenda" element={<ProtectedRoute requiredAccess="agenda"><Agenda /></ProtectedRoute>} />
           <Route path="/agenda/:id" element={<ProtectedRoute requiredAccess="agenda"><AgendaDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/ca" element={<ProtectedRoute requiredAccess="chiffre_affaire"><CADetail /></ProtectedRoute>} />
           <Route path="/profil" element={<Profil />} />
           <Route path="/notifications" element={<Notifications />} />
             <Route path="/parametres" element={<ProtectedRoute requiredAccess="parametres"><Parametres /></ProtectedRoute>} />

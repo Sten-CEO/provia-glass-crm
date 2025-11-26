@@ -51,17 +51,10 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold uppercase tracking-wide">Tableau de bord</h1>
           <p className="text-muted-foreground">Vue d'ensemble de votre activité</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setAlertsModalOpen(true)}>
-            <Settings2 className="h-4 w-4 mr-2" />
-            Modifier les alertes
-          </Button>
-          {hasAccess("chiffre_affaire") && (
-            <Button variant="outline" onClick={() => navigate('/dashboard/ca')}>
-              Vue précise CA
-            </Button>
-          )}
-        </div>
+        <Button variant="outline" onClick={() => setAlertsModalOpen(true)}>
+          <Settings2 className="h-4 w-4 mr-2" />
+          Modifier les alertes
+        </Button>
       </div>
 
       {/* Module Chiffre d'Affaires - only show if user has access */}
