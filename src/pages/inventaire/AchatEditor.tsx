@@ -603,6 +603,10 @@ const AchatEditor = () => {
               Marquer "Reçue"
             </Button>
           )}
+          <Button onClick={handleSave} disabled={loading}>
+            <Save className="mr-2 h-4 w-4" />
+            Enregistrer
+          </Button>
           {isEditing && (
             <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} disabled={loading}>
               <Trash2 className="mr-2 h-4 w-4" />
