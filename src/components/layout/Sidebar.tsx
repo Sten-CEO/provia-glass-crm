@@ -177,7 +177,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             variant="ghost"
             size="icon"
             onClick={toggleCollapsed}
-            className="absolute -right-3 top-4 h-7 w-7 rounded-full border border-border bg-background shadow-md z-10 hover:scale-110 transition-transform"
+            className="absolute -right-4 top-4 h-7 w-7 rounded-full border border-border bg-background shadow-md z-10 hover:scale-110 transition-transform"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
