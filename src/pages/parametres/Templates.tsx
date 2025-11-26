@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Save, Trash2, FileText, Star, Eye, Palette } from "lucide-react";
 import { TemplatePreview } from "@/components/templates/TemplatePreview";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 interface Template {
   id: string;
@@ -37,6 +38,7 @@ interface Template {
 }
 
 const Templates = () => {
+  const { companyId } = useCurrentCompany();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -63,10 +65,16 @@ const Templates = () => {
   const handleSave = async () => {
     if (!selectedTemplate) return;
 
+    if (!companyId) {
+      toast.error("Impossible de déterminer votre société");
+      return;
+    }
+
     // Validation: content_html est requis et ne peut pas être vide
     const contentHtml = selectedTemplate.content_html?.trim() || '<div style="padding: 20px;">Contenu du document</div>';
 
     const templateData = {
+      company_id: companyId,
       type: selectedTemplate.type,
       name: selectedTemplate.name,
       theme: selectedTemplate.theme || 'classique',
