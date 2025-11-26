@@ -79,9 +79,12 @@ const InventaireAchats = () => {
   });
 
   const loadOrders = async () => {
+    if (!company?.id) return;
+
     const { data, error } = await supabase
       .from("purchase_orders")
       .select("*")
+      .eq("company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -93,9 +96,12 @@ const InventaireAchats = () => {
   };
 
   const loadInventory = async () => {
+    if (!company?.id) return;
+
     const { data, error } = await supabase
       .from("inventory_items")
       .select("id, name, sku, type, unit_price_ht")
+      .eq("company_id", company.id)
       .order("name");
 
     if (error) {
@@ -107,8 +113,10 @@ const InventaireAchats = () => {
   };
 
   useEffect(() => {
-    loadOrders();
-    loadInventory();
+    if (company?.id) {
+      loadOrders();
+      loadInventory();
+    }
 
     const channel = supabase
       .channel("purchase_orders_changes")
@@ -120,7 +128,7 @@ const InventaireAchats = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [company?.id]);
 
   const generateOrderNumber = () => {
     const year = new Date().getFullYear();
