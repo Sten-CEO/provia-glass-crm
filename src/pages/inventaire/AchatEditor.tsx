@@ -69,7 +69,32 @@ const AchatEditor = () => {
     } else {
       generateOrderNumber();
     }
-  }, [id]);
+  }, [id, company?.id]);
+
+  // Realtime subscription for inventory updates
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const channel = supabase
+      .channel('inventory_items_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `company_id=eq.${company.id}`
+        },
+        () => {
+          loadInventoryItems();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [company?.id]);
 
   const loadInventoryItems = async () => {
     if (!company?.id) return;
