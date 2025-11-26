@@ -493,11 +493,6 @@ const AchatEditor = () => {
   };
 
   const totals = calculateTotals();
-  const filteredItems = inventoryItems.filter((item) => {
-    const selectedItem = formData.items[0];
-    if (!selectedItem) return true;
-    return item.type === selectedItem.type;
-  });
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -670,29 +665,39 @@ const AchatEditor = () => {
                     <Select
                       value={item.item_id || undefined}
                       onValueChange={(value) => selectInventoryItem(index, value)}
-                      disabled={inventoryItems.filter((i) => i.type === item.type && i.id).length === 0}
+                      disabled={inventoryItems.filter((i) => i.type === item.type).length === 0}
                     >
                       <SelectTrigger className={!item.item_id ? "border-destructive" : ""}>
                         <SelectValue placeholder="Sélectionner depuis l'inventaire..." />
                       </SelectTrigger>
-                      <SelectContent>
-                        {inventoryItems
-                          .filter((i) => i.type === item.type && i.id)
-                          .map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
-                            </SelectItem>
-                          ))}
+                      <SelectContent className="bg-popover z-50 max-h-[300px]">
+                        {inventoryItems.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            Aucun article dans l'inventaire
+                          </div>
+                        ) : inventoryItems.filter((i) => i.type === item.type).length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            Aucun {item.type} disponible
+                          </div>
+                        ) : (
+                          inventoryItems
+                            .filter((i) => i.type === item.type)
+                            .map((i) => (
+                              <SelectItem key={i.id} value={i.id}>
+                                {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
+                              </SelectItem>
+                            ))
+                        )}
                       </SelectContent>
                     </Select>
-                    {inventoryItems.filter((i) => i.type === item.type && i.id).length === 0 && (
+                    {inventoryItems.filter((i) => i.type === item.type).length === 0 && (
                       <p className="text-xs text-amber-600 mt-1">
                         {inventoryItems.length === 0
                           ? "⚠️ Aucun article dans l'inventaire. Créez des articles dans Inventaire > Consommables ou Matériels."
                           : `⚠️ Aucun ${item.type} disponible. Créez un ${item.type} dans l'inventaire ou changez le type ci-dessus.`}
                       </p>
                     )}
-                    {!item.item_id && inventoryItems.filter((i) => i.type === item.type && i.id).length > 0 && (
+                    {!item.item_id && inventoryItems.filter((i) => i.type === item.type).length > 0 && (
                       <p className="text-xs text-destructive mt-1">Article requis</p>
                     )}
                   </div>

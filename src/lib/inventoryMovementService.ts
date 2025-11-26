@@ -125,8 +125,8 @@ export async function convertPlannedToOut(sourceId: string, sourceType: "devis" 
         .eq("id", lastMovement.id);
     }
 
-    // Update stock
-    await updateItemStock(movement.item_id);
+    // Update stock - use company_id from the movement
+    await updateItemStock(movement.item_id, movement.company_id);
   }
 }
 
@@ -161,7 +161,7 @@ export async function reschedulePlannedMovements(
 /**
  * Record a purchase receipt (inventory in)
  */
-export async function receiveInventoryIn(itemId: string, qty: number, purchaseId: string, note?: string): Promise<void> {
+export async function receiveInventoryIn(itemId: string, qty: number, purchaseId: string, companyId: string, note?: string): Promise<void> {
   await createInventoryMovement({
     item_id: itemId,
     type: "in",
@@ -173,5 +173,5 @@ export async function receiveInventoryIn(itemId: string, qty: number, purchaseId
     date: new Date().toISOString(),
   });
 
-  await updateItemStock(itemId);
+  await updateItemStock(itemId, companyId);
 }
