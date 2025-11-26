@@ -77,13 +77,25 @@ const AchatEditor = () => {
   }, [company?.id]);
 
   const loadInventoryItems = async () => {
-    if (!company?.id) return;
+    if (!company?.id) {
+      console.log("❌ [AchatEditor] Cannot load inventory: company.id is undefined");
+      return;
+    }
 
-    const { data } = await supabase
+    console.log("🔵 [AchatEditor] Loading inventory items for company:", company.id);
+    const { data, error } = await supabase
       .from("inventory_items")
       .select("*")
       .eq("company_id", company.id)
       .order("name");
+
+    if (error) {
+      console.error("❌ [AchatEditor] Error loading inventory:", error);
+      toast.error("Erreur de chargement de l'inventaire");
+      return;
+    }
+
+    console.log(`✅ [AchatEditor] Loaded ${data?.length || 0} inventory items:`, data);
     if (data) setInventoryItems(data);
   };
 
@@ -680,13 +692,30 @@ const AchatEditor = () => {
                         <SelectValue placeholder="Sélectionner depuis l'inventaire..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {inventoryItems
-                          .filter((i) => i.type === item.type && i.id)
-                          .map((i) => (
+                        {(() => {
+                          const filtered = inventoryItems.filter((i) => i.type === item.type && i.id);
+                          console.log(`[AchatEditor] Filtering items for type "${item.type}":`, {
+                            totalItems: inventoryItems.length,
+                            filteredItems: filtered.length,
+                            filtered
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                {inventoryItems.length === 0
+                                  ? "Aucun article dans l'inventaire. Créez des articles d'abord."
+                                  : `Aucun ${item.type} dans l'inventaire. Changez le type ou créez des ${item.type}s.`}
+                              </div>
+                            );
+                          }
+
+                          return filtered.map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.name} {i.sku ? `(${i.sku})` : ""} - Stock: {i.qty_on_hand || 0}
                             </SelectItem>
-                          ))}
+                          ));
+                        })()}
                       </SelectContent>
                     </Select>
                     {!item.item_id && (
