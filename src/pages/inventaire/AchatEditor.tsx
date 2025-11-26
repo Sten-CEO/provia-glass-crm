@@ -47,12 +47,10 @@ const AchatEditor = () => {
   const isEditing = !!id;
   const { company } = useCompany();
 
-  console.log("🚀 [AchatEditor] Component render. company:", company);
-
   const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  
+
   const [formData, setFormData] = useState<PurchaseOrder>({
     number: "",
     supplier: "",
@@ -65,6 +63,7 @@ const AchatEditor = () => {
   });
 
   useEffect(() => {
+    loadInventoryItems();
     if (isEditing) {
       loadPurchaseOrder();
     } else {
@@ -72,36 +71,14 @@ const AchatEditor = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    console.log("🔄 [AchatEditor] useEffect triggered. company:", company);
-    if (company?.id) {
-      console.log("✅ [AchatEditor] Company ID exists, calling loadInventoryItems");
-      loadInventoryItems();
-    } else {
-      console.log("⚠️ [AchatEditor] Company or company.id is undefined");
-    }
-  }, [company?.id]);
-
   const loadInventoryItems = async () => {
-    if (!company?.id) {
-      console.log("❌ [AchatEditor] Cannot load inventory: company.id is undefined");
-      return;
-    }
+    if (!company?.id) return;
 
-    console.log("🔵 [AchatEditor] Loading inventory items for company:", company.id);
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("inventory_items")
       .select("*")
       .eq("company_id", company.id)
       .order("name");
-
-    if (error) {
-      console.error("❌ [AchatEditor] Error loading inventory:", error);
-      toast.error("Erreur de chargement de l'inventaire");
-      return;
-    }
-
-    console.log(`✅ [AchatEditor] Loaded ${data?.length || 0} inventory items:`, data);
     if (data) setInventoryItems(data);
   };
 
