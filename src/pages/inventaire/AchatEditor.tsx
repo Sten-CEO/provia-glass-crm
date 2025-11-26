@@ -71,8 +71,12 @@ const AchatEditor = () => {
   }, [id]);
 
   useEffect(() => {
+    console.log("🔄 [AchatEditor] useEffect triggered. company:", company);
     if (company?.id) {
+      console.log("✅ [AchatEditor] Company ID exists, calling loadInventoryItems");
       loadInventoryItems();
+    } else {
+      console.log("⚠️ [AchatEditor] Company or company.id is undefined");
     }
   }, [company?.id]);
 
