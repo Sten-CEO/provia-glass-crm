@@ -64,9 +64,9 @@ export function useAccessControls() {
       setUserRole(userRoleData.role);
       console.log('👤 [useAccessControls.TS] User role:', userRoleData.role);
 
-      // OWNER has automatic full access (accounts created via signup)
-      if (userRoleData.role === 'owner') {
-        console.log('✅ [useAccessControls.TS] Owner detected - granting full access');
+      // OWNER and ADMIN have automatic full access
+      if (userRoleData.role === 'owner' || userRoleData.role === 'admin') {
+        console.log('✅ [useAccessControls.TS] Owner/Admin detected - granting full access');
         setAccessControls({
           devis: true,
           planning: true,
@@ -116,8 +116,8 @@ export function useAccessControls() {
   };
 
   const hasAccess = (feature: keyof AccessControls): boolean => {
-    // Owner always has access to everything
-    if (userRole === 'owner') {
+    // Owner and Admin always have access to everything
+    if (userRole === 'owner' || userRole === 'admin') {
       return true;
     }
 
