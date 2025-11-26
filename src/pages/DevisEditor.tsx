@@ -54,6 +54,7 @@ import { useQuoteInventorySync } from "@/hooks/useQuoteInventorySync";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { InterventionInfoBlock } from "@/components/devis/InterventionInfoBlock";
 import { MaterialsAvailabilityChecker } from "@/components/interventions/MaterialsAvailabilityChecker";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Quote {
   id?: string;
@@ -91,6 +92,7 @@ interface Quote {
 const DevisEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { company } = useCompany();
   const isNewQuote = !id || id === "new";
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
@@ -156,14 +158,21 @@ const DevisEditor = () => {
 
   useEffect(() => {
     // Load reference data in background (non-blocking)
-    loadClients();
-    loadEmployees();
-    loadTemplates();
-  }, []);
+    if (company?.id) {
+      loadClients();
+      loadEmployees();
+      loadTemplates();
+    }
+  }, [company?.id]);
 
   const loadClients = async () => {
+    if (!company?.id) return;
+
     try {
-      const { data } = await supabase.from("clients").select("*");
+      const { data } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("company_id", company.id);
       setClients(data || []);
     } catch (error) {
       console.error("Error loading clients:", error);
@@ -171,8 +180,13 @@ const DevisEditor = () => {
   };
 
   const loadEmployees = async () => {
+    if (!company?.id) return;
+
     try {
-      const { data } = await supabase.from("equipe").select("*");
+      const { data } = await supabase
+        .from("equipe")
+        .select("*")
+        .eq("company_id", company.id);
       setEmployees(data || []);
     } catch (error) {
       console.error("Error loading employees:", error);
@@ -180,11 +194,14 @@ const DevisEditor = () => {
   };
 
   const loadTemplates = async () => {
+    if (!company?.id) return;
+
     try {
       const { data, error } = await supabase
         .from("doc_templates")
         .select("*")
         .eq("type", "QUOTE")
+        .eq("company_id", company.id)
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) {
@@ -1460,28 +1477,6 @@ const DevisEditor = () => {
               </Button>
             </CardContent>
           </Card>
-
-          {/* Remise */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Remise</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Remise HT (€)</Label>
-                  <Input
-                    type="number"
-                    value={quote.discount_ht}
-                    onChange={(e) =>
-                      setQuote({ ...quote, discount_ht: parseFloat(e.target.value) || 0 })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Paiement */}
@@ -1491,6 +1486,20 @@ const DevisEditor = () => {
               <CardTitle>Acompte et paiement</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label>Remise HT (€)</Label>
+                <Input
+                  type="number"
+                  value={quote.discount_ht}
+                  onChange={(e) =>
+                    setQuote({ ...quote, discount_ht: parseFloat(e.target.value) || 0 })
+                  }
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cette remise sera déduite du total HT
+                </p>
+              </div>
               <div>
                 <Label>Acompte requis HT (€)</Label>
                 <Input
