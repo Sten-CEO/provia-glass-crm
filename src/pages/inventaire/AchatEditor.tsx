@@ -72,9 +72,12 @@ const AchatEditor = () => {
   }, [id]);
 
   const loadInventoryItems = async () => {
+    if (!company?.id) return;
+
     const { data } = await supabase
       .from("inventory_items")
       .select("*")
+      .eq("company_id", company.id)
       .order("name");
     if (data) setInventoryItems(data);
   };
@@ -194,6 +197,12 @@ const AchatEditor = () => {
 
   // Synchronize inventory movements after saving the purchase
   const syncMovementsForPurchase = async (refId: string) => {
+    if (!company?.id) {
+      console.error("Cannot sync movements without company_id");
+      toast.error("Erreur: entreprise non chargée");
+      return;
+    }
+
     let createdPlanned = 0;
     let createdDone = 0;
     try {
@@ -202,7 +211,8 @@ const AchatEditor = () => {
         .from("inventory_movements")
         .select("id, status")
         .eq("source", "achat")
-        .eq("ref_id", refId);
+        .eq("ref_id", refId)
+        .eq("company_id", company.id);
 
       if (existing && existing.length > 0) {
         for (const m of existing) {
@@ -221,6 +231,7 @@ const AchatEditor = () => {
           // Create planned inbound movement for expected date
           if (qtyOrdered > 0) {
             await createInventoryMovement({
+              company_id: company.id,
               item_id: item.item_id,
               type: "in",
               qty: qtyOrdered,
@@ -238,6 +249,7 @@ const AchatEditor = () => {
           const qty = qtyReceived > 0 ? qtyReceived : qtyOrdered;
           if (qty > 0) {
             await createInventoryMovement({
+              company_id: company.id,
               item_id: item.item_id,
               type: "in",
               qty,
@@ -253,6 +265,7 @@ const AchatEditor = () => {
           // Create done for received and planned for remaining
           if (qtyReceived > 0) {
             await createInventoryMovement({
+              company_id: company.id,
               item_id: item.item_id,
               type: "in",
               qty: qtyReceived,
@@ -267,6 +280,7 @@ const AchatEditor = () => {
           const remaining = Math.max(0, qtyOrdered - qtyReceived);
           if (remaining > 0) {
             await createInventoryMovement({
+              company_id: company.id,
               item_id: item.item_id,
               type: "in",
               qty: remaining,
@@ -283,6 +297,7 @@ const AchatEditor = () => {
           // Enregistrer un mouvement annulé pour trace
           if (qtyOrdered > 0 || qtyReceived > 0) {
             await createInventoryMovement({
+              company_id: company.id,
               item_id: item.item_id,
               type: "in",
               qty: qtyReceived > 0 ? qtyReceived : qtyOrdered,

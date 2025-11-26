@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CreateMovementParams {
+  company_id?: string; // Optional: will be auto-fetched from item if not provided
   item_id: string;
   type: "in" | "out" | "reserve" | "expected_out";
   qty: number;
@@ -14,6 +15,7 @@ export interface CreateMovementParams {
 
 export async function createInventoryMovement(params: CreateMovementParams) {
   const {
+    company_id: providedCompanyId,
     item_id,
     type,
     qty,
@@ -25,10 +27,26 @@ export async function createInventoryMovement(params: CreateMovementParams) {
     date = new Date().toISOString(),
   } = params;
 
+  // If company_id not provided, fetch it from the inventory item
+  let company_id = providedCompanyId;
+  if (!company_id) {
+    const { data: item, error: itemError } = await supabase
+      .from("inventory_items")
+      .select("company_id")
+      .eq("id", item_id)
+      .single();
+
+    if (itemError || !item) {
+      throw new Error("Failed to get company_id from inventory item");
+    }
+    company_id = item.company_id;
+  }
+
   // Create movement
   const { data: movement, error: movementError } = await supabase
     .from("inventory_movements")
     .insert({
+      company_id,
       item_id,
       type,
       qty,
@@ -46,18 +64,19 @@ export async function createInventoryMovement(params: CreateMovementParams) {
 
   // Update stock if movement is done
   if (status === "done") {
-    await updateItemStock(item_id);
+    await updateItemStock(item_id, company_id);
   }
 
   return movement;
 }
 
-export async function updateItemStock(item_id: string) {
+export async function updateItemStock(item_id: string, company_id: string) {
   // Get all done movements for this item
   const { data: movements, error } = await supabase
     .from("inventory_movements")
     .select("type, qty, status")
     .eq("item_id", item_id)
+    .eq("company_id", company_id)
     .eq("status", "done");
 
   if (error) throw error;
@@ -74,6 +93,7 @@ export async function updateItemStock(item_id: string) {
     .from("inventory_movements")
     .select("type, qty")
     .eq("item_id", item_id)
+    .eq("company_id", company_id)
     .eq("status", "planned");
 
   const reserved = (plannedMovements || []).reduce((total, m) => {
@@ -115,18 +135,19 @@ export async function cancelMovement(movement_id: string) {
 
   // Update stock if was done
   if (movement.status === "done") {
-    await updateItemStock(movement.item_id);
+    await updateItemStock(movement.item_id, movement.company_id);
   }
 
   return movement;
 }
 
-export async function convertPlannedToReal(ref_id: string, ref_number: string) {
+export async function convertPlannedToReal(ref_id: string, ref_number: string, company_id: string) {
   // Get planned movements for this reference
   const { data: planned, error } = await supabase
     .from("inventory_movements")
     .select("*")
     .eq("ref_id", ref_id)
+    .eq("company_id", company_id)
     .eq("status", "planned");
 
   if (error) throw error;
@@ -141,6 +162,7 @@ export async function convertPlannedToReal(ref_id: string, ref_number: string) {
 
     // Create real exit
     await createInventoryMovement({
+      company_id,
       item_id: movement.item_id,
       type: "out",
       qty: movement.qty,
