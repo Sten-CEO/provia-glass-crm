@@ -1,4 +1,4 @@
-const CACHE_NAME = 'provia-employee-v1';
+const CACHE_NAME = 'provia-employee-v3-access-fix';
 const urlsToCache = [
   '/',
   '/employee',
