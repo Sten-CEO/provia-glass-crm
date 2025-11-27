@@ -56,7 +56,8 @@ interface TeamMember {
     equipe?: boolean;
     inventaire?: boolean;
     agenda?: boolean;
-    dashboard?: boolean;
+    tableau_de_bord?: boolean;  // Fixed: was "dashboard"
+    chiffre_affaire?: boolean;   // Added: was missing
   };
 }
 
