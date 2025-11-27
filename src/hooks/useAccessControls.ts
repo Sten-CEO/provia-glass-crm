@@ -35,7 +35,7 @@ export function useAccessControls() {
 
   const loadAccessControls = async () => {
     try {
-      console.log('🟢 [useAccessControls.TS] Loading access controls...');
+      console.log('🟢🟢🟢 [V3 - NEW VERSION] Loading access controls...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.log('❌ [useAccessControls.TS] No user found');
