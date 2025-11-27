@@ -66,7 +66,7 @@ export function useAccessControls() {
 
       // OWNER has automatic full access (accounts created via signup)
       if (userRoleData.role === 'owner') {
-        console.log('✅ [useAccessControls.TS] Owner detected - granting full access');
+        console.log('🔑 [useAccessControls] OWNER ROLE - AUTO FULL ACCESS GRANTED (v2.0)');
         setAccessControls({
           devis: true,
           planning: true,
@@ -88,6 +88,7 @@ export function useAccessControls() {
 
       // For all other roles (admin, manager, backoffice, employe_terrain)
       // Get access_controls from equipe table
+      console.log('🔍 [useAccessControls] NON-OWNER ROLE - Fetching access_controls from equipe table for user:', user.id);
       const { data: equipeData, error: equipeError } = await supabase
         .from("equipe")
         .select("access_controls")
