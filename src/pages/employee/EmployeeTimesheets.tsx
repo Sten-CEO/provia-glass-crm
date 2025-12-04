@@ -158,6 +158,7 @@ export const EmployeeTimesheets = () => {
         .insert({
           timesheet_entry_id: currentEntry.id,
           start_at: format(now, "HH:mm:ss"),
+          company_id: currentEntry.company_id,
         })
         .select()
         .single();
