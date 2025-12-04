@@ -323,16 +323,20 @@ const Templates = () => {
               {/* Left side - Editor */}
               <div className="overflow-y-auto border-r p-6 bg-muted/30">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-5 mb-6">
+                  <TabsList className={`grid w-full mb-6 ${isEmailTemplate ? 'grid-cols-3' : 'grid-cols-5'}`}>
                     <TabsTrigger value="general">Général</TabsTrigger>
-                    <TabsTrigger value="apparence">
-                      <Palette className="h-4 w-4 mr-2" />
-                      Apparence
-                    </TabsTrigger>
+                    {!isEmailTemplate && (
+                      <TabsTrigger value="apparence">
+                        <Palette className="h-4 w-4 mr-2" />
+                        Apparence
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger value="contenu">Contenu</TabsTrigger>
-                    <TabsTrigger value="colonnes" disabled={isEmailTemplate}>
-                      Colonnes
-                    </TabsTrigger>
+                    {!isEmailTemplate && (
+                      <TabsTrigger value="colonnes">
+                        Colonnes
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger value="options">
                       <Settings className="h-4 w-4 mr-2" />
                       Options
