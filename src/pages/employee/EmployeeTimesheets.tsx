@@ -170,6 +170,25 @@ export const EmployeeTimesheets = () => {
         return;
       }
 
+      // If currentEntry.company_id is null, update it first to fix RLS policy
+      if (!currentEntry.company_id && companyId) {
+        console.log("Updating currentEntry with company_id:", companyId);
+        const { error: updateError } = await supabase
+          .from("timesheets_entries")
+          .update({ company_id: companyId })
+          .eq("id", currentEntry.id);
+
+        if (updateError) {
+          console.error("Error updating timesheet entry:", updateError);
+          toast.error("Erreur lors de la mise à jour du pointage");
+          return;
+        }
+
+        // Update local state
+        setCurrentEntry({ ...currentEntry, company_id: companyId });
+        console.log("currentEntry updated successfully");
+      }
+
       const insertData = {
         timesheet_entry_id: currentEntry.id,
         start_at: format(now, "HH:mm:ss"),
