@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Copy } from "lucide-react";
+import { Mail, Copy, Eye } from "lucide-react";
+import { useDocumentTemplates } from "@/hooks/useDocumentTemplates";
+import { replaceVariables, TemplateVariableValues } from "@/lib/templateVariables";
 
 interface QuoteSendModalProps {
   open: boolean;
@@ -15,6 +18,12 @@ interface QuoteSendModalProps {
   quoteNumber: string;
   clientEmail: string;
   clientName: string;
+  quoteData?: {
+    total_ht?: number;
+    total_ttc?: number;
+    issued_at?: string;
+    expiry_date?: string;
+  };
 }
 
 export function QuoteSendModal({
@@ -24,15 +33,60 @@ export function QuoteSendModal({
   quoteNumber,
   clientEmail,
   clientName,
+  quoteData,
 }: QuoteSendModalProps) {
   const { toast } = useToast();
+  const { templates, loadTemplates } = useDocumentTemplates({
+    type: "EMAIL",
+    emailType: "quote",
+    autoLoad: true
+  });
+
   const [sending, setSending] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState(clientEmail);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [subject, setSubject] = useState(`Devis ${quoteNumber}`);
   const [message, setMessage] = useState(
     `Bonjour ${clientName},\n\nVeuillez trouver ci-joint votre devis.\n\nCordialement`
   );
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Load templates on mount
+  useEffect(() => {
+    if (open) {
+      loadTemplates();
+    }
+  }, [open]);
+
+  // Apply template when selected
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const template = templates.find(t => t.id === selectedTemplateId);
+      if (template) {
+        // Prepare variable values
+        const variables: TemplateVariableValues = {
+          NomClient: clientName,
+          EmailClient: clientEmail,
+          NumDevis: quoteNumber,
+          NumDocument: quoteNumber,
+          TypeDocument: "Devis",
+          MontantHT: quoteData?.total_ht || 0,
+          MontantTTC: quoteData?.total_ttc || 0,
+          DateEnvoi: new Date().toISOString(),
+          DateCreation: quoteData?.issued_at || new Date().toISOString(),
+          DateExpiration: quoteData?.expiry_date,
+        };
+
+        // Replace variables in template
+        const newSubject = replaceVariables(template.email_subject || "", variables);
+        const newBody = replaceVariables(template.email_body || "", variables);
+
+        setSubject(newSubject);
+        setMessage(newBody);
+      }
+    }
+  }, [selectedTemplateId, templates, clientName, clientEmail, quoteNumber, quoteData]);
 
   const handleSend = async () => {
     if (!recipientEmail) {
@@ -104,6 +158,27 @@ export function QuoteSendModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {templates.length > 0 && (
+            <div>
+              <Label htmlFor="template">Modèle d'email (optionnel)</Label>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un modèle..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Les variables seront automatiquement remplacées
+              </p>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="email">Destinataire</Label>
             <Input
