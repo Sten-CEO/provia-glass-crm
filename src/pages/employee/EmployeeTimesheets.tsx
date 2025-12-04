@@ -118,6 +118,14 @@ export const EmployeeTimesheets = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const formatHoursDecimal = (hoursDecimal: number) => {
+    const totalSeconds = Math.round(hoursDecimal * 3600);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   const startWork = async () => {
     if (!employeeId || !companyId) return;
 
@@ -339,7 +347,7 @@ export const EmployeeTimesheets = () => {
                   <Button
                     onClick={endBreak}
                     size="lg"
-                    className="w-full bg-orange-600 hover:bg-orange-700"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg"
                   >
                     <Play className="h-5 w-5 mr-2" />
                     Fin de ma pause
@@ -349,7 +357,7 @@ export const EmployeeTimesheets = () => {
                 <Button
                   onClick={endWork}
                   size="lg"
-                  className="w-full bg-red-600 hover:bg-red-700"
+                  className="w-full bg-red-500 hover:bg-red-600 text-white shadow-lg"
                 >
                   <Square className="h-5 w-5 mr-2" />
                   Terminer la journée
@@ -374,7 +382,7 @@ export const EmployeeTimesheets = () => {
                     {entry.start_at?.substring(0, 5)} - {entry.end_at?.substring(0, 5) || "En cours"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {entry.hours ? `${entry.hours}h` : "Calcul en cours..."}
+                    {entry.hours ? formatHoursDecimal(entry.hours) : "Calcul en cours..."}
                   </p>
                 </div>
                 <Badge variant={entry.status === "draft" ? "secondary" : "default"}>
