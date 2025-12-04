@@ -35,6 +35,9 @@ import EmployeeDetail from "./pages/EmployeeDetail";
 import Timesheets from "./pages/Timesheets";
 import Paiements from "./pages/Paiements";
 import Parametres from "./pages/Parametres";
+import Templates from "./pages/parametres/Templates";
+import ServiceCatalog from "./pages/parametres/ServiceCatalog";
+import Taxes from "./pages/parametres/Taxes";
 import Support from "./pages/Support";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import NotFound from "./pages/NotFound";
@@ -135,6 +138,9 @@ const App = () => {
           <Route path="/profil" element={<Profil />} />
           <Route path="/notifications" element={<Notifications />} />
             <Route path="/parametres" element={<ProtectedRoute requiredAccess="parametres"><Parametres /></ProtectedRoute>} />
+            <Route path="/parametres/templates" element={<ProtectedRoute requiredAccess="parametres"><Templates /></ProtectedRoute>} />
+            <Route path="/parametres/services" element={<ProtectedRoute requiredAccess="parametres"><ServiceCatalog /></ProtectedRoute>} />
+            <Route path="/parametres/taxes" element={<ProtectedRoute requiredAccess="parametres"><Taxes /></ProtectedRoute>} />
             <Route path="/support" element={<Support />} />
           </Route>
 
