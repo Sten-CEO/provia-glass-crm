@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Camera, Upload, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useEmployee } from "@/contexts/EmployeeContext";
 
 interface JobPhotoCaptureProps {
   jobId: string;
@@ -18,9 +19,11 @@ export const JobPhotoCapture = ({
   photoType,
   onPhotoUploaded,
 }: JobPhotoCaptureProps) => {
+  const { companyId } = useEmployee();
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,6 +65,7 @@ export const JobPhotoCapture = ({
         .insert({
           intervention_id: jobId,
           employee_id: employeeId,
+          company_id: companyId,
           file_name: file.name,
           file_url: urlData.publicUrl,
           file_type: "image",
@@ -83,17 +87,31 @@ export const JobPhotoCapture = ({
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const triggerCamera = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const triggerGallery = () => {
+    galleryInputRef.current?.click();
   };
 
   return (
     <Card className="p-4">
+      {/* Input pour la caméra */}
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {/* Input pour la galerie */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -119,17 +137,17 @@ export const JobPhotoCapture = ({
           <Button
             variant="outline"
             className="w-full"
-            onClick={triggerFileInput}
+            onClick={triggerCamera}
             disabled={uploading}
           >
             <Camera className="mr-2 h-4 w-4" />
             {uploading ? "Envoi en cours..." : "Prendre une photo"}
           </Button>
-          
+
           <Button
             variant="outline"
             className="w-full"
-            onClick={triggerFileInput}
+            onClick={triggerGallery}
             disabled={uploading}
           >
             <Upload className="mr-2 h-4 w-4" />

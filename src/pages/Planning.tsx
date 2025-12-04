@@ -330,8 +330,8 @@ const Planning = () => {
           eventClick={(info) => navigate(`/interventions/${info.event.id}/report`)}
           height="auto"
           locale="fr"
-          slotMinTime="07:00:00"
-          slotMaxTime="20:00:00"
+          slotMinTime="05:00:00"
+          slotMaxTime="22:00:00"
           allDaySlot={false}
         />
       </div>
