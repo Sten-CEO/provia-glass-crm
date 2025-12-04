@@ -45,9 +45,26 @@ const Templates = () => {
   }, []);
 
   const handleNew = () => {
+    // Déterminer le type selon le filtre actif
+    let defaultType: "QUOTE" | "INVOICE" | "EMAIL" = "QUOTE";
+    let defaultEmailType: string | null = null;
+    let defaultName = "Nouveau modèle";
+
+    if (filterType === "QUOTE") {
+      defaultType = "QUOTE";
+      defaultName = "Nouveau modèle de devis";
+    } else if (filterType === "INVOICE") {
+      defaultType = "INVOICE";
+      defaultName = "Nouveau modèle de facture";
+    } else if (filterType === "EMAIL") {
+      defaultType = "EMAIL";
+      defaultEmailType = "quote";
+      defaultName = "Nouveau modèle d'email";
+    }
+
     setSelectedTemplate({
-      type: "QUOTE",
-      name: "Nouveau modèle",
+      type: defaultType,
+      name: defaultName,
       is_default: false,
       theme: "classique",
       main_color: "#3b82f6",
@@ -62,9 +79,9 @@ const Templates = () => {
       show_discounts: true,
       show_remaining_balance: false,
       signature_enabled: false,
-      email_subject: null,
-      email_body: null,
-      email_type: null,
+      email_subject: defaultType === "EMAIL" ? "Votre {{TypeDocument}} {{NumDocument}}" : null,
+      email_body: defaultType === "EMAIL" ? "Bonjour {{NomClient}},\n\nVeuillez trouver ci-joint votre document.\n\nCordialement,\n{{NomEntreprise}}" : null,
+      email_type: defaultEmailType,
       content_html: '<div style="padding: 20px;"><p>Contenu du document</p></div>',
       header_html: '<div style="text-align: center;"><h2>{{NomEntreprise}}</h2></div>',
       footer_html: '<div style="text-align: center; font-size: 12px;">{{NomEntreprise}} - Page 1</div>',
