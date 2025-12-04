@@ -372,108 +372,137 @@ const Templates = () => {
                     </div>
 
                     {isEmailTemplate && (
-                      <div>
-                        <Label>Type d'email</Label>
-                        <Select
-                          value={selectedTemplate.email_type || "quote"}
-                          onValueChange={(v) =>
-                            setSelectedTemplate({ ...selectedTemplate, email_type: v })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="quote">Devis</SelectItem>
-                            <SelectItem value="invoice">Facture</SelectItem>
-                            <SelectItem value="reminder">Relance</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <>
+                        <div>
+                          <Label>Type d'email</Label>
+                          <Select
+                            value={selectedTemplate.email_type || "quote"}
+                            onValueChange={(v) =>
+                              setSelectedTemplate({ ...selectedTemplate, email_type: v })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="quote">Devis</SelectItem>
+                              <SelectItem value="invoice">Facture</SelectItem>
+                              <SelectItem value="reminder">Relance</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label>Police d'écriture</Label>
+                          <Select
+                            value={selectedTemplate.font_family || "Arial"}
+                            onValueChange={(v) =>
+                              setSelectedTemplate({ ...selectedTemplate, font_family: v })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Arial">Arial</SelectItem>
+                              <SelectItem value="Helvetica">Helvetica</SelectItem>
+                              <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                              <SelectItem value="Georgia">Georgia</SelectItem>
+                              <SelectItem value="Roboto">Roboto</SelectItem>
+                              <SelectItem value="Verdana">Verdana</SelectItem>
+                              <SelectItem value="Calibri">Calibri</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     )}
                   </TabsContent>
 
                   {/* APPARENCE TAB */}
                   <TabsContent value="apparence" className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Couleur principale</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="color"
-                            value={selectedTemplate.main_color || "#3b82f6"}
-                            onChange={(e) =>
-                              setSelectedTemplate({
-                                ...selectedTemplate,
-                                main_color: e.target.value,
-                              })
-                            }
-                            className="w-16 h-10 cursor-pointer"
-                          />
-                          <Input
-                            value={selectedTemplate.main_color || "#3b82f6"}
-                            onChange={(e) =>
-                              setSelectedTemplate({
-                                ...selectedTemplate,
-                                main_color: e.target.value,
-                              })
-                            }
-                            placeholder="#3b82f6"
-                          />
-                        </div>
+                    {isEmailTemplate ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <p>Les options d'apparence sont disponibles dans l'onglet "Général"</p>
                       </div>
-
-                      <div>
-                        <Label>Couleur d'accent</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="color"
-                            value={selectedTemplate.accent_color || "#fbbf24"}
-                            onChange={(e) =>
-                              setSelectedTemplate({
-                                ...selectedTemplate,
-                                accent_color: e.target.value,
-                              })
-                            }
-                            className="w-16 h-10 cursor-pointer"
-                          />
-                          <Input
-                            value={selectedTemplate.accent_color || "#fbbf24"}
-                            onChange={(e) =>
-                              setSelectedTemplate({
-                                ...selectedTemplate,
-                                accent_color: e.target.value,
-                              })
-                            }
-                            placeholder="#fbbf24"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Police</Label>
-                      <Select
-                        value={selectedTemplate.font_family || "Arial"}
-                        onValueChange={(v) =>
-                          setSelectedTemplate({ ...selectedTemplate, font_family: v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Arial">Arial</SelectItem>
-                          <SelectItem value="Helvetica">Helvetica</SelectItem>
-                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                          <SelectItem value="Georgia">Georgia</SelectItem>
-                          <SelectItem value="Roboto">Roboto</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {!isEmailTemplate && (
+                    ) : (
                       <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Couleur principale</Label>
+                            <div className="flex gap-2 mt-1">
+                              <Input
+                                type="color"
+                                value={selectedTemplate.main_color || "#3b82f6"}
+                                onChange={(e) =>
+                                  setSelectedTemplate({
+                                    ...selectedTemplate,
+                                    main_color: e.target.value,
+                                  })
+                                }
+                                className="w-16 h-10 cursor-pointer"
+                              />
+                              <Input
+                                value={selectedTemplate.main_color || "#3b82f6"}
+                                onChange={(e) =>
+                                  setSelectedTemplate({
+                                    ...selectedTemplate,
+                                    main_color: e.target.value,
+                                  })
+                                }
+                                placeholder="#3b82f6"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label>Couleur d'accent</Label>
+                            <div className="flex gap-2 mt-1">
+                              <Input
+                                type="color"
+                                value={selectedTemplate.accent_color || "#fbbf24"}
+                                onChange={(e) =>
+                                  setSelectedTemplate({
+                                    ...selectedTemplate,
+                                    accent_color: e.target.value,
+                                  })
+                                }
+                                className="w-16 h-10 cursor-pointer"
+                              />
+                              <Input
+                                value={selectedTemplate.accent_color || "#fbbf24"}
+                                onChange={(e) =>
+                                  setSelectedTemplate({
+                                    ...selectedTemplate,
+                                    accent_color: e.target.value,
+                                  })
+                                }
+                                placeholder="#fbbf24"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label>Police</Label>
+                          <Select
+                            value={selectedTemplate.font_family || "Arial"}
+                            onValueChange={(v) =>
+                              setSelectedTemplate({ ...selectedTemplate, font_family: v })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Arial">Arial</SelectItem>
+                              <SelectItem value="Helvetica">Helvetica</SelectItem>
+                              <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                              <SelectItem value="Georgia">Georgia</SelectItem>
+                              <SelectItem value="Roboto">Roboto</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         <BackgroundStyleSelector
                           value={selectedTemplate.background_style || "solid"}
                           onChange={(v) =>
@@ -810,6 +839,7 @@ const Templates = () => {
                     subject={selectedTemplate.email_subject || ""}
                     body={selectedTemplate.email_body || ""}
                     emailType={selectedTemplate.email_type as any}
+                    fontFamily={selectedTemplate.font_family || "Arial"}
                   />
                 ) : (
                   <LivePdfPreview

@@ -6,12 +6,14 @@ interface LiveEmailPreviewProps {
   subject: string;
   body: string;
   emailType?: "quote" | "invoice" | "reminder";
+  fontFamily?: string;
 }
 
 export function LiveEmailPreview({
   subject,
   body,
   emailType = "quote",
+  fontFamily = "Arial",
 }: LiveEmailPreviewProps) {
   // Get sample values for preview
   const sampleValues = getSampleValues(emailType);
@@ -57,7 +59,7 @@ export function LiveEmailPreview({
       </div>
 
       {/* Email body */}
-      <div className="p-6 bg-white">
+      <div className="p-6 bg-white" style={{ fontFamily }}>
         <div className="prose prose-sm max-w-none">
           <div
             className="whitespace-pre-wrap text-sm leading-relaxed text-foreground"
