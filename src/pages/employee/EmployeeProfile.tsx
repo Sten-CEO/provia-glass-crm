@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, User, Mail, Phone, Camera, Globe } from "lucide-react";
+import { LogOut, User, Mail, Phone, Camera, Globe, Lock, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface EmployeeProfile {
@@ -27,6 +27,10 @@ export const EmployeeProfile = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [lang, setLang] = useState("fr");
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     loadProfile();
@@ -97,6 +101,75 @@ export const EmployeeProfile = () => {
     } catch (error) {
       console.error("Language change error:", error);
       toast.error("Erreur de mise à jour");
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!profile || !newEmail) {
+      toast.error("Veuillez saisir un nouvel email");
+      return;
+    }
+
+    if (!newEmail.includes("@")) {
+      toast.error("Email invalide");
+      return;
+    }
+
+    try {
+      // Update auth email
+      const { error: authError } = await supabase.auth.updateUser({
+        email: newEmail,
+      });
+
+      if (authError) throw authError;
+
+      // Update equipe table
+      const { error: dbError } = await supabase
+        .from("equipe")
+        .update({ email: newEmail })
+        .eq("id", profile.id);
+
+      if (dbError) throw dbError;
+
+      setProfile({ ...profile, email: newEmail });
+      setNewEmail("");
+      toast.success("Email mis à jour avec succès");
+    } catch (error: any) {
+      toast.error("Erreur lors de la mise à jour de l'email");
+      console.error(error);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Mot de passe mis à jour avec succès");
+    } catch (error: any) {
+      toast.error("Erreur lors de la mise à jour du mot de passe");
+      console.error(error);
     }
   };
 
@@ -177,6 +250,65 @@ export const EmployeeProfile = () => {
             <Button onClick={handleUpdatePhone}>Enregistrer</Button>
           </div>
         </div>
+      </Card>
+
+      {/* Sécurité - Changement d'email */}
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Mail className="h-5 w-5" />
+          Changer mon email
+        </h3>
+
+        <div className="space-y-2">
+          <Label>Email actuel</Label>
+          <Input value={profile.email} disabled className="bg-muted" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Nouvel email</Label>
+          <Input
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="nouveau.email@exemple.com"
+          />
+        </div>
+
+        <Button onClick={handleUpdateEmail} className="w-full">
+          Mettre à jour l'email
+        </Button>
+      </Card>
+
+      {/* Sécurité - Changement de mot de passe */}
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Lock className="h-5 w-5" />
+          Changer mon mot de passe
+        </h3>
+
+        <div className="space-y-2">
+          <Label>Nouveau mot de passe</Label>
+          <Input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Minimum 6 caractères"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Confirmer le mot de passe</Label>
+          <Input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Retapez le nouveau mot de passe"
+          />
+        </div>
+
+        <Button onClick={handleUpdatePassword} className="w-full">
+          Mettre à jour le mot de passe
+        </Button>
       </Card>
 
       {/* Préférences */}

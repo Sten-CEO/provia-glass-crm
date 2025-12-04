@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Phone, Send, HelpCircle } from "lucide-react";
+import { Send, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployee } from "@/contexts/EmployeeContext";
@@ -38,20 +38,6 @@ export const EmployeeSupport = () => {
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-
-  const handleCallSupport = () => {
-    // TODO: récupérer le numéro de téléphone depuis company_settings
-    window.location.href = "tel:+33000000000";
-    
-    // Log l'événement (temporairement commenté en attente de la mise à jour des types)
-    /* 
-    supabase.from("support_events").insert({
-      employee_id: employeeId,
-      event_type: "call",
-      metadata: { timestamp: new Date().toISOString() }
-    });
-    */
-  };
 
   const handleSubmitTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,24 +83,6 @@ export const EmployeeSupport = () => {
           Consultez la FAQ ou contactez-nous pour toute question
         </p>
       </div>
-
-      {/* Bouton urgence */}
-      <Card className="p-4 bg-primary/10 border-primary/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Phone className="h-6 w-6 text-primary" />
-            <div>
-              <div className="font-semibold">Besoin d'aide urgente ?</div>
-              <div className="text-sm text-muted-foreground">
-                Appelez le support technique
-              </div>
-            </div>
-          </div>
-          <Button onClick={handleCallSupport} variant="default" size="lg">
-            Appeler
-          </Button>
-        </div>
-      </Card>
 
       {/* FAQ */}
       <Card className="p-6">
