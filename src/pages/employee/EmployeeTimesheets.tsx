@@ -157,30 +157,45 @@ export const EmployeeTimesheets = () => {
       // Use currentEntry.company_id if available, otherwise fallback to companyId from context
       const breakCompanyId = currentEntry.company_id || companyId;
 
+      // Debug logging
+      console.log("=== DEBUG startBreak ===");
+      console.log("currentEntry:", currentEntry);
+      console.log("currentEntry.company_id:", currentEntry.company_id);
+      console.log("companyId from context:", companyId);
+      console.log("breakCompanyId:", breakCompanyId);
+
       if (!breakCompanyId) {
         toast.error("Erreur: company_id manquant");
+        console.error("breakCompanyId is null or undefined");
         return;
       }
 
+      const insertData = {
+        timesheet_entry_id: currentEntry.id,
+        start_at: format(now, "HH:mm:ss"),
+        company_id: breakCompanyId,
+      };
+      console.log("Inserting with data:", insertData);
+
       const { data, error } = await supabase
         .from("timesheet_breaks")
-        .insert({
-          timesheet_entry_id: currentEntry.id,
-          start_at: format(now, "HH:mm:ss"),
-          company_id: breakCompanyId,
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error details:", error);
+        throw error;
+      }
 
+      console.log("Break created successfully:", data);
       setCurrentBreak(data);
       setOnBreak(true);
       toast.success("Pause démarrée");
       loadTimesheets();
     } catch (error: any) {
-      toast.error("Erreur lors du démarrage de la pause");
-      console.error(error);
+      console.error("=== FULL ERROR ===", error);
+      toast.error(`Erreur lors du démarrage de la pause: ${error.message || "Erreur inconnue"}`);
     }
   };
 
