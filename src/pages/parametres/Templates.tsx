@@ -228,8 +228,6 @@ const Templates = () => {
                       {template.type === "INVOICE" && "Facture"}
                       {template.type === "EMAIL" && `Email (${template.email_type || "non défini"})`}
                     </span>
-                    <span>•</span>
-                    <span className="capitalize">{template.theme}</span>
                   </div>
                 </div>
               </div>
@@ -393,25 +391,6 @@ const Templates = () => {
                         </Select>
                       </div>
                     )}
-
-                    <div>
-                      <Label>Thème</Label>
-                      <Select
-                        value={selectedTemplate.theme}
-                        onValueChange={(v) =>
-                          setSelectedTemplate({ ...selectedTemplate, theme: v })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="classique">Classique</SelectItem>
-                          <SelectItem value="compact">Compact</SelectItem>
-                          <SelectItem value="détaillé">Détaillé</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </TabsContent>
 
                   {/* APPARENCE TAB */}
