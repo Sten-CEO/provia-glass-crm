@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Eraser, Check } from "lucide-react";
+import { useEmployee } from "@/contexts/EmployeeContext";
 
 interface SignatureCanvasProps {
   jobId: string;
@@ -18,6 +19,7 @@ export const SignatureCanvas = ({
   employeeId,
   onSignatureSaved,
 }: SignatureCanvasProps) => {
+  const { companyId } = useEmployee();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [signerName, setSignerName] = useState("");
@@ -126,6 +128,7 @@ export const SignatureCanvas = ({
         .insert({
           job_id: jobId,
           employee_id: employeeId,
+          company_id: companyId,
           signer_name: signerName,
           signer_email: signerEmail || null,
           image_url: publicUrl,
