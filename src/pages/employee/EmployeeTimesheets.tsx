@@ -10,7 +10,7 @@ import { fr } from "date-fns/locale";
 import { useEmployee } from "@/contexts/EmployeeContext";
 
 export const EmployeeTimesheets = () => {
-  const { employeeId, loading: contextLoading } = useEmployee();
+  const { employeeId, companyId, loading: contextLoading } = useEmployee();
   const [isWorking, setIsWorking] = useState(false);
   const [onBreak, setOnBreak] = useState(false);
   const [currentEntry, setCurrentEntry] = useState<any>(null);
@@ -119,7 +119,7 @@ export const EmployeeTimesheets = () => {
   };
 
   const startWork = async () => {
-    if (!employeeId) return;
+    if (!employeeId || !companyId) return;
 
     try {
       const now = new Date();
@@ -127,6 +127,7 @@ export const EmployeeTimesheets = () => {
         .from("timesheets_entries")
         .insert({
           employee_id: employeeId,
+          company_id: companyId,
           date: format(now, "yyyy-MM-dd"),
           start_at: format(now, "HH:mm:ss"),
           timesheet_type: "day",
@@ -153,12 +154,20 @@ export const EmployeeTimesheets = () => {
 
     try {
       const now = new Date();
+      // Use currentEntry.company_id if available, otherwise fallback to companyId from context
+      const breakCompanyId = currentEntry.company_id || companyId;
+
+      if (!breakCompanyId) {
+        toast.error("Erreur: company_id manquant");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("timesheet_breaks")
         .insert({
           timesheet_entry_id: currentEntry.id,
           start_at: format(now, "HH:mm:ss"),
-          company_id: currentEntry.company_id,
+          company_id: breakCompanyId,
         })
         .select()
         .single();
