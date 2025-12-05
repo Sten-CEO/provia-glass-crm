@@ -585,12 +585,20 @@ export const EmployeeInterventionDetail = () => {
           {signatures.length > 0 ? (
             <Card className="p-4">
               <h4 className="font-semibold mb-3">Signature client</h4>
+              {console.log("🖼️ Displaying signature with URL:", signatures[0].image_url)}
               <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
                 <img
                   src={signatures[0].image_url}
                   alt="Signature"
                   className="max-w-full h-auto mx-auto"
                   style={{ maxHeight: "300px" }}
+                  onError={(e) => {
+                    console.error("❌ Image failed to load:", signatures[0].image_url);
+                    console.error("Error event:", e);
+                  }}
+                  onLoad={() => {
+                    console.log("✅ Image loaded successfully!");
+                  }}
                 />
               </div>
               <div className="mt-4 space-y-1">

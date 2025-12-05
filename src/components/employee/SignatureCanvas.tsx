@@ -117,6 +117,12 @@ export const SignatureCanvas = ({
         .from("signatures")
         .getPublicUrl(filePath);
 
+      console.log("📸 Signature image URL:", {
+        filePath,
+        publicUrl,
+        testInBrowser: "Copie cette URL dans ton navigateur pour tester: " + publicUrl
+      });
+
       // Enregistrer dans jobs (intervention) avec la nouvelle colonne signature_url
       const { error: jobError } = await supabase
         .from("jobs")
