@@ -44,7 +44,6 @@ export default function InterventionEditor() {
     { key: "equipment", label: "Équipements" },
     { key: "internal_notes", label: "Notes internes secrétariat" },
     { key: "satisfaction", label: "Satisfaction client / suivi qualité" },
-    { key: "gps", label: "Coordonnées GPS / géolocalisation" },
     { key: "documents", label: "Documents joints / photos" },
     { key: "history", label: "Historique interventions précédentes" },
   ];
