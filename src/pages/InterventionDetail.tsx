@@ -10,7 +10,6 @@ import { InterventionDataTab } from "@/components/interventions/InterventionData
 import { InterventionHistoryTab } from "@/components/interventions/InterventionHistoryTab";
 import { InterventionReportTab } from "@/components/interventions/InterventionReportTab";
 import { InterventionSatisfactionTab } from "@/components/interventions/InterventionSatisfactionTab";
-import { InterventionGeolocationTab } from "@/components/interventions/InterventionGeolocationTab";
 import { FilesSection } from "@/components/interventions/FilesSection";
 
 export default function InterventionDetail() {
@@ -104,12 +103,11 @@ export default function InterventionDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="data" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="data">Données</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="report">Rapport</TabsTrigger>
           <TabsTrigger value="satisfaction">Satisfaction</TabsTrigger>
-          <TabsTrigger value="geoloc">Géolocalisation</TabsTrigger>
           <TabsTrigger value="files">Fichiers</TabsTrigger>
         </TabsList>
 
@@ -127,10 +125,6 @@ export default function InterventionDetail() {
 
         <TabsContent value="satisfaction" className="mt-6">
           <InterventionSatisfactionTab interventionId={id!} />
-        </TabsContent>
-
-        <TabsContent value="geoloc" className="mt-6">
-          <InterventionGeolocationTab job={job} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-6">

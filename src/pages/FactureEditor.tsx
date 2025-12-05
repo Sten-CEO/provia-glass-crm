@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,8 @@ export default function FactureEditor() {
   const { id } = useParams();
   const isNew = !id || id === "new";
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const interventionId = searchParams.get("intervention");
 
   const [clients, setClients] = useState<any[]>([]);
   const { templates, defaultTemplate } = useTemplates("invoice");
@@ -63,7 +65,8 @@ export default function FactureEditor() {
   useEffect(() => {
     loadClients();
     if (!isNew && id) loadInvoice(id);
-  }, [id]);
+    else if (isNew && interventionId) loadInterventionData(interventionId);
+  }, [id, interventionId]);
 
   useEffect(() => {
     if (!selectedTemplateId && defaultTemplate) setSelectedTemplateId(defaultTemplate.id);
@@ -101,6 +104,80 @@ export default function FactureEditor() {
       notes_legal: data.notes_legal || "",
     });
     setSelectedTemplateId(data.template_id || "");
+  };
+
+  const loadInterventionData = async (interventionId: string) => {
+    // Charger l'intervention avec ses données
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select(`
+        *,
+        clients:client_id (nom, email),
+        intervention_consumables (
+          id, quantity, unit_price, total,
+          inventory_item:inventory_item_id (name, unit)
+        ),
+        intervention_services (
+          id, description, quantity, unit_price, total
+        )
+      `)
+      .eq("id", interventionId)
+      .single();
+
+    if (jobError || !job) {
+      toast.error("Erreur lors du chargement de l'intervention");
+      return;
+    }
+
+    // Préparer les lignes de facture à partir de l'intervention
+    const lignes: LigneFacture[] = [];
+
+    // Ajouter les consommables
+    if (job.intervention_consumables && Array.isArray(job.intervention_consumables)) {
+      job.intervention_consumables.forEach((consumable: any) => {
+        lignes.push({
+          description: consumable.inventory_item?.name || "Consommable",
+          quantite: consumable.quantity || 1,
+          prix_unitaire: consumable.unit_price || 0,
+          total: consumable.total || 0,
+        });
+      });
+    }
+
+    // Ajouter les services
+    if (job.intervention_services && Array.isArray(job.intervention_services)) {
+      job.intervention_services.forEach((service: any) => {
+        lignes.push({
+          description: service.description || "Service",
+          quantite: service.quantity || 1,
+          prix_unitaire: service.unit_price || 0,
+          total: service.total || 0,
+        });
+      });
+    }
+
+    // Si pas de lignes, ajouter la prestation de base
+    if (lignes.length === 0) {
+      lignes.push({
+        description: job.titre || "Intervention",
+        quantite: 1,
+        prix_unitaire: 0,
+        total: 0,
+      });
+    }
+
+    // Mettre à jour la facture avec les données de l'intervention
+    setFacture((f) => ({
+      ...f,
+      client_id: job.client_id || "",
+      client_nom: job.clients?.nom || "",
+      lignes,
+      notes_legal: `Intervention du ${new Date(job.date).toLocaleDateString("fr-FR")}\n${job.description || ""}`.trim(),
+    }));
+
+    // Marquer l'intervention comme liée à cette facture (après création)
+    // On stockera l'ID intervention pour le lier plus tard lors de la sauvegarde
+    toast.success("Données de l'intervention chargées");
   };
 
   const addLigne = () => {
@@ -163,6 +240,19 @@ export default function FactureEditor() {
         return;
       }
       setFacture((f) => ({ ...f, id: data.id }));
+
+      // Si la facture a été créée à partir d'une intervention, lier l'intervention à la facture
+      if (interventionId) {
+        const { error: jobError } = await supabase
+          .from("jobs")
+          .update({ invoice_id: data.id })
+          .eq("id", interventionId);
+
+        if (jobError) {
+          console.error("Erreur lors de la liaison de l'intervention:", jobError);
+        }
+      }
+
       toast.success("Facture créée");
       navigate(`/factures/${data.id}`);
     } else {

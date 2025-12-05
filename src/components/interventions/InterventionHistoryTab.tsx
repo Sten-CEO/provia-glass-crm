@@ -31,6 +31,27 @@ export function InterventionHistoryTab({ interventionId }: InterventionHistoryTa
 
   useEffect(() => {
     loadLogs();
+
+    // Écoute des nouveaux logs en temps réel
+    const channel = supabase
+      .channel(`intervention_logs_${interventionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "intervention_logs",
+          filter: `intervention_id=eq.${interventionId}`,
+        },
+        () => {
+          loadLogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [interventionId]);
 
   const loadLogs = async () => {
