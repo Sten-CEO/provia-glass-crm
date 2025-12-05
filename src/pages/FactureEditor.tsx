@@ -12,6 +12,7 @@ import { ArrowLeft, Save, FileText, Mail, Plus, Trash2 } from "lucide-react";
 import { useTemplates } from "@/hooks/useTemplates";
 import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
+import { logInvoiceLink } from "@/lib/interventionLogger";
 
 interface LigneFacture {
   description: string;
@@ -250,6 +251,9 @@ export default function FactureEditor() {
 
         if (jobError) {
           console.error("Erreur lors de la liaison de l'intervention:", jobError);
+        } else {
+          // Enregistrer dans l'historique de l'intervention
+          await logInvoiceLink(interventionId, data.numero);
         }
       }
 
