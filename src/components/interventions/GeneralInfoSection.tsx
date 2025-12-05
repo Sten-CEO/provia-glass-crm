@@ -23,8 +23,40 @@ export function GeneralInfoSection({ intervention, onChange }: GeneralInfoSectio
   }, []);
 
   const loadData = async () => {
+    // Get current user's company_id first
+    const { data: { user } } = await supabase.auth.getUser();
+    let userCompanyId = null;
+
+    if (user) {
+      // Try to get company_id from user_roles
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .single();
+
+      userCompanyId = userRole?.company_id;
+
+      // If not in user_roles, try equipe table
+      if (!userCompanyId) {
+        const { data: employee } = await supabase
+          .from("equipe")
+          .select("company_id")
+          .eq("user_id", user.id)
+          .single();
+
+        userCompanyId = employee?.company_id;
+      }
+    }
+
+    // Build query with company_id filter if available
+    let employeesQuery = supabase.from("equipe").select("id, nom");
+    if (userCompanyId) {
+      employeesQuery = employeesQuery.eq("company_id", userCompanyId);
+    }
+
     const [empRes, quotesRes, contractsRes] = await Promise.all([
-      supabase.from("equipe").select("id, nom"),
+      employeesQuery,
       supabase.from("devis").select("id, numero, client_nom").order("created_at", { ascending: false }).limit(50),
       supabase.from("contracts").select("id, contract_number, title").order("created_at", { ascending: false }).limit(50),
     ]);

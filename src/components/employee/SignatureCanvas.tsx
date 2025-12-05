@@ -79,11 +79,18 @@ export const SignatureCanvas = ({
       return;
     }
 
+    if (!companyId) {
+      console.error("Company ID is missing:", { companyId, employeeId, jobId });
+      toast.error("Erreur: Company ID manquant. Veuillez vous reconnecter.");
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     try {
       setSaving(true);
+      console.log("Saving signature with company_id:", companyId);
 
       // Convertir le canvas en blob
       const blob = await new Promise<Blob>((resolve) => {
@@ -123,6 +130,13 @@ export const SignatureCanvas = ({
       if (jobError) throw jobError;
 
       // Optionnel: Enregistrer aussi dans job_signatures pour historique détaillé
+      console.log("Inserting into job_signatures with:", {
+        job_id: jobId,
+        employee_id: employeeId,
+        company_id: companyId,
+        signer_name: signerName,
+      });
+
       const { error: sigError } = await supabase
         .from("job_signatures")
         .insert({
@@ -136,8 +150,16 @@ export const SignatureCanvas = ({
         });
 
       if (sigError) {
-        console.error("Warning: job_signatures insert failed:", sigError);
+        console.error("ERROR: job_signatures insert failed:", {
+          error: sigError,
+          message: sigError.message,
+          details: sigError.details,
+          hint: sigError.hint,
+          code: sigError.code,
+        });
         // Ne pas bloquer si cette table secondaire échoue
+      } else {
+        console.log("✅ job_signatures insert succeeded");
       }
 
       toast.success("Signature enregistrée avec succès");
