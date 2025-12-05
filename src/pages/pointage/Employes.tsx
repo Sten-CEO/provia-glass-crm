@@ -21,6 +21,8 @@ interface Employee {
   email: string;
   role: string;
   app_access_status: string;
+  hours_this_month?: number;
+  billable_hours?: number;
 }
 
 export default function Employes() {
@@ -48,13 +50,51 @@ export default function Employes() {
   }, []);
 
   const loadEmployees = async () => {
+    // Récupérer le company_id de l'utilisateur courant
+    const { data: companyIdData, error: companyIdError } = await supabase
+      .rpc('get_user_company_id');
+
+    if (companyIdError) {
+      console.error('Erreur lors de la récupération du company_id:', companyIdError);
+      return;
+    }
+
+    const companyId = companyIdData;
+
+    // Charger les employés filtrés par company_id
     const { data } = await supabase
       .from('equipe')
       .select('*')
+      .eq('company_id', companyId)
       .order('nom');
 
     if (data) {
-      setEmployees(data);
+      // Calculer les heures pour chaque employé
+      const employeesWithHours = await Promise.all(
+        data.map(async (employee) => {
+          // Calculer les heures du mois en cours
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+
+          const { data: timesheets } = await supabase
+            .from('timesheets_entries')
+            .select('hours, is_billable')
+            .eq('employee_id', employee.id)
+            .gte('date', startOfMonth.toISOString().split('T')[0]);
+
+          const hoursThisMonth = timesheets?.reduce((sum, ts) => sum + (ts.hours || 0), 0) || 0;
+          const billableHours = timesheets?.filter(ts => ts.is_billable).reduce((sum, ts) => sum + (ts.hours || 0), 0) || 0;
+
+          return {
+            ...employee,
+            hours_this_month: hoursThisMonth,
+            billable_hours: billableHours,
+          };
+        })
+      );
+
+      setEmployees(employeesWithHours);
     }
   };
 
@@ -114,13 +154,13 @@ export default function Employes() {
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>0h</span>
+                    <span>{(employee.hours_this_month || 0).toFixed(1)}h</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-4 w-4" />
-                    <span>0h</span>
+                    <span>{(employee.billable_hours || 0).toFixed(1)}h</span>
                   </div>
                 </TableCell>
                 <TableCell>
