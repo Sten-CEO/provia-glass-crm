@@ -16,7 +16,6 @@ import { ArrowLeft, Save, FileText, CheckCircle2, Repeat, Settings } from "lucid
 import { GeneralInfoSection } from "@/components/interventions/GeneralInfoSection";
 import { ConsumablesSection } from "@/components/interventions/ConsumablesSection";
 import { ServicesSection } from "@/components/interventions/ServicesSection";
-import { TimesheetsSection } from "@/components/interventions/TimesheetsSection";
 import { FilesSection } from "@/components/interventions/FilesSection";
 import { NotesSignatureSection } from "@/components/interventions/NotesSignatureSection";
 import { InvoiceSection } from "@/components/interventions/InvoiceSection";
@@ -403,7 +402,6 @@ export default function InterventionEditor() {
             <TabsTrigger value="checklist">Checklist</TabsTrigger>
             <TabsTrigger value="consumables">Consommables / Matériaux</TabsTrigger>
             <TabsTrigger value="services">Services / Prestations</TabsTrigger>
-            <TabsTrigger value="timesheets">Temps passé</TabsTrigger>
             <TabsTrigger value="files">Fichiers & Photos</TabsTrigger>
             <TabsTrigger value="notes">Notes & Signature</TabsTrigger>
             {isEditMode && <TabsTrigger value="invoice">Facturation</TabsTrigger>}
@@ -427,10 +425,6 @@ export default function InterventionEditor() {
 
           <TabsContent value="services">
             <ServicesSection interventionId={id} />
-          </TabsContent>
-
-          <TabsContent value="timesheets">
-            <TimesheetsSection interventionId={id} />
           </TabsContent>
 
           <TabsContent value="files">

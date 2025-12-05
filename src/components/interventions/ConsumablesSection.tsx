@@ -33,7 +33,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     if (!interventionId) return;
     const { data } = await supabase
       .from("jobs")
-      .select("date, heure_debut, heure_fin, scheduled_start, scheduled_end")
+      .select("date, heure_debut, heure_fin, scheduled_start, scheduled_end, company_id")
       .eq("id", interventionId)
       .single();
     if (data) setIntervention(data);
@@ -84,8 +84,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       return;
     }
 
+    if (!intervention?.company_id) {
+      toast.error("Company ID manquant. Veuillez recharger la page.");
+      return;
+    }
+
     const newLine = {
       intervention_id: interventionId,
+      company_id: intervention.company_id,
       product_name: "",
       quantity: 1,
       unit: "unité",
@@ -100,6 +106,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       .single();
 
     if (error) {
+      console.error("Erreur lors de l'ajout:", error);
       toast.error("Erreur lors de l'ajout");
       return;
     }
