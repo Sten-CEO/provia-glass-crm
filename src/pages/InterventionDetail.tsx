@@ -11,6 +11,8 @@ import { InterventionHistoryTab } from "@/components/interventions/InterventionH
 import { InterventionReportTab } from "@/components/interventions/InterventionReportTab";
 import { InterventionSatisfactionTab } from "@/components/interventions/InterventionSatisfactionTab";
 import { FilesSection } from "@/components/interventions/FilesSection";
+import { useInterventionTimesheetLogger } from "@/hooks/useInterventionTimesheetLogger";
+import { useInterventionStatusLogger } from "@/hooks/useInterventionStatusLogger";
 
 export default function InterventionDetail() {
   const { id } = useParams();
@@ -18,6 +20,10 @@ export default function InterventionDetail() {
   const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+
+  // Loggers automatiques
+  useInterventionTimesheetLogger(id || null);
+  useInterventionStatusLogger(id || null);
 
   useEffect(() => {
     loadJob();
