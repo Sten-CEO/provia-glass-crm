@@ -1,14 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { generateQuotePDF } from '../_shared/pdf-generator.ts';
+import { generateInvoicePDF } from '../_shared/pdf-generator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface SendQuoteEmailRequest {
-  quoteId: string;
+interface SendInvoiceEmailRequest {
+  invoiceId: string;
   recipientEmail: string;
   recipientName: string;
   subject?: string;
@@ -41,13 +41,13 @@ function replaceVariables(template: string, values: Record<string, any>): string
   result = result.replace(/\{\{AdresseClient\}\}/g, values.AdresseClient || '');
 
   // Document variables
-  result = result.replace(/\{\{NumDevis\}\}/g, values.NumDevis || '');
+  result = result.replace(/\{\{NumFacture\}\}/g, values.NumFacture || '');
   result = result.replace(/\{\{NumDocument\}\}/g, values.NumDocument || '');
   result = result.replace(/\{\{TypeDocument\}\}/g, values.TypeDocument || '');
   result = result.replace(/\{\{MontantHT\}\}/g, values.MontantHT || '');
   result = result.replace(/\{\{MontantTTC\}\}/g, values.MontantTTC || '');
   result = result.replace(/\{\{DateEnvoi\}\}/g, values.DateEnvoi || '');
-  result = result.replace(/\{\{DateExpiration\}\}/g, values.DateExpiration || '');
+  result = result.replace(/\{\{DateEcheance\}\}/g, values.DateEcheance || '');
   result = result.replace(/\{\{DateCreation\}\}/g, values.DateCreation || '');
 
   // Company variables
@@ -135,9 +135,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { quoteId, recipientEmail, recipientName, subject, message, templateId }: SendQuoteEmailRequest = await req.json();
+    const { invoiceId, recipientEmail, recipientName, subject, message, templateId }: SendInvoiceEmailRequest = await req.json();
 
-    console.log('Sending quote email:', { quoteId, recipientEmail, templateId });
+    console.log('Sending invoice email:', { invoiceId, recipientEmail, templateId });
 
     // Vérifier l'authentification
     const authHeader = req.headers.get('Authorization');
@@ -176,43 +176,43 @@ serve(async (req) => {
 
     const companyId = userRole.company_id;
 
-    // Récupérer le devis avec les infos client et entreprise
-    const { data: quote, error: quoteError } = await supabase
-      .from('devis')
+    // Récupérer la facture avec les infos client et entreprise
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('factures')
       .select(`
         *,
-        clients(*),
-        companies(*)
+        clients:client_id (nom, email, telephone, adresse),
+        companies:company_id (*)
       `)
-      .eq('id', quoteId)
-      .eq('company_id', companyId) // Sécurité : vérifier que le devis appartient à la company
+      .eq('id', invoiceId)
+      .eq('company_id', companyId) // Sécurité : vérifier que la facture appartient à la company
       .single();
 
-    if (quoteError || !quote) {
-      console.error('Quote error:', quoteError);
-      throw new Error('Devis introuvable ou accès non autorisé');
+    if (invoiceError || !invoice) {
+      console.error('Invoice error:', invoiceError);
+      throw new Error('Facture introuvable ou accès non autorisé');
     }
 
     // Récupérer les informations de la société
-    const company = quote.companies;
+    const company = invoice.companies;
     if (!company) {
       throw new Error('Informations de société manquantes');
     }
 
     // Préparer les variables pour le template
     const variables = {
-      NomClient: recipientName || quote.clients?.nom || quote.client_nom || '',
-      EmailClient: recipientEmail || quote.clients?.email || '',
-      TelephoneClient: quote.clients?.telephone || '',
-      AdresseClient: quote.clients?.adresse || '',
-      NumDevis: quote.numero || '',
-      NumDocument: quote.numero || '',
-      TypeDocument: 'Devis',
-      MontantHT: formatCurrency(quote.total_ht || 0),
-      MontantTTC: formatCurrency(quote.total_ttc || 0),
+      NomClient: recipientName || invoice.clients?.nom || invoice.client_nom || '',
+      EmailClient: recipientEmail || invoice.clients?.email || '',
+      TelephoneClient: invoice.clients?.telephone || '',
+      AdresseClient: invoice.clients?.adresse || '',
+      NumFacture: invoice.numero || '',
+      NumDocument: invoice.numero || '',
+      TypeDocument: 'Facture',
+      MontantHT: formatCurrency(invoice.total_ht || 0),
+      MontantTTC: formatCurrency(invoice.total_ttc || 0),
       DateEnvoi: formatDate(new Date().toISOString()),
-      DateCreation: formatDate(quote.issued_at || new Date().toISOString()),
-      DateExpiration: quote.expiry_date ? formatDate(quote.expiry_date) : '',
+      DateCreation: formatDate(invoice.issue_date || new Date().toISOString()),
+      DateEcheance: invoice.echeance ? formatDate(invoice.echeance) : '',
       NomEntreprise: company.name || 'Provia Glass',
       EmailEntreprise: company.email || '',
       TelephoneEntreprise: company.telephone || '',
@@ -220,8 +220,8 @@ serve(async (req) => {
     };
 
     // Si un template est fourni, l'utiliser
-    let finalSubject = subject || `Devis ${quote.numero}`;
-    let finalMessage = message || 'Veuillez trouver ci-joint votre devis.';
+    let finalSubject = subject || `Facture ${invoice.numero}`;
+    let finalMessage = message || 'Veuillez trouver ci-joint votre facture.';
 
     if (templateId) {
       const { data: template } = await supabase
@@ -240,33 +240,6 @@ serve(async (req) => {
       finalMessage = replaceVariables(finalMessage, variables);
     }
 
-    // Générer un token unique si pas déjà fait
-    let token = quote.token;
-    if (!token) {
-      token = crypto.randomUUID();
-
-      // Mettre à jour le devis avec le token et la date d'envoi
-      const { error: updateError } = await supabase
-        .from('devis')
-        .update({
-          token,
-          sent_at: new Date().toISOString(),
-          statut: 'Envoyé'
-        })
-        .eq('id', quoteId);
-
-      if (updateError) {
-        throw updateError;
-      }
-    }
-
-    // Créer l'événement d'envoi
-    await supabase.from('quote_events').insert({
-      quote_id: quoteId,
-      event_type: 'sent',
-      metadata: { recipient_email: recipientEmail }
-    });
-
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
     if (!resendApiKey) {
@@ -275,7 +248,6 @@ serve(async (req) => {
       console.log('To:', recipientEmail);
       console.log('Subject:', finalSubject);
       console.log('Message:', finalMessage);
-      console.log('Quote link:', `/quote/${token}`);
       console.log('===================================================');
 
       return new Response(
@@ -283,8 +255,6 @@ serve(async (req) => {
           success: true,
           message: 'Envoi simulé - Veuillez configurer la clé API Resend pour l\'envoi réel',
           simulation: true,
-          token,
-          publicUrl: `/quote/${token}`
         }),
         {
           status: 200,
@@ -295,30 +265,24 @@ serve(async (req) => {
 
     // ENVOI RÉEL avec Resend
 
-    // 1. Générer le PDF du devis
-    const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
+    // 1. Générer le PDF de la facture
+    const { buffer: pdfBuffer, filename: pdfFilename } = await generateInvoicePDF(invoice, supabase);
 
     // 2. Préparer le contenu HTML de l'email
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #4A90E2; color: white; padding: 20px; text-align: center;">
+        <div style="background-color: #E74C3C; color: white; padding: 20px; text-align: center;">
           <h1 style="margin: 0;">${company.name || 'Provia Glass'}</h1>
         </div>
 
         <div style="padding: 30px; background-color: #f9f9f9;">
           ${finalMessage.split('\n').map(line => `<p>${line}</p>`).join('')}
 
-          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #4A90E2;">
-            <h2 style="margin-top: 0; color: #333;">Devis ${quote.numero}</h2>
-            <p style="color: #666; margin: 5px 0;"><strong>Montant TTC:</strong> ${formatCurrency(quote.total_ttc || 0)}</p>
-            <p style="color: #666; margin: 5px 0;"><strong>Valable jusqu'au:</strong> ${quote.expiry_date ? formatDate(quote.expiry_date) : 'N/A'}</p>
-          </div>
-
-          <div style="text-align: center; margin-top: 30px;">
-            <a href="${Deno.env.get('SUPABASE_URL')}/quote/${token}"
-               style="display: inline-block; background-color: #4A90E2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-              Consulter et signer le devis en ligne
-            </a>
+          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #E74C3C;">
+            <h2 style="margin-top: 0; color: #333;">Facture ${invoice.numero}</h2>
+            <p style="color: #666; margin: 5px 0;"><strong>Montant TTC:</strong> ${formatCurrency(invoice.total_ttc || 0)}</p>
+            <p style="color: #666; margin: 5px 0;"><strong>Date d'échéance:</strong> ${invoice.echeance ? formatDate(invoice.echeance) : 'N/A'}</p>
+            ${invoice.statut === 'Payée' ? '<p style="color: #27AE60; font-weight: bold; margin: 10px 0;">✓ Payée</p>' : '<p style="color: #E74C3C; font-weight: bold; margin: 10px 0;">⚠ En attente de paiement</p>'}
           </div>
 
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
@@ -326,21 +290,20 @@ serve(async (req) => {
             ${company.adresse ? `<p>${company.adresse}</p>` : ''}
             ${company.telephone ? `<p>Tél: ${company.telephone}</p>` : ''}
             ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+            ${company.siret ? `<p>SIRET: ${company.siret}</p>` : ''}
           </div>
         </div>
       </div>
     `;
 
     // 3. Préparer le texte brut (fallback)
-    const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('SUPABASE_URL')}/quote/${token}`;
+    const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}`;
 
     // 4. Déterminer l'email d'expédition
-    // Utiliser email_from s'il existe, sinon email, sinon un email par défaut
     const fromEmail = company.email_from || company.email || 'noreply@proviabase.app';
     const replyToEmail = company.email || company.email_from || fromEmail;
 
     // Le "from" doit être un domaine vérifié dans Resend
-    // On utilise un domaine par défaut et on met l'email de la société en reply-to
     const from = `${company.name || 'Provia Glass'} <noreply@proviabase.app>`;
 
     // 5. Envoyer l'email avec Resend
@@ -371,8 +334,6 @@ serve(async (req) => {
         success: true,
         message: 'Email envoyé avec succès',
         messageId: emailResult.messageId,
-        token,
-        publicUrl: `/quote/${token}`
       }),
       {
         status: 200,
@@ -380,7 +341,7 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error('Error sending quote email:', error);
+    console.error('Error sending invoice email:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
