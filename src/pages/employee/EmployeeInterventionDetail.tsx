@@ -585,14 +585,27 @@ export const EmployeeInterventionDetail = () => {
           {signatures.length > 0 ? (
             <Card className="p-4">
               <h4 className="font-semibold mb-3">Signature client</h4>
-              <img
-                src={signatures[0].image_url}
-                alt="Signature"
-                className="w-full border rounded"
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                Signé par: {signatures[0].signer_name}
-              </p>
+              <div className="bg-white border-2 border-gray-300 rounded-lg p-4">
+                <img
+                  src={signatures[0].image_url}
+                  alt="Signature"
+                  className="max-w-full h-auto mx-auto"
+                  style={{ maxHeight: "300px" }}
+                />
+              </div>
+              <div className="mt-4 space-y-1">
+                <p className="text-sm font-medium">
+                  Signé par: <span className="font-normal">{signatures[0].signer_name}</span>
+                </p>
+                {signatures[0].signer_email && (
+                  <p className="text-sm text-muted-foreground">
+                    Email: {signatures[0].signer_email}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Date de signature: {new Date(signatures[0].signed_at).toLocaleString('fr-FR')}
+                </p>
+              </div>
             </Card>
           ) : (
             employeeId && (
