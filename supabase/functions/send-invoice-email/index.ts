@@ -130,26 +130,25 @@ serve(async (req) => {
   }
 
   try {
-    // Créer le client Supabase
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     const { invoiceId, recipientEmail, recipientName, subject, message, templateId }: SendInvoiceEmailRequest = await req.json();
 
     console.log('Sending invoice email:', { invoiceId, recipientEmail, templateId });
 
-    // Vérifier l'authentification
+    // Vérifier l'authentification avec le token utilisateur
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header');
       throw new Error('Non authentifié');
     }
 
-    // Extraire le JWT token et vérifier l'utilisateur
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    // Créer un client avec le token de l'utilisateur pour vérifier l'auth
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
 
     if (userError || !user) {
       console.error('Auth error:', userError);
@@ -157,6 +156,12 @@ serve(async (req) => {
     }
 
     console.log('User authenticated:', user.id);
+
+    // Créer le client Supabase principal avec SERVICE_ROLE_KEY
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     // Récupérer le company_id de l'utilisateur
     const { data: userRole, error: roleError } = await supabase
