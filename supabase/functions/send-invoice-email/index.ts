@@ -311,13 +311,13 @@ serve(async (req) => {
     const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}`;
 
     // 4. Déterminer l'email d'expédition
-    // Utiliser email_from s'il existe, sinon email, sinon l'email de test Resend
-    const fromEmail = company.email_from || company.email || 'onboarding@resend.dev';
+    // Utiliser email_from s'il existe, sinon email, sinon l'email vérifié process-ly.com
+    const fromEmail = company.email_from || company.email || 'noreply@process-ly.com';
     const replyToEmail = company.email || company.email_from || '';
 
     // Le "from" doit être un domaine vérifié dans Resend
-    // On utilise l'email de test Resend par défaut et on met l'email de la société en reply-to
-    const from = `${company.name || 'Provia Glass'} <onboarding@resend.dev>`;
+    // On utilise process-ly.com vérifié et on met l'email de la société en reply-to
+    const from = `${company.name || 'Provia Glass'} <noreply@process-ly.com>`;
 
     // 5. Envoyer l'email avec Resend
     let emailResult = await sendEmailWithResend({
