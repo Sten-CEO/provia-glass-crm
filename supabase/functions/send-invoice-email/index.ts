@@ -311,11 +311,13 @@ serve(async (req) => {
     const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}`;
 
     // 4. Déterminer l'email d'expédition
-    const fromEmail = company.email_from || company.email || 'noreply@proviabase.app';
-    const replyToEmail = company.email || company.email_from || fromEmail;
+    // Utiliser email_from s'il existe, sinon email, sinon l'email de test Resend
+    const fromEmail = company.email_from || company.email || 'onboarding@resend.dev';
+    const replyToEmail = company.email || company.email_from || '';
 
     // Le "from" doit être un domaine vérifié dans Resend
-    const from = `${company.name || 'Provia Glass'} <noreply@proviabase.app>`;
+    // On utilise l'email de test Resend par défaut et on met l'email de la société en reply-to
+    const from = `${company.name || 'Provia Glass'} <onboarding@resend.dev>`;
 
     // 5. Envoyer l'email avec Resend
     const emailResult = await sendEmailWithResend({

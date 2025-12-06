@@ -346,13 +346,13 @@ serve(async (req) => {
     const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('SUPABASE_URL')}/quote/${token}`;
 
     // 4. Déterminer l'email d'expédition
-    // Utiliser email_from s'il existe, sinon email, sinon un email par défaut
-    const fromEmail = company.email_from || company.email || 'noreply@proviabase.app';
-    const replyToEmail = company.email || company.email_from || fromEmail;
+    // Utiliser email_from s'il existe, sinon email, sinon l'email de test Resend
+    const fromEmail = company.email_from || company.email || 'onboarding@resend.dev';
+    const replyToEmail = company.email || company.email_from || '';
 
     // Le "from" doit être un domaine vérifié dans Resend
-    // On utilise un domaine par défaut et on met l'email de la société en reply-to
-    const from = `${company.name || 'Provia Glass'} <noreply@proviabase.app>`;
+    // On utilise l'email de test Resend par défaut et on met l'email de la société en reply-to
+    const from = `${company.name || 'Provia Glass'} <onboarding@resend.dev>`;
 
     // 5. Envoyer l'email avec Resend
     const emailResult = await sendEmailWithResend({
