@@ -13,8 +13,13 @@ const Parametres = () => {
   const [companyName, setCompanyName] = useState("");
   const [siret, setSiret] = useState("");
   const [tva, setTva] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailFrom, setEmailFrom] = useState("");
+  const [telephone, setTelephone] = useState("");
+  const [adresse, setAdresse] = useState("");
+  const [ville, setVille] = useState("");
+  const [codePostal, setCodePostal] = useState("");
   const [loading, setLoading] = useState(false);
-  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,32 +63,36 @@ const Parametres = () => {
       console.log("Company ID found:", userRole.company_id);
       setCompanyId(userRole.company_id);
 
-      // 3. Charger les paramètres de la société
+      // 3. Charger les données de la société
       const { data, error } = await supabase
-        .from("company_settings")
+        .from("companies")
         .select("*")
-        .eq("company_id", userRole.company_id)
+        .eq("id", userRole.company_id)
         .maybeSingle();
 
-      console.log("Company settings data:", data);
-      console.log("Settings error:", error);
+      console.log("Company data:", data);
+      console.log("Company error:", error);
 
       if (error) {
-        console.error("Error fetching company settings:", error);
+        console.error("Error fetching company:", error);
         toast.error("Erreur lors du chargement des paramètres");
         return;
       }
 
       if (data) {
-        setCompanyName(data.company_name || "");
+        setCompanyName(data.name || "");
         setSiret(data.siret || "");
         setTva(data.tva_intracom || "");
-        setSettingsId(data.id);
-        console.log("Settings loaded successfully");
+        setEmail(data.email || "");
+        setEmailFrom(data.email_from || "");
+        setTelephone(data.telephone || "");
+        setAdresse(data.adresse || "");
+        setVille(data.ville || "");
+        setCodePostal(data.code_postal || "");
+        console.log("Company data loaded successfully");
       } else {
-        console.log("No company settings found, will create on save");
-        // Même s'il n'y a pas de settings, on peut créer lors de la sauvegarde
-        toast.info("Aucun paramètre existant. Vous pouvez les créer en enregistrant.");
+        console.log("No company found");
+        toast.error("Société non trouvée");
       }
     } catch (error) {
       console.error("Error loading company settings:", error);
@@ -93,7 +102,7 @@ const Parametres = () => {
 
   const handleSave = async () => {
     console.log("HandleSave called, companyId:", companyId);
-    
+
     if (!companyId) {
       console.error("No companyId available for save");
       toast.error("Impossible de sauvegarder : société non trouvée. Rechargez la page.");
@@ -101,53 +110,37 @@ const Parametres = () => {
     }
 
     setLoading(true);
-    
+
     try {
-      if (settingsId) {
-        // Mise à jour
-        console.log("Updating existing settings:", settingsId);
-        const { error } = await supabase
-          .from("company_settings")
-          .update({
-            company_name: companyName,
-            siret: siret,
-            tva_intracom: tva,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", settingsId);
+      // Mise à jour de la société
+      console.log("Updating company:", companyId);
+      const { error } = await supabase
+        .from("companies")
+        .update({
+          name: companyName,
+          siret: siret,
+          tva_intracom: tva,
+          email: email,
+          email_from: emailFrom,
+          telephone: telephone,
+          adresse: adresse,
+          ville: ville,
+          code_postal: codePostal,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", companyId);
 
-        if (error) {
-          console.error("Erreur update:", error);
-          throw error;
-        }
-        console.log("Update successful");
-      } else {
-        // Création
-        console.log("Creating new settings for company:", companyId);
-        const { data, error } = await supabase
-          .from("company_settings")
-          .insert({
-            company_id: companyId,
-            company_name: companyName,
-            siret: siret,
-            tva_intracom: tva,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error("Erreur insert:", error);
-          throw error;
-        }
-        console.log("Insert successful:", data);
-        if (data) setSettingsId(data.id);
+      if (error) {
+        console.error("Erreur update:", error);
+        throw error;
       }
+      console.log("Update successful");
 
       toast.success("Paramètres enregistrés avec succès");
-      
+
       // Déclencher la mise à jour du nom de l'entreprise dans le header
       window.dispatchEvent(new Event('company-updated'));
-      
+
       // Recharger pour vérifier
       await loadCompanySettings();
     } catch (error: any) {
@@ -174,9 +167,9 @@ const Parametres = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="nom">Nom de la société</Label>
-              <Input 
-                id="nom" 
-                placeholder="Entreprise" 
+              <Input
+                id="nom"
+                placeholder="Entreprise"
                 className="glass-card"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
@@ -184,9 +177,9 @@ const Parametres = () => {
             </div>
             <div>
               <Label htmlFor="siret">SIRET</Label>
-              <Input 
-                id="siret" 
-                placeholder="123 456 789 00010" 
+              <Input
+                id="siret"
+                placeholder="123 456 789 00010"
                 className="glass-card"
                 value={siret}
                 onChange={(e) => setSiret(e.target.value)}
@@ -194,16 +187,100 @@ const Parametres = () => {
             </div>
             <div>
               <Label htmlFor="tva">Numéro TVA</Label>
-              <Input 
-                id="tva" 
-                placeholder="FR12345678901" 
+              <Input
+                id="tva"
+                placeholder="FR12345678901"
                 className="glass-card"
                 value={tva}
                 onChange={(e) => setTva(e.target.value)}
               />
             </div>
-            <Button 
-              className="bg-primary hover:bg-primary/90 text-foreground font-semibold"
+
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Contact</h3>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="email">Email principal</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="contact@entreprise.com"
+                    className="glass-card"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Utilisé comme reply-to dans les emails de devis/factures
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="emailFrom">Email d'expédition (optionnel)</Label>
+                  <Input
+                    id="emailFrom"
+                    type="email"
+                    placeholder="noreply@entreprise.com"
+                    className="glass-card"
+                    value={emailFrom}
+                    onChange={(e) => setEmailFrom(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Si vide, l'email principal sera utilisé
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="telephone">Téléphone</Label>
+                  <Input
+                    id="telephone"
+                    type="tel"
+                    placeholder="01 23 45 67 89"
+                    className="glass-card"
+                    value={telephone}
+                    onChange={(e) => setTelephone(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Adresse</h3>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="adresse">Adresse complète</Label>
+                  <Input
+                    id="adresse"
+                    placeholder="123 Rue de la République"
+                    className="glass-card"
+                    value={adresse}
+                    onChange={(e) => setAdresse(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="codePostal">Code postal</Label>
+                    <Input
+                      id="codePostal"
+                      placeholder="75001"
+                      className="glass-card"
+                      value={codePostal}
+                      onChange={(e) => setCodePostal(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="ville">Ville</Label>
+                    <Input
+                      id="ville"
+                      placeholder="Paris"
+                      className="glass-card"
+                      value={ville}
+                      onChange={(e) => setVille(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="bg-primary hover:bg-primary/90 text-foreground font-semibold w-full"
               onClick={handleSave}
               disabled={loading}
             >

@@ -44,7 +44,7 @@ import {
   UNITS,
   TVA_RATES,
 } from "@/lib/quoteUtils";
-import { EmailComposerModal } from "@/components/devis/EmailComposerModal";
+import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -463,19 +463,10 @@ const DevisEditor = () => {
     await handleSave();
     const quoteId = quote.id;
     if (quoteId) {
-      await supabase.from("devis").update({ statut: "Envoyé", date_envoi: new Date().toISOString() }).eq("id", quoteId);
-      setQuote((q) => ({ ...q, statut: "Envoyé" }));
       setEmailModalOpen(true);
     } else {
       toast.error("Veuillez d'abord enregistrer le devis");
     }
-  };
-
-  const handleEmailSend = async (to: string[], subject: string, body: string) => {
-    // Stub for Phase 3
-    console.log("Email stub:", { to, subject, body });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
   };
 
   const createJobFromQuote = async (q?: Quote) => {
@@ -1659,15 +1650,20 @@ const DevisEditor = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Email Composer Modal */}
-      <EmailComposerModal
+      {/* Quote Send Modal */}
+      <QuoteSendModal
         open={emailModalOpen}
         onOpenChange={setEmailModalOpen}
+        quoteId={quote.id || ""}
         quoteNumber={quote.numero}
-        clientEmail={quote.contact_email || quote.client_nom}
+        clientEmail={quote.contact_email || ""}
         clientName={quote.client_nom}
-        totalTTC={quote.total_ttc}
-        onSend={handleEmailSend}
+        quoteData={{
+          total_ht: quote.total_ht,
+          total_ttc: quote.total_ttc,
+          issued_at: quote.date_emission || new Date().toISOString(),
+          expiry_date: quote.expiry_date,
+        }}
       />
 
       {/* PDF Preview Modal */}
