@@ -135,30 +135,30 @@ serve(async (req) => {
 
     console.log('Sending invoice email:', { invoiceId, recipientEmail, templateId });
 
-    // Vérifier l'authentification avec le token utilisateur
+    // Vérifier l'authentification
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header');
       throw new Error('Non authentifié');
     }
 
-    // Créer un client avec ANON_KEY et le header Authorization de l'utilisateur
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      throw new Error('Utilisateur non trouvé ou token invalide');
+    // Décoder le JWT pour extraire le user_id
+    const jwt = authHeader.replace('Bearer ', '');
+    const parts = jwt.split('.');
+    if (parts.length !== 3) {
+      throw new Error('Token JWT invalide');
     }
 
-    console.log('User authenticated:', user.id);
+    const payload = JSON.parse(atob(parts[1]));
+    const userId = payload.sub;
 
-    // Créer le client Supabase principal avec SERVICE_ROLE_KEY
+    if (!userId) {
+      throw new Error('User ID non trouvé dans le token');
+    }
+
+    console.log('User authenticated:', userId);
+
+    // Créer le client Supabase avec SERVICE_ROLE_KEY
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -168,7 +168,7 @@ serve(async (req) => {
     const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('company_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (roleError || !userRole) {
@@ -176,7 +176,7 @@ serve(async (req) => {
       const { data: employee } = await supabase
         .from('equipe')
         .select('company_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
 
       if (!employee) {
