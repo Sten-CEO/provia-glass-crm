@@ -115,7 +115,7 @@ export function QuoteSendModal({
 
       setPublicUrl(data.publicUrl);
 
-      if (data.simulation) {
+      if (data?.simulation) {
         toast({
           title: "⚠️ Envoi simulé",
           description: data.message,
@@ -123,8 +123,9 @@ export function QuoteSendModal({
       } else {
         toast({
           title: "Email envoyé",
-          description: "Le devis a été envoyé avec succès",
+          description: `Le devis a été envoyé avec succès à ${recipientEmail}`,
         });
+        onOpenChange(false);
       }
 
     } catch (error: any) {

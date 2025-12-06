@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2, Download, FileDown } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Download, FileDown, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { recomputeInvoiceTotals } from "@/lib/invoiceUtils";
+import { InvoiceSendModal } from "@/components/factures/InvoiceSendModal";
 
 interface LigneFacture {
   description: string;
@@ -24,6 +25,8 @@ const FactureDetail = () => {
   const [facture, setFacture] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [lignes, setLignes] = useState<LigneFacture[]>([]);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [clientData, setClientData] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -33,9 +36,15 @@ const FactureDetail = () => {
   }, [id]);
 
   const loadFacture = async () => {
-    const { data } = await supabase.from("factures").select("*").eq("id", id).single();
+    const { data } = await supabase
+      .from("factures")
+      .select("*, clients:client_id(nom, email)")
+      .eq("id", id)
+      .single();
+
     if (data) {
       setFacture(data);
+      setClientData(data.clients);
       const parsedLignes = (Array.isArray(data.lignes) ? data.lignes : []) as unknown as LigneFacture[];
       setLignes(parsedLignes);
     }
@@ -119,13 +128,22 @@ const FactureDetail = () => {
           <h1 className="text-3xl font-bold uppercase tracking-wide">{facture.numero}</h1>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
-            <Save className="mr-2 h-4 w-4" />
-            Sauvegarder
+          <Button
+            onClick={() => setSendModalOpen(true)}
+            variant="outline"
+            className="glass-card"
+            disabled={!clientData?.email}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Envoyer par email
           </Button>
           <Button variant="outline" className="glass-card">
             <Download className="mr-2 h-4 w-4" />
             PDF
+          </Button>
+          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
+            <Save className="mr-2 h-4 w-4" />
+            Sauvegarder
           </Button>
         </div>
       </div>
@@ -300,6 +318,24 @@ const FactureDetail = () => {
           PDF
         </Button>
       </div>
+
+      {/* Modal d'envoi par email */}
+      {clientData && (
+        <InvoiceSendModal
+          open={sendModalOpen}
+          onOpenChange={setSendModalOpen}
+          invoiceId={facture.id}
+          invoiceNumber={facture.numero}
+          clientEmail={clientData.email || ""}
+          clientName={clientData.nom || facture.client_nom || ""}
+          invoiceData={{
+            total_ht: facture.total_ht,
+            total_ttc: facture.total_ttc,
+            issue_date: facture.issue_date,
+            echeance: facture.echeance,
+          }}
+        />
+      )}
     </div>
   );
 };
