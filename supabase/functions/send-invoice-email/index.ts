@@ -130,6 +130,36 @@ serve(async (req) => {
   }
 
   try {
+    // Vérifier l'authentification d'abord
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Non authentifié');
+    }
+
+    // Créer un client Supabase avec le token de l'utilisateur pour l'authentification
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
+    );
+
+    // Récupérer l'utilisateur authentifié
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      throw new Error('Utilisateur non trouvé');
+    }
+
+    console.log('User authenticated:', user.id);
+
+    // Créer un client avec privilèges élevés pour les opérations sensibles
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -138,20 +168,6 @@ serve(async (req) => {
     const { invoiceId, recipientEmail, recipientName, subject, message, templateId }: SendInvoiceEmailRequest = await req.json();
 
     console.log('Sending invoice email:', { invoiceId, recipientEmail, templateId });
-
-    // Vérifier l'authentification
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Non authentifié');
-    }
-
-    // Récupérer l'utilisateur authentifié
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      throw new Error('Utilisateur non trouvé');
-    }
 
     // Récupérer le company_id de l'utilisateur
     const { data: userRole, error: roleError } = await supabase
