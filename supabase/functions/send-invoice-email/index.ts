@@ -142,14 +142,14 @@ serve(async (req) => {
       throw new Error('Non authentifié');
     }
 
-    // Créer un client avec le token de l'utilisateur pour vérifier l'auth
-    const supabaseAuth = createClient(
+    // Créer un client avec ANON_KEY et le header Authorization de l'utilisateur
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
 
     if (userError || !user) {
       console.error('Auth error:', userError);
