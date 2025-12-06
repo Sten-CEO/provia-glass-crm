@@ -320,7 +320,7 @@ serve(async (req) => {
     const from = `${company.name || 'Provia Glass'} <onboarding@resend.dev>`;
 
     // 5. Envoyer l'email avec Resend
-    const emailResult = await sendEmailWithResend({
+    let emailResult = await sendEmailWithResend({
       to: recipientEmail,
       from,
       replyTo: replyToEmail,
@@ -335,6 +335,65 @@ serve(async (req) => {
       ],
       resendApiKey,
     });
+
+    // Gérer le mode test de Resend : si l'erreur indique qu'on ne peut envoyer qu'à notre propre email
+    if (!emailResult.success && emailResult.error?.includes('testing emails to your own email')) {
+      console.log('Resend is in test mode, extracting owner email...');
+
+      // Extraire l'email du propriétaire du message d'erreur
+      const match = emailResult.error.match(/\(([^)]+@[^)]+)\)/);
+      const ownerEmail = match ? match[1] : 'sten.1rlpro@gmail.com';
+
+      console.log(`Resending to owner email: ${ownerEmail}`);
+
+      // Modifier le sujet pour indiquer que c'est un test
+      const testSubject = `[TEST MODE] ${finalSubject} - Destinataire: ${recipientEmail}`;
+      const testMessage = `
+        <div style="background-color: #FFF3CD; border: 2px solid #FFC107; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+          <h3 style="color: #856404; margin-top: 0;">⚠️ Mode Test Resend</h3>
+          <p style="color: #856404; margin: 5px 0;"><strong>Email original destiné à :</strong> ${recipientName} (${recipientEmail})</p>
+          <p style="color: #856404; margin: 5px 0;">Pour envoyer des emails aux clients, activez votre compte Resend sur <a href="https://resend.com">resend.com</a></p>
+        </div>
+        ${htmlContent}
+      `;
+
+      // Réessayer avec l'email du propriétaire
+      emailResult = await sendEmailWithResend({
+        to: ownerEmail,
+        from,
+        replyTo: replyToEmail,
+        subject: testSubject,
+        html: testMessage,
+        text: `MODE TEST - Destinataire original: ${recipientEmail}\n\n${textContent}`,
+        attachments: [
+          {
+            filename: pdfFilename,
+            content: pdfBuffer,
+          },
+        ],
+        resendApiKey,
+      });
+
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email en mode test');
+      }
+
+      console.log('Email sent in test mode to:', ownerEmail);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Email envoyé en MODE TEST à ${ownerEmail}. Pour envoyer aux clients, activez votre compte Resend.`,
+          testMode: true,
+          messageId: emailResult.messageId,
+          originalRecipient: recipientEmail
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     if (!emailResult.success) {
       throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email');
