@@ -111,6 +111,11 @@ export function InvoiceSendModal({
         toast.warning("⚠️ Envoi simulé", {
           description: data.message,
         });
+      } else if (data?.testMode) {
+        toast.warning("⚠️ Mode Test Resend", {
+          description: data.message || `Email envoyé à votre adresse email au lieu de ${recipientEmail}`,
+          duration: 8000,
+        });
       } else {
         toast.success("Email envoyé", {
           description: `La facture a été envoyée à ${recipientEmail}`,

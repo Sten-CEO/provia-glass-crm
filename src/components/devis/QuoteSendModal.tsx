@@ -120,6 +120,12 @@ export function QuoteSendModal({
           title: "⚠️ Envoi simulé",
           description: data.message,
         });
+      } else if (data?.testMode) {
+        toast({
+          title: "⚠️ Mode Test Resend",
+          description: data.message || `Email envoyé à votre adresse email au lieu de ${recipientEmail}`,
+          duration: 8000,
+        });
       } else {
         toast({
           title: "Email envoyé",
