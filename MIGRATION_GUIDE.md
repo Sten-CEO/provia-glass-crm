@@ -1,3 +1,27 @@
+# Guide de migration - Ajout des champs de contact
+
+## Problème rencontré
+
+Lors de la sauvegarde des paramètres société, l'erreur suivante apparaît :
+```
+Could not find the 'tva_intracom' column of 'companies' in the schema cache
+```
+
+## Solution
+
+Vous devez appliquer la migration qui ajoute les colonnes manquantes à la table `companies`.
+
+## Étapes à suivre
+
+### Option 1 : Via le Dashboard Supabase (Recommandé)
+
+1. **Ouvrez le dashboard Supabase** : https://supabase.com/dashboard
+2. **Sélectionnez votre projet**
+3. **Allez dans SQL Editor** (dans le menu de gauche)
+4. **Créez une nouvelle requête** (bouton "New query")
+5. **Copiez-collez le script SQL suivant** :
+
+```sql
 -- Ajout des champs de contact et email d'expédition pour les sociétés
 -- Ces champs sont utilisés pour l'envoi d'emails (devis, factures) et les informations de contact
 
@@ -28,3 +52,48 @@ COMMENT ON COLUMN public.companies.tva_intracom IS 'Numéro TVA intracommunautai
 
 -- Créer un index pour les recherches par email
 CREATE INDEX IF NOT EXISTS idx_companies_email ON public.companies(email);
+```
+
+6. **Cliquez sur "Run"** (ou appuyez sur Ctrl+Enter)
+7. **Vérifiez le résultat** : Vous devriez voir "Success. No rows returned"
+
+### Option 2 : Via Supabase CLI (Si vous développez en local)
+
+```bash
+npx supabase db push
+```
+
+## Vérification
+
+Pour vérifier que la migration a été appliquée correctement :
+
+1. Allez dans **Table Editor** > **companies**
+2. Vérifiez que les colonnes suivantes existent :
+   - ✅ `email`
+   - ✅ `email_from`
+   - ✅ `telephone`
+   - ✅ `adresse`
+   - ✅ `ville`
+   - ✅ `code_postal`
+   - ✅ `siret`
+   - ✅ `tva_intracom`
+   - ✅ `updated_at`
+
+## Après la migration
+
+1. **Actualisez votre application** (F5)
+2. **Allez dans Paramètres > Société**
+3. **Remplissez les champs** :
+   - Nom de la société
+   - SIRET
+   - Numéro TVA
+   - Email principal
+   - Téléphone
+   - Adresse
+4. **Cliquez sur Enregistrer**
+
+Cela devrait maintenant fonctionner sans erreur !
+
+## Note importante
+
+⚠️ La clause `IF NOT EXISTS` garantit que le script peut être exécuté plusieurs fois sans erreur. Si les colonnes existent déjà, elles ne seront pas modifiées.
