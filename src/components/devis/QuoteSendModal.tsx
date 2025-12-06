@@ -221,7 +221,7 @@ export function QuoteSendModal({
           {publicUrl && (
             <div className="bg-muted p-4 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm font-medium">Lien public</Label>
+                <Label className="text-sm font-medium">Lien public du devis</Label>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -234,18 +234,11 @@ export function QuoteSendModal({
               <p className="text-sm text-muted-foreground break-all">
                 {window.location.origin}{publicUrl}
               </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Le client peut consulter et signer le devis via ce lien
+              </p>
             </div>
           )}
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800 font-medium mb-1">
-              ⚠️ Mode simulation
-            </p>
-            <p className="text-sm text-amber-700">
-              Configurez la clé API Resend pour l'envoi réel d'emails. 
-              En attendant, le client peut consulter et signer le devis via le lien public.
-            </p>
-          </div>
         </div>
 
         <DialogFooter>
