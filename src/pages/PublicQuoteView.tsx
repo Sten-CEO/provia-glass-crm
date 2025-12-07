@@ -1,352 +1,398 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
-import { FileText, Download, Check, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { FileText, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
 
-interface Quote {
+interface QuoteData {
   id: string;
   numero: string;
   client_nom: string;
-  montant: string;
+  client_email: string;
   total_ht: number;
   total_ttc: number;
-  lignes: any;
+  issued_at: string;
+  expiry_date: string;
   statut: string;
-  created_at: string;
-  expires_at: string | null;
-  accepted_at: string | null;
-  declined_at: string | null;
-  message_client?: string;
-  conditions?: string;
+  company: {
+    name: string;
+    email: string;
+    telephone: string;
+    adresse: string;
+  };
+  signature: {
+    signer_name: string;
+    signed_at: string;
+  } | null;
 }
 
-export default function PublicQuoteView() {
-  const { token } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  const [quote, setQuote] = useState<Quote | null>(null);
+const PublicQuoteView = () => {
+  const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
+  const [quote, setQuote] = useState<QuoteData | null>(null);
+  const [pdfData, setPdfData] = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState<string>("");
+  const [expired, setExpired] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Signature form
   const [signerName, setSignerName] = useState("");
   const [signerEmail, setSignerEmail] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     loadQuote();
   }, [token]);
 
   const loadQuote = async () => {
-    if (!token) return;
-
     try {
-      // Charger le devis par token
-      const { data, error } = await supabase
-        .from('devis')
-        .select('*')
-        .eq('token', token)
-        .single();
+      setLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase.functions.invoke('get-quote-public', {
+        body: { token },
+      });
 
       if (error) throw error;
 
-      setQuote(data);
+      if (data.expired) {
+        setExpired(true);
+        setQuote(data.quote);
+        return;
+      }
 
-      // Enregistrer l'événement "opened"
-      await supabase.from('quote_events').insert({
-        quote_id: data.id,
-        event_type: 'opened',
-        ip_address: 'client',
-        user_agent: navigator.userAgent
-      });
+      setQuote(data.quote);
+      setPdfData(data.pdf.data);
+      setPdfFilename(data.pdf.filename);
+
+      // Pré-remplir le nom et email du client
+      if (data.quote.client_nom) {
+        setSignerName(data.quote.client_nom);
+      }
+      if (data.quote.client_email) {
+        setSignerEmail(data.quote.client_email);
+      }
 
     } catch (error: any) {
       console.error('Error loading quote:', error);
-      toast({
-        title: "Erreur",
-        description: "Devis introuvable ou expiré",
-        variant: "destructive",
-      });
+      setError(error.message || 'Erreur lors du chargement du devis');
+      toast.error(error.message || 'Erreur lors du chargement du devis');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAccept = async () => {
-    if (!quote || !signerName || !signerEmail || !acceptedTerms) {
-      toast({
-        title: "Information manquante",
-        description: "Veuillez remplir tous les champs et accepter les conditions",
-        variant: "destructive",
-      });
+  const handleDownload = () => {
+    if (!pdfData || !pdfFilename) return;
+
+    // Convertir base64 en blob
+    const byteCharacters = atob(pdfData);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+    // Télécharger
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = pdfFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast.success('Téléchargement du devis en cours');
+  };
+
+  const handleSign = async () => {
+    if (!signerName.trim()) {
+      toast.error('Veuillez entrer votre nom');
       return;
     }
 
-    setProcessing(true);
+    if (!acceptTerms) {
+      toast.error('Veuillez accepter les conditions');
+      return;
+    }
+
+    setSigning(true);
 
     try {
-      // Créer la signature
-      await supabase.from('quote_signatures').insert({
-        quote_id: quote.id,
-        signer_name: signerName,
-        signer_email: signerEmail,
-        signature_image_url: 'digital-signature',
-        pdf_hash: 'simulation',
-        ip_address: 'client',
-        user_agent: navigator.userAgent,
-        accepted_terms: true
+      const { data, error } = await supabase.functions.invoke('sign-quote', {
+        body: {
+          token,
+          signerName: signerName.trim(),
+          signerEmail: signerEmail.trim() || undefined,
+        },
       });
 
-      // Mettre à jour le devis
-      await supabase
-        .from('devis')
-        .update({
-          statut: 'Accepté',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', quote.id);
+      if (error) throw error;
 
-      // Enregistrer l'événement
-      await supabase.from('quote_events').insert({
-        quote_id: quote.id,
-        event_type: 'accepted',
-        metadata: { signer_name: signerName, signer_email: signerEmail }
-      });
+      if (data.error) {
+        throw new Error(data.error);
+      }
 
-      toast({
-        title: "Devis accepté",
-        description: "Merci ! Nous vous contacterons prochainement.",
-      });
+      toast.success('Devis signé avec succès !');
 
-      // Recharger le devis pour afficher le nouveau statut
+      // Recharger le devis
       await loadQuote();
 
     } catch (error: any) {
-      console.error('Error accepting quote:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'accepter le devis",
-        variant: "destructive",
-      });
+      console.error('Error signing quote:', error);
+      toast.error(error.message || 'Erreur lors de la signature du devis');
     } finally {
-      setProcessing(false);
+      setSigning(false);
     }
   };
 
-  const handleDecline = async () => {
-    if (!quote) return;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR');
+  };
 
-    setProcessing(true);
-
-    try {
-      await supabase
-        .from('devis')
-        .update({
-          statut: 'Refusé',
-          declined_at: new Date().toISOString()
-        })
-        .eq('id', quote.id);
-
-      await supabase.from('quote_events').insert({
-        quote_id: quote.id,
-        event_type: 'declined'
-      });
-
-      toast({
-        title: "Devis refusé",
-        description: "Nous avons bien pris en compte votre refus.",
-      });
-
-      await loadQuote();
-
-    } catch (error: any) {
-      console.error('Error declining quote:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de refuser le devis",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessing(false);
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(amount);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Chargement du devis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Erreur</h1>
+          <p className="text-slate-600 mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (expired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <Clock className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Devis expiré</h1>
+          <p className="text-slate-600 mb-2">
+            Le devis <strong>{quote?.numero}</strong> a expiré.
+          </p>
+          {quote?.expiry_date && (
+            <p className="text-sm text-slate-500 mb-6">
+              Date d'expiration : {formatDate(quote.expiry_date)}
+            </p>
+          )}
+          <p className="text-sm text-slate-600">
+            Veuillez contacter {quote?.company?.name} pour obtenir un nouveau devis.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!quote) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="p-8 max-w-md">
-          <h1 className="text-2xl font-bold mb-4">Devis introuvable</h1>
-          <p className="text-muted-foreground">Ce devis n'existe pas ou a expiré.</p>
-        </Card>
-      </div>
-    );
+    return null;
   }
 
-  const isExpired = quote.expires_at && new Date(quote.expires_at) < new Date();
-  const isAccepted = quote.accepted_at !== null;
-  const isDeclined = quote.declined_at !== null;
-  const canInteract = !isExpired && !isAccepted && !isDeclined;
+  const isAlreadySigned = !!quote.signature;
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* En-tête */}
-        <Card className="p-8 mb-6">
+        {/* Header */}
+        <div className="bg-white rounded-t-lg shadow-xl p-8 border-b">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Devis {quote.numero}</h1>
-              <p className="text-muted-foreground">Client: {quote.client_nom}</p>
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                Devis {quote.numero}
+              </h1>
+              <p className="text-slate-600">
+                {quote.company.name}
+              </p>
             </div>
-            <FileText className="h-12 w-12 text-primary" />
+            <div className="text-right">
+              {isAlreadySigned ? (
+                <div className="flex items-center gap-2 text-green-600 font-semibold">
+                  <CheckCircle className="h-5 w-5" />
+                  Signé
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-orange-600 font-semibold">
+                  <Clock className="h-5 w-5" />
+                  En attente
+                </div>
+              )}
+            </div>
           </div>
 
-          {isAccepted && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 text-green-700">
-                <Check className="h-5 w-5" />
-                <span className="font-medium">Devis accepté</span>
-              </div>
+          <div className="grid grid-cols-2 gap-6 text-sm">
+            <div>
+              <p className="text-slate-500 mb-1">Client</p>
+              <p className="font-semibold text-slate-800">{quote.client_nom}</p>
+              {quote.client_email && (
+                <p className="text-slate-600">{quote.client_email}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-slate-500 mb-1">Montant TTC</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {formatCurrency(quote.total_ttc)}
+              </p>
+            </div>
+          </div>
+
+          {quote.expiry_date && (
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                <strong>Valable jusqu'au :</strong> {formatDate(quote.expiry_date)}
+              </p>
             </div>
           )}
+        </div>
 
-          {isDeclined && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 text-red-700">
-                <X className="h-5 w-5" />
-                <span className="font-medium">Devis refusé</span>
-              </div>
+        {/* PDF Viewer */}
+        <div className="bg-white shadow-xl p-6 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Document PDF
+            </h2>
+            <Button onClick={handleDownload} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Télécharger
+            </Button>
+          </div>
+
+          {pdfData && (
+            <div className="border rounded-lg overflow-hidden">
+              <iframe
+                src={`data:application/pdf;base64,${pdfData}`}
+                className="w-full h-[600px]"
+                title="Devis PDF"
+              />
             </div>
           )}
+        </div>
 
-          {isExpired && !isAccepted && !isDeclined && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-              <p className="text-orange-700">Ce devis a expiré</p>
-            </div>
-          )}
-
-          {quote.message_client && (
-            <div className="bg-muted p-4 rounded-lg mb-4">
-              <p className="text-sm">{quote.message_client}</p>
-            </div>
-          )}
-        </Card>
-
-        {/* Lignes du devis */}
-        <Card className="p-8 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Détails</h2>
-          
-          <div className="space-y-2">
-            {(Array.isArray(quote.lignes) ? quote.lignes : []).map((ligne: any, index: number) => (
-              <div key={index} className="flex justify-between py-2 border-b">
+        {/* Signature Section */}
+        <div className="bg-white rounded-b-lg shadow-xl p-8">
+          {isAlreadySigned ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="flex items-start gap-4">
+                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
-                  <p className="font-medium">{ligne.description}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Qté: {ligne.quantite || ligne.qty} × {(ligne.prix_unitaire || ligne.unit_price_ht)?.toFixed(2)} €
+                  <h3 className="text-lg font-semibold text-green-800 mb-2">
+                    Devis signé électroniquement
+                  </h3>
+                  <p className="text-green-700 mb-1">
+                    <strong>Signataire :</strong> {quote.signature.signer_name}
+                  </p>
+                  <p className="text-sm text-green-600">
+                    <strong>Date de signature :</strong> {formatDate(quote.signature.signed_at)}
                   </p>
                 </div>
-                <p className="font-medium">
-                  {((ligne.quantite || ligne.qty) * (ligne.prix_unitaire || ligne.unit_price_ht)).toFixed(2)} €
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 pt-4 border-t space-y-2">
-            <div className="flex justify-between">
-              <span>Total HT</span>
-              <span className="font-medium">{quote.total_ht?.toFixed(2)} €</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total TTC</span>
-              <span>{quote.total_ttc?.toFixed(2)} €</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Formulaire de signature */}
-        {canInteract && (
-          <Card className="p-8">
-            <h2 className="text-xl font-semibold mb-4">Accepter le devis</h2>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <Label htmlFor="signerName">Nom complet *</Label>
-                <Input
-                  id="signerName"
-                  value={signerName}
-                  onChange={(e) => setSignerName(e.target.value)}
-                  placeholder="Votre nom"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="signerEmail">Email *</Label>
-                <Input
-                  id="signerEmail"
-                  type="email"
-                  value={signerEmail}
-                  onChange={(e) => setSignerEmail(e.target.value)}
-                  placeholder="votre@email.com"
-                />
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="terms"
-                  checked={acceptedTerms}
-                  onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                />
-                <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
-                  J'accepte les conditions générales de vente et confirme mon accord pour ce devis
-                </label>
               </div>
             </div>
+          ) : (
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-4">
+                Signature électronique
+              </h2>
+              <p className="text-slate-600 mb-6">
+                Pour accepter ce devis, veuillez remplir les informations ci-dessous et signer électroniquement.
+              </p>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={handleAccept}
-                disabled={processing || !signerName || !signerEmail || !acceptedTerms}
-                className="flex-1"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Accepter le devis
-              </Button>
-              
-              <Button
-                onClick={handleDecline}
-                disabled={processing}
-                variant="outline"
-                className="flex-1"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Refuser
-              </Button>
-            </div>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="signerName">Nom et prénom *</Label>
+                  <Input
+                    id="signerName"
+                    value={signerName}
+                    onChange={(e) => setSignerName(e.target.value)}
+                    placeholder="Jean Dupont"
+                    className="mt-1"
+                  />
+                </div>
 
-            {quote.conditions && (
-              <div className="mt-6 pt-4 border-t">
-                <h3 className="text-sm font-medium mb-2">Conditions</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {quote.conditions}
-                </p>
+                <div>
+                  <Label htmlFor="signerEmail">Email (optionnel)</Label>
+                  <Input
+                    id="signerEmail"
+                    type="email"
+                    value={signerEmail}
+                    onChange={(e) => setSignerEmail(e.target.value)}
+                    placeholder="jean.dupont@example.com"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border">
+                  <Checkbox
+                    id="accept"
+                    checked={acceptTerms}
+                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                  />
+                  <Label htmlFor="accept" className="text-sm leading-relaxed cursor-pointer">
+                    Je confirme avoir lu et accepté les termes de ce devis.
+                    En signant électroniquement, j'accepte que cette signature ait la même valeur juridique qu'une signature manuscrite.
+                  </Label>
+                </div>
+
+                <Button
+                  onClick={handleSign}
+                  disabled={signing || !signerName.trim() || !acceptTerms}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-6 text-lg"
+                  size="lg"
+                >
+                  {signing ? 'Signature en cours...' : 'Signer électroniquement'}
+                </Button>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-slate-500">
+          <p>
+            Pour toute question, contactez{' '}
+            <a href={`mailto:${quote.company.email}`} className="text-blue-600 hover:underline">
+              {quote.company.email}
+            </a>
+            {quote.company.telephone && (
+              <>
+                {' '}ou appelez le{' '}
+                <a href={`tel:${quote.company.telephone}`} className="text-blue-600 hover:underline">
+                  {quote.company.telephone}
+                </a>
+              </>
             )}
-          </Card>
-        )}
+          </p>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default PublicQuoteView;
