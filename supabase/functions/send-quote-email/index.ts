@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { generateQuotePDF } from '../_shared/pdf-generator.ts';
+import { sendEmailViaSMTP } from '../_shared/smtp-mailer.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,71 +59,6 @@ function replaceVariables(template: string, values: Record<string, any>): string
   result = result.replace(/\{\{AdresseEntreprise\}\}/g, values.AdresseEntreprise || '');
 
   return result;
-}
-
-/**
- * Envoie un email via Resend avec pièce jointe PDF
- */
-async function sendEmailWithResend(params: {
-  to: string;
-  from: string;
-  replyTo: string;
-  subject: string;
-  html: string;
-  text: string;
-  attachments?: Array<{
-    filename: string;
-    content: Uint8Array;
-  }>;
-  resendApiKey: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  try {
-    const { to, from, replyTo, subject, html, text, attachments, resendApiKey } = params;
-
-    // Préparer les pièces jointes au format base64 pour Resend
-    const formattedAttachments = attachments?.map(att => ({
-      filename: att.filename,
-      content: btoa(String.fromCharCode(...att.content)), // Convertir Uint8Array en base64
-    }));
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        reply_to: replyTo,
-        subject,
-        html,
-        text,
-        attachments: formattedAttachments,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend API error:', data);
-      return {
-        success: false,
-        error: data.message || 'Erreur lors de l\'envoi de l\'email',
-      };
-    }
-
-    return {
-      success: true,
-      messageId: data.id,
-    };
-  } catch (error: any) {
-    console.error('Error sending email with Resend:', error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
 }
 
 serve(async (req) => {
@@ -210,6 +146,15 @@ serve(async (req) => {
       throw new Error('Informations de société manquantes');
     }
 
+    // Vérifier la configuration SMTP
+    if (!company.smtp_enabled) {
+      throw new Error('Configuration SMTP non activée. Veuillez configurer votre SMTP dans les paramètres de société.');
+    }
+
+    if (!company.smtp_host || !company.smtp_port || !company.smtp_username || !company.smtp_password) {
+      throw new Error('Configuration SMTP incomplète. Veuillez renseigner tous les champs SMTP dans les paramètres.');
+    }
+
     // Préparer les variables pour le template
     const variables = {
       NomClient: recipientName || quote.clients?.nom || quote.client_nom || '',
@@ -278,38 +223,10 @@ serve(async (req) => {
       metadata: { recipient_email: recipientEmail }
     });
 
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-
-    if (!resendApiKey) {
-      // MODE SIMULATION: Pas de clé API Resend configurée
-      console.log('=== EMAIL SIMULATION (Clé API Resend manquante) ===');
-      console.log('To:', recipientEmail);
-      console.log('Subject:', finalSubject);
-      console.log('Message:', finalMessage);
-      console.log('Quote link:', `/quote/${token}`);
-      console.log('===================================================');
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Envoi simulé - Veuillez configurer la clé API Resend pour l\'envoi réel',
-          simulation: true,
-          token,
-          publicUrl: `/quote/${token}`
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // ENVOI RÉEL avec Resend
-
-    // 1. Générer le PDF du devis
+    // Générer le PDF du devis
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
-    // 2. Préparer le contenu HTML de l'email
+    // Préparer le contenu HTML de l'email
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #4A90E2; color: white; padding: 20px; text-align: center;">
@@ -342,102 +259,40 @@ serve(async (req) => {
       </div>
     `;
 
-    // 3. Préparer le texte brut (fallback)
+    // Préparer le texte brut (fallback)
     const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('SUPABASE_URL')}/quote/${token}`;
 
-    // 4. Déterminer l'email d'expédition
-    // Utiliser email_from s'il existe, sinon email, sinon l'email vérifié process-ly.com
-    const fromEmail = company.email_from || company.email || 'noreply@process-ly.com';
-    const replyToEmail = company.email || company.email_from || '';
-
-    // Le "from" doit être un domaine vérifié dans Resend
-    // On utilise process-ly.com vérifié et on met l'email de la société en reply-to
-    const from = `${company.name || 'Provia Glass'} <noreply@process-ly.com>`;
-
-    // 5. Envoyer l'email avec Resend
-    let emailResult = await sendEmailWithResend({
-      to: recipientEmail,
-      from,
-      replyTo: replyToEmail,
-      subject: finalSubject,
-      html: htmlContent,
-      text: textContent,
-      attachments: [
-        {
-          filename: pdfFilename,
-          content: pdfBuffer,
-        },
-      ],
-      resendApiKey,
-    });
-
-    // Gérer le mode test de Resend : si l'erreur indique qu'on ne peut envoyer qu'à notre propre email
-    if (!emailResult.success && emailResult.error?.includes('testing emails to your own email')) {
-      console.log('Resend is in test mode, extracting owner email...');
-
-      // Extraire l'email du propriétaire du message d'erreur
-      const match = emailResult.error.match(/\(([^)]+@[^)]+)\)/);
-      const ownerEmail = match ? match[1] : 'sten.1rlpro@gmail.com';
-
-      console.log(`Resending to owner email: ${ownerEmail}`);
-
-      // Modifier le sujet pour indiquer que c'est un test
-      const testSubject = `[TEST MODE] ${finalSubject} - Destinataire: ${recipientEmail}`;
-      const testMessage = `
-        <div style="background-color: #FFF3CD; border: 2px solid #FFC107; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
-          <h3 style="color: #856404; margin-top: 0;">⚠️ Mode Test Resend</h3>
-          <p style="color: #856404; margin: 5px 0;"><strong>Email original destiné à :</strong> ${recipientName} (${recipientEmail})</p>
-          <p style="color: #856404; margin: 5px 0;">Pour envoyer des emails aux clients, activez votre compte Resend sur <a href="https://resend.com">resend.com</a></p>
-          <p style="color: #856404; margin: 5px 0;"><strong>Lien public du devis :</strong> <a href="${Deno.env.get('SUPABASE_URL')}/quote/${token}">Voir le devis</a></p>
-        </div>
-        ${htmlContent}
-      `;
-
-      // Réessayer avec l'email du propriétaire
-      emailResult = await sendEmailWithResend({
-        to: ownerEmail,
-        from,
-        replyTo: replyToEmail,
-        subject: testSubject,
-        html: testMessage,
-        text: `MODE TEST - Destinataire original: ${recipientEmail}\n\n${textContent}`,
+    // Envoyer l'email via SMTP
+    console.log('Sending email via SMTP...');
+    const emailResult = await sendEmailViaSMTP(
+      {
+        host: company.smtp_host,
+        port: company.smtp_port,
+        username: company.smtp_username,
+        password: company.smtp_password,
+        secure: company.smtp_secure ?? true,
+      },
+      {
+        from: company.smtp_username,
+        to: recipientEmail,
+        subject: finalSubject,
+        html: htmlContent,
+        text: textContent,
+        replyTo: company.smtp_username,
         attachments: [
           {
             filename: pdfFilename,
             content: pdfBuffer,
           },
         ],
-        resendApiKey,
-      });
-
-      if (!emailResult.success) {
-        throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email en mode test');
       }
-
-      console.log('Email sent in test mode to:', ownerEmail);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Email envoyé en MODE TEST à ${ownerEmail}. Pour envoyer aux clients, activez votre compte Resend.`,
-          testMode: true,
-          messageId: emailResult.messageId,
-          token,
-          publicUrl: `/quote/${token}`,
-          originalRecipient: recipientEmail
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    );
 
     if (!emailResult.success) {
       throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email');
     }
 
-    console.log('Email sent successfully:', emailResult.messageId);
+    console.log('Email sent successfully via SMTP');
 
     return new Response(
       JSON.stringify({
