@@ -312,12 +312,17 @@ serve(async (req) => {
 
     // 4. Déterminer l'email d'expédition
     // Utiliser email_from s'il existe, sinon email, sinon l'email vérifié process-ly.com
-    const fromEmail = company.email_from || company.email || 'noreply@process-ly.com';
+    const configuredEmail = company.email_from || company.email || '';
     const replyToEmail = company.email || company.email_from || '';
 
-    // Le "from" doit être un domaine vérifié dans Resend
-    // On utilise process-ly.com vérifié et on met l'email de la société en reply-to
-    const from = `${company.name || 'Provia Glass'} <noreply@process-ly.com>`;
+    // Le "from" doit être un domaine vérifié dans Resend (process-ly.com)
+    // Si l'email configuré utilise @process-ly.com, on l'utilise, sinon noreply@process-ly.com
+    let fromEmail = 'noreply@process-ly.com';
+    if (configuredEmail && configuredEmail.toLowerCase().endsWith('@process-ly.com')) {
+      fromEmail = configuredEmail;
+    }
+
+    const from = `${company.name || 'Provia Glass'} <${fromEmail}>`;
 
     // 5. Envoyer l'email avec Resend
     let emailResult = await sendEmailWithResend({
