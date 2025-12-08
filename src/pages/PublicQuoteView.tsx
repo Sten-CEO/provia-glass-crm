@@ -88,19 +88,33 @@ const PublicQuoteView = () => {
       setPdfData(data.pdf.data);
       setPdfFilename(data.pdf.filename);
 
-      // Créer une URL blob pour le PDF
-      console.log('Creating PDF Blob from base64 data, length:', data.pdf.data.length);
+      // Créer une URL blob pour le PDF/HTML
+      console.log('Creating Blob from base64 data, length:', data.pdf.data.length);
       const byteCharacters = atob(data.pdf.data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+
+      // Détecter si c'est du HTML (commence par <!DOCTYPE ou <html)
+      const isHTML = byteCharacters.trim().startsWith('<!DOCTYPE') || byteCharacters.trim().startsWith('<html');
+      console.log('Content type detected:', isHTML ? 'HTML' : 'PDF');
+
+      if (isHTML) {
+        // C'est du HTML, créer un Blob HTML directement
+        const blob = new Blob([byteCharacters], { type: 'text/html; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        console.log('HTML Blob URL created:', url);
+        setPdfUrl(url);
+      } else {
+        // C'est un vrai PDF, créer un Blob PDF
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        console.log('PDF Blob created, size:', blob.size, 'type:', blob.type);
+        const url = URL.createObjectURL(blob);
+        console.log('PDF Blob URL created:', url);
+        setPdfUrl(url);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      console.log('PDF Blob created, size:', blob.size, 'type:', blob.type);
-      const url = URL.createObjectURL(blob);
-      console.log('PDF Blob URL created:', url);
-      setPdfUrl(url);
 
       // Pré-remplir le nom et email du client
       if (data.quote.client_nom) {
@@ -309,7 +323,7 @@ const PublicQuoteView = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Document PDF
+              Document de devis
             </h2>
             <Button onClick={handleDownload} variant="outline">
               <Download className="h-4 w-4 mr-2" />
@@ -318,44 +332,16 @@ const PublicQuoteView = () => {
           </div>
 
           {pdfUrl ? (
-            <div className="border rounded-lg overflow-hidden bg-slate-50">
-              <object
-                data={pdfUrl}
-                type="application/pdf"
-                className="w-full h-[600px]"
-              >
-                <div className="p-8 text-center">
-                  <p className="text-slate-700 mb-4">
-                    Le PDF ne peut pas être affiché dans votre navigateur.
-                  </p>
-                  <Button onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger le PDF
-                  </Button>
-                </div>
-              </object>
-            </div>
-          ) : pdfData ? (
-            <div className="border rounded-lg overflow-hidden bg-slate-50">
-              <object
-                data={`data:application/pdf;base64,${pdfData}`}
-                type="application/pdf"
-                className="w-full h-[600px]"
-              >
-                <div className="p-8 text-center">
-                  <p className="text-slate-700 mb-4">
-                    Le PDF ne peut pas être affiché dans votre navigateur.
-                  </p>
-                  <Button onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger le PDF
-                  </Button>
-                </div>
-              </object>
+            <div className="border rounded-lg overflow-hidden bg-white">
+              <iframe
+                src={pdfUrl}
+                className="w-full h-[600px] border-0"
+                title="Document de devis"
+              />
             </div>
           ) : (
             <div className="p-8 text-center text-slate-500">
-              Chargement du PDF...
+              Chargement du document...
             </div>
           )}
         </div>
