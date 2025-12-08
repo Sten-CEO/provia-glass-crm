@@ -122,55 +122,75 @@ function replaceTemplateVariables(text: string, quote: QuoteData): string {
  * Génère le HTML du header selon le layout configuré
  */
 function generateHeaderHTML(template: TemplateData, quote: QuoteData): string {
-  if (!template.header_logo) return '';
+  const mainColor = template.main_color || '#22c55e'; // Vert par défaut
+  const accentColor = template.accent_color || '#ef4444'; // Rouge par défaut
 
-  const mainColor = template.main_color || '#3b82f6';
-  const logoSizeStyle = template.logo_size === 'small'
-    ? 'height: 48px;'
-    : template.logo_size === 'large'
-    ? 'height: 96px;'
-    : 'height: 64px;';
-
-  const logoHTML = `<img src="${template.header_logo}" alt="Logo" style="${logoSizeStyle} object-fit: contain;" />`;
-  const titleHTML = `
-    <div>
-      <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: ${mainColor};">
+  // Nouveau design : En-tête avec titre centré et bordure
+  return `
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="font-size: 48px; font-weight: bold; margin: 0 0 8px 0; color: ${mainColor}; letter-spacing: 2px;">
         ${template.type === 'QUOTE' ? 'DEVIS' : 'FACTURE'}
       </h1>
-      <p style="font-size: 14px; color: #6b7280; margin: 0;">N° ${quote.numero}</p>
+      <p style="font-size: 16px; color: #6b7280; margin: 0 0 16px 0;">N° ${quote.numero}</p>
+      <div style="height: 3px; background-color: ${mainColor}; width: 100%; margin-bottom: 24px;"></div>
     </div>
   `;
+}
 
-  switch (template.header_layout) {
-    case 'logo-center':
-      return `
-        <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
-          <div style="margin-bottom: 16px;">${logoHTML}</div>
-          ${titleHTML}
-        </div>
-      `;
-    case 'logo-right':
-      return `
-        <div style="display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
-          <div>${logoHTML}</div>
-          ${titleHTML}
-        </div>
-      `;
-    case 'split':
-      return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
-          <div>${logoHTML}</div>
-          ${titleHTML}
-        </div>
-      `;
-    default: // logo-left
-      return `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
-          <div>${logoHTML}</div>
-          ${titleHTML}
-        </div>
-      `;
-  }
+/**
+ * Génère la section avec le nom de l'entreprise (OUI) centré
+ */
+function generateCompanyNameSection(template: TemplateData, quote: QuoteData): string {
+  return `
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h2 style="font-size: 32px; font-weight: bold; margin: 0;">${quote.companies?.name || 'Entreprise'}</h2>
+    </div>
+  `;
+}
+
+/**
+ * Génère la section Émetteur/Client avec bordures colorées
+ */
+function generateEmetteurClientSection(template: TemplateData, quote: QuoteData): string {
+  const mainColor = template.main_color || '#22c55e'; // Vert
+  const accentColor = template.accent_color || '#ef4444'; // Rouge
+  const issuedDate = quote.issued_at
+    ? new Date(quote.issued_at).toLocaleDateString('fr-FR')
+    : new Date().toLocaleDateString('fr-FR');
+  const expiryDate = quote.expiry_date
+    ? new Date(quote.expiry_date).toLocaleDateString('fr-FR')
+    : '';
+
+  return `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+      <!-- Émetteur (bordure verte) -->
+      <div style="border-left: 5px solid ${mainColor}; padding: 16px; background-color: ${mainColor}08;">
+        <h3 style="font-size: 16px; font-weight: bold; color: ${mainColor}; margin: 0 0 12px 0;">Émetteur</h3>
+        <p style="font-weight: 600; margin: 4px 0;">${quote.companies?.name || 'Entreprise'}</p>
+        ${quote.companies?.adresse ? `<p style="margin: 4px 0; font-size: 14px;">${quote.companies.adresse}</p>` : ''}
+        ${quote.companies?.email ? `<p style="margin: 4px 0; font-size: 14px;">${quote.companies.email}</p>` : ''}
+      </div>
+
+      <!-- Client (bordure rouge) -->
+      <div style="border-left: 5px solid ${accentColor}; padding: 16px; background-color: ${accentColor}08;">
+        <h3 style="font-size: 16px; font-weight: bold; color: ${accentColor}; margin: 0 0 12px 0;">Client</h3>
+        <p style="font-weight: 600; margin: 4px 0;">${quote.client_nom}</p>
+        ${quote.property_address || quote.clients?.adresse ? `<p style="margin: 4px 0; font-size: 14px;">${quote.property_address || quote.clients?.adresse}</p>` : ''}
+        ${quote.contact_phone || quote.clients?.telephone ? `<p style="margin: 4px 0; font-size: 14px;">${quote.contact_phone || quote.clients?.telephone}</p>` : ''}
+        ${quote.contact_email || quote.clients?.email ? `<p style="margin: 4px 0; font-size: 14px;">${quote.contact_email || quote.clients?.email}</p>` : ''}
+      </div>
+    </div>
+
+    <!-- Dates -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 14px;">
+      <div>
+        <p style="margin: 4px 0;"><strong>Date :</strong> ${issuedDate}</p>
+      </div>
+      <div style="text-align: right;">
+        ${expiryDate ? `<p style="margin: 4px 0;"><strong>Valable jusqu'au :</strong> ${expiryDate}</p>` : ''}
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -376,25 +396,15 @@ export function renderQuoteHTML(template: TemplateData, quote: QuoteData): strin
 <body>
   ${generateHeaderHTML(template, quote)}
 
+  ${generateCompanyNameSection(template, quote)}
+
+  ${generateEmetteurClientSection(template, quote)}
+
   ${template.header_html ? `
     <div class="header" style="margin-bottom: 24px;">
       ${replaceTemplateVariables(template.header_html, quote)}
     </div>
   ` : ''}
-
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 14px;">
-    <div>
-      <p style="font-weight: 600; margin: 4px 0;">Date: ${issuedDate}</p>
-      ${expiryDate ? `<p style="margin: 4px 0;">Valable jusqu'au: ${expiryDate}</p>` : ''}
-    </div>
-    <div style="text-align: right;">
-      <p style="font-weight: 600; margin: 0 0 8px 0;">Client</p>
-      <p style="font-weight: 500; margin: 4px 0;">${quote.client_nom}</p>
-      ${quote.property_address || quote.clients?.adresse ? `<p style="margin: 4px 0;">${quote.property_address || quote.clients?.adresse}</p>` : ''}
-      ${quote.contact_phone || quote.clients?.telephone ? `<p style="margin: 4px 0;">${quote.contact_phone || quote.clients?.telephone}</p>` : ''}
-      ${quote.contact_email || quote.clients?.email ? `<p style="margin: 4px 0;">${quote.contact_email || quote.clients?.email}</p>` : ''}
-    </div>
-  </div>
 
   ${quote.title ? `<div style="margin-bottom: 16px;"><h2 style="font-size: 18px; font-weight: 600;">${quote.title}</h2></div>` : ''}
 
