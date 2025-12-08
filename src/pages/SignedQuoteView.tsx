@@ -59,36 +59,44 @@ export default function SignedQuoteView() {
       setPdfFilename(pdfFilename);
 
       // Créer le Blob URL pour afficher le PDF
-      let contentString: string;
-
       // Vérifier le type de pdfData
       if (typeof pdfData !== 'string') {
         console.error('PDF data is not a string:', typeof pdfData);
         throw new Error('Format de données PDF invalide');
       }
 
+      // Décoder le base64 en Uint8Array (pour gérer correctement l'UTF-8)
+      let bytes: Uint8Array;
+      let decodedContent: string;
+
       try {
         // Essayer de décoder en base64
-        contentString = atob(pdfData);
+        const binaryString = atob(pdfData);
+        bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Décoder l'UTF-8 correctement
+        const decoder = new TextDecoder('utf-8');
+        decodedContent = decoder.decode(bytes);
       } catch (error) {
         // Si le décodage échoue, c'est peut-être déjà une chaîne de caractères
         console.log('PDF data is not base64, using as-is');
-        contentString = pdfData;
+        decodedContent = pdfData;
+        bytes = new TextEncoder().encode(pdfData);
       }
 
-      const isHTML = contentString.trim().startsWith('<!DOCTYPE') || contentString.trim().startsWith('<html');
+      const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
 
       if (isHTML) {
-        const blob = new Blob([contentString], { type: 'text/html; charset=utf-8' });
+        // C'est du HTML, créer un Blob HTML avec le contenu UTF-8 décodé
+        const blob = new Blob([decodedContent], { type: 'text/html; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
       } else {
-        const byteNumbers = new Array(contentString.length);
-        for (let i = 0; i < contentString.length; i++) {
-          byteNumbers[i] = contentString.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        // C'est un vrai PDF, créer un Blob PDF avec les bytes bruts
+        const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
       }

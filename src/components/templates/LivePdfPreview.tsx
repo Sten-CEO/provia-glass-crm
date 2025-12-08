@@ -1,19 +1,8 @@
-/**
- * LivePdfPreview - Aperçu en temps réel dans l'éditeur de templates
- *
- * Ce composant utilise le renderer unifié (quoteHtmlRenderer.ts) pour
- * garantir que l'aperçu est identique au PDF final.
- */
-
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { renderQuoteHTML } from "@/lib/quote-template-renderer";
 import { DocumentTemplate } from "@/hooks/useDocumentTemplates";
-import {
-  renderQuoteToHtml,
-  getSampleQuoteData,
-  QuoteRenderData,
-} from "@/lib/quoteHtmlRenderer";
-import { useMemo } from "react";
 
 interface LivePdfPreviewProps {
   template: Partial<DocumentTemplate>;
@@ -24,45 +13,93 @@ export function LivePdfPreview({
   template,
   documentType = "quote",
 }: LivePdfPreviewProps) {
-  // Get sample data for preview
-  const sampleData: QuoteRenderData = useMemo(() => {
-    const data = getSampleQuoteData();
+  // Créer des données d'exemple pour la preview
+  const sampleQuoteData = {
+    numero: "DEV-2025-0001",
+    client_nom: "Jean Dupont",
+    issued_at: new Date().toISOString(),
+    expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    total_ht: 1500,
+    total_ttc: 1800,
+    remise: template.show_discounts ? 100 : 0,
+    required_deposit_ht: 0,
+    title: "Installation de vitrerie",
+    client_message: template.default_payment_method ? `Méthode de paiement : ${template.default_payment_method}` : "",
+    lignes: [
+      {
+        name: "Prestation d'exemple",
+        description: "Prestation d'exemple - Double vitrage",
+        qty: 1,
+        unit_price_ht: 1500,
+        tva_rate: template.default_vat_rate || 20,
+        total: 1500,
+      },
+    ],
+    companies: {
+      name: "Provia BASE",
+      adresse: "123 Rue de la Vitrerie, 75001 Paris",
+      telephone: "01 23 45 67 89",
+      email: "contact@provia-glass.fr",
+    },
+    clients: {
+      nom: "Jean Dupont",
+      adresse: "456 Avenue du Client, 75002 Paris",
+      telephone: "06 12 34 56 78",
+      email: "jean.dupont@example.com",
+    },
+    property_address: "456 Avenue du Client, 75002 Paris",
+    contact_phone: "06 12 34 56 78",
+    contact_email: "jean.dupont@example.com",
+  };
 
-    // Adjust for invoice type
-    if (documentType === "invoice") {
-      return {
-        ...data,
-        numero: "FACT-2025-001",
-      };
-    }
+  // Générer le HTML avec useMemo pour forcer le re-render quand le template change
+  const html = useMemo(() => {
+    // Préparer le template avec les bonnes valeurs par défaut
+    const templateData = {
+      type: documentType === "quote" ? ("QUOTE" as const) : ("INVOICE" as const),
+      header_logo: template.header_logo,
+      header_layout: (template.header_layout as any) || "logo-left",
+      logo_size: (template.logo_size as any) || "medium",
+      main_color: template.main_color,
+      accent_color: template.accent_color,
+      background_style: (template.background_style as any) || "solid",
+      font_family: template.font_family,
+      show_vat: template.show_vat ?? true,
+      show_discounts: template.show_discounts ?? false,
+      show_remaining_balance: template.show_remaining_balance ?? false,
+      signature_enabled: template.signature_enabled ?? false,
+      header_html: template.header_html,
+      content_html: template.content_html,
+      footer_html: template.footer_html,
+      css: template.css,
+    };
 
-    return data;
-  }, [documentType]);
-
-  // Generate HTML using the unified renderer
-  const previewHtml = useMemo(() => {
-    return renderQuoteToHtml(sampleData, template, {
-      documentType: documentType === "quote" ? "QUOTE" : "INVOICE",
-      mode: "preview",
-    });
-  }, [sampleData, template, documentType]);
+    // Générer le HTML avec la fonction unifiée
+    return renderQuoteHTML(templateData, sampleQuoteData as any);
+  }, [
+    documentType,
+    template.header_logo,
+    template.header_layout,
+    template.logo_size,
+    template.main_color,
+    template.accent_color,
+    template.background_style, // ← IMPORTANT : déclenche re-render quand changé
+    template.font_family,
+    template.show_vat,
+    template.show_discounts,
+    template.show_remaining_balance,
+    template.signature_enabled,
+    template.header_html,
+    template.content_html,
+    template.footer_html,
+    template.css,
+  ]);
 
   return (
     <Card className="overflow-hidden bg-gray-100 p-4">
-      <div
-        className="bg-white shadow-lg rounded-lg overflow-hidden"
-        style={{ maxHeight: "800px", overflow: "auto" }}
-      >
-        {/* Render the unified HTML */}
-        <div
-          className="quote-preview-content"
-          dangerouslySetInnerHTML={{ __html: previewHtml }}
-          style={{
-            // Override body styles since we're embedding in a div
-            padding: "40px",
-            fontFamily: template.font_family || "Arial, sans-serif",
-          }}
-        />
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden" style={{ maxHeight: "800px", overflowY: "auto" }}>
+        {/* Afficher le HTML généré */}
+        <div dangerouslySetInnerHTML={{ __html: html }} />
       </div>
 
       {/* Indicateur de preview */}

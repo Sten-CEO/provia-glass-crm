@@ -95,26 +95,32 @@ const PublicQuoteView = () => {
 
       // Créer une URL blob pour le PDF/HTML
       console.log('Creating Blob from base64 data, length:', data.pdf.data.length);
-      const byteCharacters = atob(data.pdf.data);
+
+      // Décoder le base64 en Uint8Array (pour gérer correctement l'UTF-8)
+      const base64 = data.pdf.data;
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Décoder l'UTF-8 correctement
+      const decoder = new TextDecoder('utf-8');
+      const decodedContent = decoder.decode(bytes);
 
       // Détecter si c'est du HTML (commence par <!DOCTYPE ou <html)
-      const isHTML = byteCharacters.trim().startsWith('<!DOCTYPE') || byteCharacters.trim().startsWith('<html');
+      const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
       console.log('Content type detected:', isHTML ? 'HTML' : 'PDF');
 
       if (isHTML) {
-        // C'est du HTML, créer un Blob HTML directement
-        const blob = new Blob([byteCharacters], { type: 'text/html; charset=utf-8' });
+        // C'est du HTML, créer un Blob HTML avec le contenu UTF-8 décodé
+        const blob = new Blob([decodedContent], { type: 'text/html; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         console.log('HTML Blob URL created:', url);
         setPdfUrl(url);
       } else {
-        // C'est un vrai PDF, créer un Blob PDF
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        // C'est un vrai PDF, créer un Blob PDF avec les bytes bruts
+        const blob = new Blob([bytes], { type: 'application/pdf' });
         console.log('PDF Blob created, size:', blob.size, 'type:', blob.type);
         const url = URL.createObjectURL(blob);
         console.log('PDF Blob URL created:', url);
@@ -141,20 +147,34 @@ const PublicQuoteView = () => {
   const handleDownload = () => {
     if (!pdfData || !pdfFilename) return;
 
-    // Convertir base64 en blob
-    const byteCharacters = atob(pdfData);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    // Décoder le base64 en Uint8Array (pour gérer correctement l'UTF-8)
+    const base64 = pdfData;
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+    // Décoder l'UTF-8 pour détecter le type de contenu
+    const decoder = new TextDecoder('utf-8');
+    const decodedContent = decoder.decode(bytes);
+    const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
+
+    // Créer le blob avec le bon type MIME
+    const blob = isHTML
+      ? new Blob([decodedContent], { type: 'text/html; charset=utf-8' })
+      : new Blob([bytes], { type: 'application/pdf' });
+
+    // Ajuster le nom de fichier si c'est du HTML
+    const downloadFilename = isHTML
+      ? pdfFilename.replace(/\.pdf$/, '.html')
+      : pdfFilename;
 
     // Télécharger
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = pdfFilename;
+    a.download = downloadFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
