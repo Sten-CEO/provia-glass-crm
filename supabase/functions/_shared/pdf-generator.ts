@@ -35,21 +35,33 @@ export async function generateQuotePDF(
   quote: QuoteData,
   supabase: SupabaseClient
 ): Promise<{ buffer: Uint8Array; filename: string }> {
+  console.log('🎨 generateQuotePDF called for quote:', quote.numero);
+  console.log('📋 Quote has template_id:', quote.template_id);
+
   // Récupérer le template si template_id est fourni
   let template = null;
   if (quote.template_id) {
+    console.log('🔍 Attempting to load template:', quote.template_id);
     const { data, error } = await supabase
       .from('doc_templates')
       .select('*')
       .eq('id', quote.template_id)
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error('❌ Error loading template:', error);
+    } else if (data) {
+      console.log('✅ Template loaded successfully:', data.name, '| Main color:', data.main_color);
       template = data;
+    } else {
+      console.log('⚠️ No template data returned for id:', quote.template_id);
     }
+  } else {
+    console.log('⚠️ No template_id provided, using default template');
   }
 
   const html = template ? generateQuoteHTMLWithTemplate(quote, template) : generateQuoteHTML(quote);
+  console.log('📄 Using template function:', template ? 'generateQuoteHTMLWithTemplate' : 'generateQuoteHTML (default)');
 
   // Convertir le HTML en buffer (UTF-8)
   const buffer = new TextEncoder().encode(html);
