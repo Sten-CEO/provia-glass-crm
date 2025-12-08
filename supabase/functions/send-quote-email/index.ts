@@ -243,7 +243,7 @@ serve(async (req) => {
           </div>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${Deno.env.get('SUPABASE_URL')}/quote/${token}"
+            <a href="${Deno.env.get('FRONTEND_URL') || 'http://localhost:5173'}/quote/${token}"
                style="display: inline-block; background-color: #4A90E2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
               Consulter et signer le devis en ligne
             </a>
@@ -260,7 +260,7 @@ serve(async (req) => {
     `;
 
     // Préparer le texte brut (fallback)
-    const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('SUPABASE_URL')}/quote/${token}`;
+    const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('FRONTEND_URL') || 'http://localhost:5173'}/quote/${token}`;
 
     // Envoyer l'email via SMTP
     console.log('Sending email via SMTP...');
