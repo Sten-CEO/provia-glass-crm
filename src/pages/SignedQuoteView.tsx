@@ -12,7 +12,6 @@ export default function SignedQuoteView() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [quoteNumber, setQuoteNumber] = useState<string>("");
-  const [isHTML, setIsHTML] = useState(false);
 
   useEffect(() => {
     loadSignedQuote();
@@ -77,10 +76,9 @@ export default function SignedQuoteView() {
         contentString = pdfData;
       }
 
-      const htmlDetected = contentString.trim().startsWith('<!DOCTYPE') || contentString.trim().startsWith('<html');
-      setIsHTML(htmlDetected);
+      const isHTML = contentString.trim().startsWith('<!DOCTYPE') || contentString.trim().startsWith('<html');
 
-      if (htmlDetected) {
+      if (isHTML) {
         const blob = new Blob([contentString], { type: 'text/html; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
@@ -108,11 +106,7 @@ export default function SignedQuoteView() {
 
     const a = document.createElement('a');
     a.href = pdfUrl;
-    // Si c'est du HTML, changer l'extension
-    const downloadName = isHTML && pdfFilename.endsWith('.pdf')
-      ? pdfFilename.replace('.pdf', '.html')
-      : pdfFilename;
-    a.download = downloadName;
+    a.download = pdfFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
