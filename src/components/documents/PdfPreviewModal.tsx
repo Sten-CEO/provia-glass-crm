@@ -50,18 +50,40 @@ export const PdfPreviewModal = ({
 
   const replaceVariables = (text: string) => {
     if (!text) return "";
+
+    const companyName = documentData.companies?.name || "Provia BASE";
+    const totalHT = `${(documentData.total_ht || 0).toFixed(2)} €`;
+    const totalTTC = `${(documentData.total_ttc || 0).toFixed(2)} €`;
+    const date = documentData.issued_at || documentData.issue_date || new Date().toLocaleDateString("fr-FR");
+    const dueDate = documentData.expiry_date || documentData.echeance || "";
+
     return text
-      .replace(/{company_name}/g, "Provia BASE")
+      // English variables with single braces
+      .replace(/{company_name}/g, companyName)
       .replace(/{client_name}/g, documentData.client_nom || "Client")
       .replace(/{document_number}/g, documentData.numero || "")
-      .replace(/{total_ht}/g, `${(documentData.total_ht || 0).toFixed(2)} €`)
-      .replace(/{total_ttc}/g, `${(documentData.total_ttc || 0).toFixed(2)} €`)
-      .replace(/{date}/g, documentData.issued_at || documentData.issue_date || new Date().toLocaleDateString("fr-FR"))
-      .replace(/{due_date}/g, documentData.expiry_date || documentData.echeance || "")
+      .replace(/{total_ht}/g, totalHT)
+      .replace(/{total_ttc}/g, totalTTC)
+      .replace(/{date}/g, date)
+      .replace(/{due_date}/g, dueDate)
       .replace(/{property_address}/g, documentData.property_address || documentData.adresse || "")
       .replace(/{contact_phone}/g, documentData.contact_phone || documentData.telephone || "")
       .replace(/{contact_email}/g, documentData.contact_email || documentData.email || "")
-      .replace(/{document_type}/g, documentType === "QUOTE" ? "Devis" : "Facture");
+      .replace(/{document_type}/g, documentType === "QUOTE" ? "Devis" : "Facture")
+      // French variables with double braces (pour compatibilité templates personnalisés)
+      .replace(/\{\{NomEntreprise\}\}/g, companyName)
+      .replace(/\{\{NomClient\}\}/g, documentData.client_nom || "Client")
+      .replace(/\{\{EmailClient\}\}/g, documentData.contact_email || documentData.email || "")
+      .replace(/\{\{TelephoneClient\}\}/g, documentData.contact_phone || documentData.telephone || "")
+      .replace(/\{\{AdresseClient\}\}/g, documentData.property_address || documentData.adresse || "")
+      .replace(/\{\{NumDevis\}\}/g, documentData.numero || "")
+      .replace(/\{\{NumDocument\}\}/g, documentData.numero || "")
+      .replace(/\{\{TypeDocument\}\}/g, documentType === "QUOTE" ? "Devis" : "Facture")
+      .replace(/\{\{MontantHT\}\}/g, totalHT)
+      .replace(/\{\{MontantTTC\}\}/g, totalTTC)
+      .replace(/\{\{DateEnvoi\}\}/g, date)
+      .replace(/\{\{DateCreation\}\}/g, date)
+      .replace(/\{\{DateExpiration\}\}/g, dueDate);
   };
 
   const handlePrint = () => {
