@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 import { generateQuotePDF } from '../_shared/pdf-generator.ts';
 
 const corsHeaders = {
@@ -71,8 +72,8 @@ serve(async (req) => {
     // Générer le PDF
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
-    // Convertir le PDF en base64 pour le renvoyer au frontend (méthode correcte pour Deno)
-    const pdfBase64 = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(pdfBuffer))));
+    // Convertir le PDF en base64 (méthode correcte pour préserver l'encodage UTF-8)
+    const pdfBase64 = base64Encode(pdfBuffer);
 
     console.log('Quote fetched successfully, PDF size:', pdfBuffer.byteLength);
 

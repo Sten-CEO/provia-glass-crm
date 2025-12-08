@@ -14,6 +14,8 @@ export interface TemplateData {
   header_layout?: 'logo-left' | 'logo-center' | 'logo-right' | 'split';
   logo_size?: 'small' | 'medium' | 'large';
   main_color: string | null;
+  accent_color?: string | null;
+  background_style?: 'solid' | 'gradient' | 'pattern' | 'none';
   font_family: string | null;
   show_vat: boolean;
   show_discounts: boolean;
@@ -303,8 +305,28 @@ function generateSignatureHTML(template: TemplateData, quote: QuoteData): string
  * @param quote - Les données du devis/facture
  * @returns Le HTML complet du document
  */
+/**
+ * Génère le CSS pour le style d'arrière-plan
+ */
+function getBackgroundStyle(template: TemplateData): string {
+  const mainColor = template.main_color || '#3b82f6';
+  const accentColor = template.accent_color || '#fbbf24';
+
+  switch (template.background_style) {
+    case 'gradient':
+      return `background: linear-gradient(135deg, ${mainColor}10 0%, ${accentColor}10 100%);`;
+    case 'pattern':
+      return `background-color: #f9fafb; background-image: repeating-linear-gradient(45deg, ${mainColor}05 0px, ${mainColor}05 10px, transparent 10px, transparent 20px);`;
+    case 'none':
+      return 'background: transparent;';
+    default: // solid
+      return 'background: white;';
+  }
+}
+
 export function renderQuoteHTML(template: TemplateData, quote: QuoteData): string {
   const mainColor = template.main_color || '#3b82f6';
+  const accentColor = template.accent_color || '#fbbf24';
   const fontFamily = template.font_family || 'Arial, sans-serif';
 
   const issuedDate = quote.issued_at
@@ -316,9 +338,17 @@ export function renderQuoteHTML(template: TemplateData, quote: QuoteData): strin
 
   return `
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta charset="utf-8">
+  <!-- ========================================
+       CONFIGURATION ENCODAGE ET POLICE
+       ========================================
+       - Charset: UTF-8 pour support complet des accents français (é, è, ê, à, ç) et symboles (€)
+       - Police: ${fontFamily}
+       - Pour modifier: changer font_family dans le template
+       ======================================== -->
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>${template.type === 'QUOTE' ? 'Devis' : 'Facture'} ${quote.numero}</title>
   <style>
     body {
@@ -327,6 +357,7 @@ export function renderQuoteHTML(template: TemplateData, quote: QuoteData): strin
       margin: 0;
       padding: 40px;
       line-height: 1.6;
+      ${getBackgroundStyle(template)}
     }
     ${template.css || ''}
   </style>
