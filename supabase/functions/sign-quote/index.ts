@@ -11,6 +11,7 @@ interface SignQuoteRequest {
   token: string;
   signerName: string;
   signerEmail?: string;
+  signatureImage?: string;
 }
 
 serve(async (req) => {
@@ -19,10 +20,14 @@ serve(async (req) => {
   }
 
   try {
-    const { token, signerName, signerEmail }: SignQuoteRequest = await req.json();
+    const { token, signerName, signerEmail, signatureImage }: SignQuoteRequest = await req.json();
 
     if (!token || !signerName) {
       throw new Error('Token et nom du signataire requis');
+    }
+
+    if (!signatureImage) {
+      throw new Error('Signature requise');
     }
 
     console.log('Signing quote with token:', token);
@@ -76,6 +81,7 @@ serve(async (req) => {
         quote_id: quote.id,
         signer_name: signerName,
         signer_email: signerEmail || null,
+        signature_image_url: signatureImage,
         ip_address: ipAddress,
         user_agent: userAgent,
       });
@@ -89,8 +95,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('devis')
       .update({
-        statut: 'Accepté',
-        updated_at: new Date().toISOString()
+        statut: 'Accepté'
       })
       .eq('id', quote.id);
 
