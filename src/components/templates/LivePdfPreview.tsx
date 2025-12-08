@@ -65,10 +65,16 @@ export function LivePdfPreview({
         />
       </div>
 
-      {/* Preview indicator */}
+      {/* Indicateur de preview */}
       <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
         <FileText className="w-3 h-3" />
-        <span>Aperçu du document avec données d'exemple</span>
+        <span>Aperçu du document avec données d'exemple - Rendu identique au PDF final</span>
+      </div>
+
+      {/* Message important */}
+      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+        💡 <strong>Astuce :</strong> Cette preview utilise exactement le même code que le PDF final.
+        Tous les changements (style d'arrière-plan, disposition, couleurs) sont appliqués en temps réel.
       </div>
     </Card>
   );
