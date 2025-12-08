@@ -58,21 +58,31 @@ const PublicQuoteView = () => {
 
   const loadQuote = async () => {
     try {
+      console.log('[DEBUG 1] Starting loadQuote, token:', token);
       setLoading(true);
       setError(null);
 
+      console.log('[DEBUG 2] Invoking get-quote-public function');
       const { data, error } = await supabase.functions.invoke('get-quote-public', {
         body: { token },
       });
 
-      if (error) throw error;
+      console.log('[DEBUG 3] Function response:', { hasData: !!data, hasError: !!error, data });
 
+      if (error) {
+        console.log('[DEBUG 4] Error received:', error);
+        throw error;
+      }
+
+      console.log('[DEBUG 5] Checking if expired:', data.expired);
       if (data.expired) {
         setExpired(true);
         setQuote(data.quote);
         return;
       }
 
+      console.log('[DEBUG 6] Setting quote and PDF data');
+      console.log('[DEBUG 7] PDF data exists?', !!data.pdf, 'PDF data.data exists?', !!data.pdf?.data);
       setQuote(data.quote);
       setPdfData(data.pdf.data);
       setPdfFilename(data.pdf.filename);
