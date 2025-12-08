@@ -14,8 +14,8 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const token = url.searchParams.get('token');
+    // Lire le token depuis le body JSON
+    const { token } = await req.json();
 
     if (!token) {
       throw new Error('Token manquant');
@@ -71,10 +71,10 @@ serve(async (req) => {
     // Générer le PDF
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
-    // Convertir le PDF en base64 pour le renvoyer au frontend
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBuffer));
+    // Convertir le PDF en base64 pour le renvoyer au frontend (méthode correcte pour Deno)
+    const pdfBase64 = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(pdfBuffer))));
 
-    console.log('Quote fetched successfully');
+    console.log('Quote fetched successfully, PDF size:', pdfBuffer.byteLength);
 
     return new Response(
       JSON.stringify({
