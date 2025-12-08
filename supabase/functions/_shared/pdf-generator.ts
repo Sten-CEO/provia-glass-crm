@@ -93,9 +93,11 @@ function replaceTemplateVariables(text: string, quote: QuoteData): string {
 
   const issuedDate = quote.issued_at ? new Date(quote.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
   const expiryDate = quote.expiry_date ? new Date(quote.expiry_date).toLocaleDateString('fr-FR') : '';
+  const companyName = quote.companies?.name || 'Provia BASE';
 
   return text
-    .replace(/{company_name}/g, quote.companies?.name || 'Provia Glass')
+    // English variables with single braces
+    .replace(/{company_name}/g, companyName)
     .replace(/{client_name}/g, quote.client_nom || 'Client')
     .replace(/{document_number}/g, quote.numero || '')
     .replace(/{total_ht}/g, `${(quote.total_ht || 0).toFixed(2)} €`)
@@ -105,7 +107,16 @@ function replaceTemplateVariables(text: string, quote: QuoteData): string {
     .replace(/{property_address}/g, quote.property_address || quote.clients?.adresse || '')
     .replace(/{contact_phone}/g, quote.contact_phone || quote.clients?.telephone || '')
     .replace(/{contact_email}/g, quote.contact_email || quote.clients?.email || '')
-    .replace(/{document_type}/g, 'Devis');
+    .replace(/{document_type}/g, 'Devis')
+    // French variables with double braces
+    .replace(/\{\{NomEntreprise\}\}/g, companyName)
+    .replace(/\{\{NomClient\}\}/g, quote.client_nom || 'Client')
+    .replace(/\{\{EmailClient\}\}/g, quote.contact_email || quote.clients?.email || '')
+    .replace(/\{\{NumDevis\}\}/g, quote.numero || '')
+    .replace(/\{\{MontantHT\}\}/g, `${(quote.total_ht || 0).toFixed(2)} €`)
+    .replace(/\{\{MontantTTC\}\}/g, `${(quote.total_ttc || 0).toFixed(2)} €`)
+    .replace(/\{\{DateEnvoi\}\}/g, issuedDate)
+    .replace(/\{\{DateExpiration\}\}/g, expiryDate);
 }
 
 /**
