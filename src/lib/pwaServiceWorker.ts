@@ -1,25 +1,25 @@
 export const registerServiceWorker = () => {
-  console.log('⚠️ Service Worker DÉSACTIVÉ temporairement pour débogage');
-  // Service Worker désactivé temporairement
-  /*
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('Service Worker enregistré:', registration.scope);
+  console.log('⚠️ Service Worker DÉSACTIVATION active');
 
-          // Vérifier les mises à jour toutes les heures
-          setInterval(() => {
-            registration.update();
-          }, 60 * 60 * 1000);
-        })
-        .catch((error) => {
-          console.error('Échec de l\'enregistrement du Service Worker:', error);
+  // Désenregistrer tous les Service Workers existants
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        console.log('🗑️ Désenregistrement du Service Worker:', registration.scope);
+        registration.unregister().then(() => {
+          console.log('✅ Service Worker désenregistré avec succès');
         });
+      });
+
+      // Forcer le rechargement des contrôleurs de page
+      if (registrations.length > 0) {
+        console.log('🔄 Rechargement pour appliquer les changements...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
     });
   }
-  */
 };
 
 // Synchronisation en arrière-plan
