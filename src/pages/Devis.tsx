@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Eye, Search, Edit, Menu, Mail, FileText, FileCheck } from "lucide-react";
+import { Plus, Trash2, Eye, Search, Edit, Menu, Mail, FileCheck } from "lucide-react";
 import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
-import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,7 +48,6 @@ const Devis = () => {
   const [filterParams, setFilterParams] = useState<URLSearchParams | null>(null);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendModalOpen, setSendModalOpen] = useState(false);
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [quoteForAction, setQuoteForAction] = useState<Quote | null>(null);
 
   // Bulk selection for mass delete
@@ -470,18 +468,6 @@ const Devis = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setQuoteForAction(quote);
-                          setConvertDialogOpen(true);
-                        }}
-                        title="Convertir"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
                           setSelectedQuote(quote);
                           setDeleteOpen(true);
                         }}
@@ -525,16 +511,6 @@ const Devis = () => {
           quoteNumber={quoteForAction.numero}
           clientEmail=""
           clientName={quoteForAction.client_nom}
-        />
-      )}
-
-      {/* Convert Quote Dialog */}
-      {quoteForAction && (
-        <QuoteConversionDialog
-          open={convertDialogOpen}
-          onOpenChange={setConvertDialogOpen}
-          quoteId={quoteForAction.id}
-          quoteData={quoteForAction}
         />
       )}
     </div>

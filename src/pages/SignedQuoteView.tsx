@@ -55,17 +55,27 @@ export default function SignedQuoteView() {
       setPdfFilename(data.filename);
 
       // Créer le Blob URL pour afficher le PDF
-      const byteCharacters = atob(data.pdf);
-      const isHTML = byteCharacters.trim().startsWith('<!DOCTYPE') || byteCharacters.trim().startsWith('<html');
+      let contentString: string;
+
+      try {
+        // Essayer de décoder en base64
+        contentString = atob(data.pdf);
+      } catch (error) {
+        // Si le décodage échoue, c'est peut-être déjà une chaîne de caractères
+        console.log('PDF data is not base64, using as-is');
+        contentString = data.pdf;
+      }
+
+      const isHTML = contentString.trim().startsWith('<!DOCTYPE') || contentString.trim().startsWith('<html');
 
       if (isHTML) {
-        const blob = new Blob([byteCharacters], { type: 'text/html; charset=utf-8' });
+        const blob = new Blob([contentString], { type: 'text/html; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         setPdfUrl(url);
       } else {
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        const byteNumbers = new Array(contentString.length);
+        for (let i = 0; i < contentString.length; i++) {
+          byteNumbers[i] = contentString.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'application/pdf' });
