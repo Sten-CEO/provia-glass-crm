@@ -1,4 +1,4 @@
-// Force reload - version 2024-12-08 13:03
+// Force reload - version 2024-12-08 13:43 - CACHE BUST
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
+
+// Log au niveau du module pour vérifier le rechargement
+console.log('🔄 PublicQuoteView module loaded at:', new Date().toISOString());
 
 interface QuoteData {
   id: string;
