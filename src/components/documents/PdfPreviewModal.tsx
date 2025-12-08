@@ -1,9 +1,27 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+/**
+ * PdfPreviewModal - Aperçu PDF lors de la création/modification d'un devis
+ *
+ * Ce composant utilise le renderer unifié (quoteHtmlRenderer.ts) pour
+ * garantir que l'aperçu est identique au PDF final envoyé au client.
+ */
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Printer, Download, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DocumentTemplate } from "@/hooks/useDocumentTemplates";
+import {
+  renderQuoteToHtml,
+  QuoteRenderData,
+  QuoteLine,
+} from "@/lib/quoteHtmlRenderer";
 
 interface PdfPreviewModalProps {
   open: boolean;
@@ -20,12 +38,16 @@ export const PdfPreviewModal = ({
   documentData,
   templateId,
 }: PdfPreviewModalProps) => {
-  const [template, setTemplate] = useState<any>(null);
+  const [template, setTemplate] = useState<DocumentTemplate | null>(null);
   const [loading, setLoading] = useState(true);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open && templateId) {
       loadTemplate();
+    } else if (open && !templateId) {
+      // Charger le template par défaut si aucun n'est spécifié
+      loadDefaultTemplate();
     }
   }, [open, templateId]);
 
@@ -43,279 +65,227 @@ export const PdfPreviewModal = ({
     } catch (error) {
       console.error("Error loading template:", error);
       toast.error("Erreur de chargement du modèle");
+      // Utiliser un template par défaut
+      setTemplate(getDefaultTemplate());
     } finally {
       setLoading(false);
     }
   };
 
-  const replaceVariables = (text: string) => {
-    if (!text) return "";
+  const loadDefaultTemplate = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("doc_templates")
+        .select("*")
+        .eq("type", documentType)
+        .eq("is_default", true)
+        .single();
 
-    const companyName = documentData.companies?.name || "Provia BASE";
-    const totalHT = `${(documentData.total_ht || 0).toFixed(2)} €`;
-    const totalTTC = `${(documentData.total_ttc || 0).toFixed(2)} €`;
-    const date = documentData.issued_at || documentData.issue_date || new Date().toLocaleDateString("fr-FR");
-    const dueDate = documentData.expiry_date || documentData.echeance || "";
-
-    return text
-      // English variables with single braces
-      .replace(/{company_name}/g, companyName)
-      .replace(/{client_name}/g, documentData.client_nom || "Client")
-      .replace(/{document_number}/g, documentData.numero || "")
-      .replace(/{total_ht}/g, totalHT)
-      .replace(/{total_ttc}/g, totalTTC)
-      .replace(/{date}/g, date)
-      .replace(/{due_date}/g, dueDate)
-      .replace(/{property_address}/g, documentData.property_address || documentData.adresse || "")
-      .replace(/{contact_phone}/g, documentData.contact_phone || documentData.telephone || "")
-      .replace(/{contact_email}/g, documentData.contact_email || documentData.email || "")
-      .replace(/{document_type}/g, documentType === "QUOTE" ? "Devis" : "Facture")
-      // French variables with double braces (pour compatibilité templates personnalisés)
-      .replace(/\{\{NomEntreprise\}\}/g, companyName)
-      .replace(/\{\{NomClient\}\}/g, documentData.client_nom || "Client")
-      .replace(/\{\{EmailClient\}\}/g, documentData.contact_email || documentData.email || "")
-      .replace(/\{\{TelephoneClient\}\}/g, documentData.contact_phone || documentData.telephone || "")
-      .replace(/\{\{AdresseClient\}\}/g, documentData.property_address || documentData.adresse || "")
-      .replace(/\{\{NumDevis\}\}/g, documentData.numero || "")
-      .replace(/\{\{NumDocument\}\}/g, documentData.numero || "")
-      .replace(/\{\{TypeDocument\}\}/g, documentType === "QUOTE" ? "Devis" : "Facture")
-      .replace(/\{\{MontantHT\}\}/g, totalHT)
-      .replace(/\{\{MontantTTC\}\}/g, totalTTC)
-      .replace(/\{\{DateEnvoi\}\}/g, date)
-      .replace(/\{\{DateCreation\}\}/g, date)
-      .replace(/\{\{DateExpiration\}\}/g, dueDate);
+      if (error || !data) {
+        // Pas de template par défaut, utiliser un template minimal
+        setTemplate(getDefaultTemplate());
+      } else {
+        setTemplate(data);
+      }
+    } catch (error) {
+      console.error("Error loading default template:", error);
+      setTemplate(getDefaultTemplate());
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Template par défaut si aucun n'est trouvé
+  const getDefaultTemplate = (): DocumentTemplate => ({
+    id: "default",
+    company_id: "",
+    type: documentType,
+    name: "Modèle par défaut",
+    is_default: true,
+    theme: "classique",
+    main_color: "#3b82f6",
+    accent_color: "#fbbf24",
+    font_family: "Arial",
+    background_style: "solid",
+    header_layout: "logo-left",
+    header_logo: null,
+    logo_position: "left",
+    logo_size: "medium",
+    header_html: null,
+    content_html: "",
+    footer_html: null,
+    css: null,
+    email_subject: null,
+    email_body: null,
+    email_type: null,
+    show_vat: true,
+    show_discounts: true,
+    show_remaining_balance: false,
+    signature_enabled: false,
+    table_columns: {
+      description: true,
+      reference: false,
+      quantity: true,
+      unit: false,
+      unit_price_ht: true,
+      vat_rate: true,
+      discount: false,
+      total_ht: true,
+    },
+    default_vat_rate: 20,
+    default_payment_method: null,
+  });
+
+  // Convertir les données du document au format attendu par le renderer
+  const quoteRenderData: QuoteRenderData = useMemo(() => {
+    const lines: QuoteLine[] = (documentData.lignes || []).map((line: any) => ({
+      name: line.name || line.description,
+      description: line.description,
+      reference: line.reference,
+      qty: line.qty || line.quantite || 1,
+      unit: line.unit,
+      unit_price_ht: line.unit_price_ht || line.prix_unitaire || 0,
+      tva_rate: line.tva_rate || 20,
+      discount: line.discount || 0,
+      total: line.total || ((line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0)),
+    }));
+
+    // Récupérer les infos entreprise
+    const company = documentData.companies || {};
+
+    return {
+      numero: documentData.numero || "",
+      title: documentData.title || documentData.titre || "",
+      issued_at: documentData.issued_at || documentData.issue_date || new Date().toISOString(),
+      expiry_date: documentData.expiry_date || documentData.echeance || "",
+
+      client_nom: documentData.client_nom || "",
+      client_email: documentData.contact_email || documentData.email || "",
+      client_telephone: documentData.contact_phone || documentData.telephone || "",
+      client_adresse: documentData.property_address || documentData.adresse || "",
+
+      company_name: company.name || company.nom || "",
+      company_email: company.email || "",
+      company_telephone: company.telephone || company.phone || "",
+      company_adresse: company.adresse || company.address || "",
+      company_siret: company.siret || "",
+      company_website: company.website || company.site_web || "",
+
+      total_ht: documentData.total_ht || 0,
+      total_ttc: documentData.total_ttc || 0,
+      remise: documentData.remise || 0,
+      acompte: documentData.required_deposit_ht || documentData.acompte || 0,
+
+      lignes: lines,
+
+      message_client: documentData.client_message || documentData.message_client || "",
+      conditions: documentData.conditions || documentData.notes_legal || "",
+
+      // Signature si présente
+      signature: documentData.quote_signatures?.[0] ? {
+        signed_at: documentData.quote_signatures[0].signed_at,
+        signer_name: documentData.quote_signatures[0].signer_name,
+        signature_image_url: documentData.quote_signatures[0].signature_image_url,
+      } : undefined,
+    };
+  }, [documentData]);
+
+  // Générer le HTML avec le renderer unifié
+  const previewHtml = useMemo(() => {
+    if (!template) return "";
+    return renderQuoteToHtml(quoteRenderData, template, {
+      documentType,
+      mode: "preview",
+    });
+  }, [quoteRenderData, template, documentType]);
 
   const handlePrint = () => {
-    window.print();
+    // Créer une fenêtre d'impression avec le HTML
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(previewHtml);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
   };
 
-  if (loading || !template) {
+  const handleDownload = () => {
+    // Créer un blob HTML et le télécharger
+    const blob = new Blob([previewHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${documentType === "QUOTE" ? "Devis" : "Facture"}_${documentData.numero || "preview"}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Document téléchargé");
+  };
+
+  if (loading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chargement...</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Chargement de l'aperçu...
+            </DialogTitle>
           </DialogHeader>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
         </DialogContent>
       </Dialog>
     );
   }
-
-  const logoSizeClass = template.logo_size === "small" ? "h-12" : template.logo_size === "large" ? "h-24" : "h-16";
-
-  // Header layout classes based on template.header_layout
-  const getHeaderLayoutClass = () => {
-    switch (template.header_layout) {
-      case "logo-center":
-        return "flex flex-col items-center text-center";
-      case "logo-right":
-        return "flex flex-row-reverse items-center justify-between";
-      case "split":
-        return "grid grid-cols-2 gap-4";
-      default: // logo-left
-        return "flex items-center justify-between";
-    }
-  };
-
-  const lines = documentData.lignes || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Aperçu PDF - {documentData.numero}</span>
+            <span>
+              Aperçu PDF - {documentData.numero}
+            </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Imprimer
               </Button>
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger
+              </Button>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="pdf-preview-content">
-          <style dangerouslySetInnerHTML={{ __html: template.css || "" }} />
-          <div 
-            className="bg-white p-8 rounded-lg shadow-lg"
-            style={{ 
-              fontFamily: template.font_family || "Arial",
-              color: "#1a1a1a"
-            }}
+        <div className="pdf-preview-container bg-gray-100 p-4 rounded-lg">
+          <div
+            ref={printRef}
+            className="bg-white shadow-lg rounded-lg overflow-hidden"
+            style={{ maxHeight: "calc(90vh - 150px)", overflow: "auto" }}
           >
-            {/* En-tête avec logo et titre selon le layout */}
-            {template.header_logo && (
-              <div className={`${getHeaderLayoutClass()} pb-4 border-b-2 mb-6`} style={{ borderColor: template.main_color || "#3b82f6" }}>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={template.header_logo}
-                    alt="Logo"
-                    className={`${logoSizeClass} object-contain`}
-                  />
-                </div>
-                <div className={template.header_layout === "logo-center" ? "mt-4" : ""}>
-                  <h1 className="text-2xl font-bold" style={{ color: template.main_color || "#3b82f6" }}>
-                    {documentType === "QUOTE" ? "DEVIS" : "FACTURE"}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">N° {documentData.numero}</p>
-                </div>
-              </div>
-            )}
-
-            {/* En-tête HTML personnalisé */}
-            {template.header_html && (
-              <div 
-                className="header mb-6"
-                dangerouslySetInnerHTML={{ __html: replaceVariables(template.header_html) }}
-              />
-            )}
-
-            {/* Informations du document */}
-            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-              <div>
-                <p className="font-semibold text-lg mb-2" style={{ color: template.main_color || "#3b82f6" }}>
-                  {documentType === "QUOTE" ? "DEVIS" : "FACTURE"}
-                </p>
-                <p className="font-semibold">N° {documentData.numero}</p>
-                <p>Date: {documentData.issued_at || documentData.issue_date || new Date().toLocaleDateString("fr-FR")}</p>
-                {documentType === "QUOTE" && documentData.expiry_date && (
-                  <p>Valable jusqu'au: {documentData.expiry_date}</p>
-                )}
-                {documentType === "INVOICE" && documentData.echeance && (
-                  <p>Échéance: {documentData.echeance}</p>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="font-semibold mb-2">Client</p>
-                <p className="font-medium">{documentData.client_nom}</p>
-                {documentData.property_address && <p>{documentData.property_address}</p>}
-                {documentData.contact_phone && <p>{documentData.contact_phone}</p>}
-                {documentData.contact_email && <p>{documentData.contact_email}</p>}
-              </div>
-            </div>
-
-            {/* Titre du devis */}
-            {documentData.title && documentType === "QUOTE" && (
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold">{documentData.title}</h2>
-              </div>
-            )}
-
-            {/* Corps du document - Tableau des lignes */}
-            {template.content_html ? (
-              <div 
-                className="content mb-6"
-                dangerouslySetInnerHTML={{ __html: replaceVariables(template.content_html) }}
-              />
-            ) : (
-              <div className="mb-6">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="border-b-2" style={{ borderColor: template.main_color || "#3b82f6" }}>
-                      <th className="text-left py-2 px-2" style={{ color: template.main_color || "#3b82f6" }}>Description</th>
-                      <th className="text-center py-2 px-2" style={{ color: template.main_color || "#3b82f6" }}>Qté</th>
-                      <th className="text-right py-2 px-2" style={{ color: template.main_color || "#3b82f6" }}>P.U. HT</th>
-                      {template.show_vat && <th className="text-center py-2 px-2" style={{ color: template.main_color || "#3b82f6" }}>TVA</th>}
-                      <th className="text-right py-2 px-2" style={{ color: template.main_color || "#3b82f6" }}>Total HT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line: any, idx: number) => (
-                      <tr key={idx} className="border-b">
-                        <td className="py-2 px-2">
-                          <div className="font-medium">{line.name || line.description}</div>
-                          {line.description && line.name !== line.description && (
-                            <div className="text-xs text-muted-foreground">{line.description}</div>
-                          )}
-                        </td>
-                        <td className="text-center py-2 px-2">{line.qty || line.quantite || 1}</td>
-                        <td className="text-right py-2 px-2">{((line.unit_price_ht || line.prix_unitaire || 0)).toFixed(2)} €</td>
-                        {template.show_vat && <td className="text-center py-2 px-2">{line.tva_rate || 20}%</td>}
-                        <td className="text-right py-2 px-2">{(line.total || ((line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0))).toFixed(2)} €</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Totaux */}
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-end gap-8">
-                <span>Total HT:</span>
-                <span className="font-semibold min-w-[120px] text-right">{(documentData.total_ht || 0).toFixed(2)} €</span>
-              </div>
-              {template.show_discounts && documentData.remise > 0 && (
-                <div className="flex justify-end gap-8 text-green-600">
-                  <span>Remise:</span>
-                  <span className="min-w-[120px] text-right">-{(documentData.remise || 0).toFixed(2)} €</span>
-                </div>
-              )}
-              {template.show_vat && (
-                <div className="flex justify-end gap-8">
-                  <span>TVA:</span>
-                  <span className="min-w-[120px] text-right">{((documentData.total_ttc || 0) - (documentData.total_ht || 0)).toFixed(2)} €</span>
-                </div>
-              )}
-              <div className="flex justify-end gap-8 text-lg font-bold pt-2 border-t-2" style={{ borderColor: template.main_color || "#3b82f6", color: template.main_color || "#3b82f6" }}>
-                <span>Total TTC:</span>
-                <span className="min-w-[120px] text-right">{(documentData.total_ttc || 0).toFixed(2)} €</span>
-              </div>
-              {documentType === "QUOTE" && documentData.required_deposit_ht > 0 && (
-                <div className="flex justify-end gap-8 text-orange-600 font-semibold">
-                  <span>Acompte requis:</span>
-                  <span className="min-w-[120px] text-right">{(documentData.required_deposit_ht || 0).toFixed(2)} €</span>
-                </div>
-              )}
-            </div>
-
-            {/* Messages client */}
-            {documentData.client_message && (
-              <div className="mt-6 p-4 bg-muted/20 rounded">
-                <p className="text-sm whitespace-pre-wrap">{documentData.client_message}</p>
-              </div>
-            )}
-
-            {/* Conditions et notes légales */}
-            {(documentData.conditions || documentData.notes_legal) && (
-              <div className="mt-6 text-xs text-muted-foreground">
-                <p className="whitespace-pre-wrap">{documentData.conditions || documentData.notes_legal}</p>
-              </div>
-            )}
-
-            {/* Pied de page HTML personnalisé */}
-            {template.footer_html && (
-              <div 
-                className="footer mt-6 pt-4 border-t text-xs text-muted-foreground"
-                dangerouslySetInnerHTML={{ __html: replaceVariables(template.footer_html) }}
-              />
-            )}
-
-            {/* Zone de signature */}
-            {template.signature_enabled && documentType === "QUOTE" && (
-              <div className="mt-8 pt-6 border-t">
-                <p className="text-sm font-semibold mb-4">Bon pour accord</p>
-                <div className="grid grid-cols-2 gap-8">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Date et signature du client:</p>
-                    <div className="h-20 border-b border-dashed"></div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Cachet de l'entreprise:</p>
-                    <div className="h-20 border-b border-dashed"></div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Render the unified HTML */}
+            <div
+              className="quote-preview-content"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
         </div>
       </DialogContent>
 
       <style>{`
         @media print {
-          .pdf-preview-content {
-            padding: 0;
+          .pdf-preview-container {
+            padding: 0 !important;
+            background: white !important;
           }
           button {
             display: none !important;
