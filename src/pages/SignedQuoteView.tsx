@@ -52,18 +52,28 @@ export default function SignedQuoteView() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setPdfFilename(data.filename);
+      // La structure de réponse contient { pdf: { filename, data } }
+      const pdfData = data.pdf?.data || data.pdf;
+      const pdfFilename = data.pdf?.filename || data.filename;
+
+      setPdfFilename(pdfFilename);
 
       // Créer le Blob URL pour afficher le PDF
       let contentString: string;
 
+      // Vérifier le type de pdfData
+      if (typeof pdfData !== 'string') {
+        console.error('PDF data is not a string:', typeof pdfData);
+        throw new Error('Format de données PDF invalide');
+      }
+
       try {
         // Essayer de décoder en base64
-        contentString = atob(data.pdf);
+        contentString = atob(pdfData);
       } catch (error) {
         // Si le décodage échoue, c'est peut-être déjà une chaîne de caractères
         console.log('PDF data is not base64, using as-is');
-        contentString = data.pdf;
+        contentString = pdfData;
       }
 
       const isHTML = contentString.trim().startsWith('<!DOCTYPE') || contentString.trim().startsWith('<html');
