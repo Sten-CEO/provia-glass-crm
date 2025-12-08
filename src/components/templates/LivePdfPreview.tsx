@@ -109,11 +109,45 @@ export function LivePdfPreview({
     template.css,
   ]);
 
+  // Fonction pour générer le style d'arrière-plan directement
+  const getBackgroundStyle = () => {
+    const mainColor = template.main_color || '#3b82f6';
+    const accentColor = template.accent_color || '#fbbf24';
+
+    switch (template.background_style) {
+      case 'gradient':
+        return { background: `linear-gradient(135deg, ${mainColor}10 0%, ${accentColor}10 100%)` };
+      case 'pattern':
+        return {
+          backgroundColor: '#f9fafb',
+          backgroundImage: `repeating-linear-gradient(45deg, ${mainColor}05 0px, ${mainColor}05 10px, transparent 10px, transparent 20px)`,
+        };
+      case 'none':
+        return { background: 'transparent' };
+      default: // solid
+        return { background: 'white' };
+    }
+  };
+
   return (
     <Card className="overflow-hidden bg-gray-100 p-4">
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden" style={{ maxHeight: "800px", overflowY: "auto" }}>
+      <div
+        className="shadow-lg rounded-lg overflow-hidden"
+        style={{
+          maxHeight: "800px",
+          overflowY: "auto",
+          ...getBackgroundStyle() // ← Applique le background_style au conteneur
+        }}
+      >
         {/* Afficher le HTML généré */}
-        <div dangerouslySetInnerHTML={{ __html: html }} />
+        <div
+          dangerouslySetInnerHTML={{ __html: html }}
+          style={{
+            padding: "40px",
+            fontFamily: template.font_family || "Arial, sans-serif",
+            minHeight: "100%",
+          }}
+        />
       </div>
 
       {/* Indicateur de preview */}
