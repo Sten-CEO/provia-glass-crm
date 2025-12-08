@@ -125,13 +125,13 @@ function generateHeaderHTML(template: TemplateData, quote: QuoteData): string {
   const mainColor = template.main_color || '#22c55e'; // Vert par défaut
   const accentColor = template.accent_color || '#ef4444'; // Rouge par défaut
 
-  // Nouveau design : En-tête avec titre centré et bordure
+  // Nouveau design : En-tête aligné à gauche, plus compact
   return `
-    <div style="text-align: center; margin-bottom: 32px;">
-      <h1 style="font-size: 48px; font-weight: bold; margin: 0 0 8px 0; color: ${mainColor}; letter-spacing: 2px;">
+    <div style="margin-bottom: 24px;">
+      <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 4px 0; color: ${mainColor};">
         ${template.type === 'QUOTE' ? 'DEVIS' : 'FACTURE'}
       </h1>
-      <p style="font-size: 16px; color: #6b7280; margin: 0 0 16px 0;">N° ${quote.numero}</p>
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 12px 0;">N° ${quote.numero}</p>
       <div style="height: 3px; background-color: ${mainColor}; width: 100%; margin-bottom: 24px;"></div>
     </div>
   `;
