@@ -193,7 +193,7 @@ export async function sendEmailViaSMTP(
       if (message.text) {
         emailContent += `--${altBoundary}\r\n`;
         emailContent += `Content-Type: text/plain; charset="UTF-8"\r\n`;
-        emailContent += `Content-Transfer-Encoding: quoted-printable\r\n`;
+        emailContent += `Content-Transfer-Encoding: 8bit\r\n`;
         emailContent += `\r\n`;
         emailContent += message.text + `\r\n`;
       }
@@ -202,7 +202,7 @@ export async function sendEmailViaSMTP(
       if (message.html) {
         emailContent += `--${altBoundary}\r\n`;
         emailContent += `Content-Type: text/html; charset="UTF-8"\r\n`;
-        emailContent += `Content-Transfer-Encoding: quoted-printable\r\n`;
+        emailContent += `Content-Transfer-Encoding: 8bit\r\n`;
         emailContent += `\r\n`;
         emailContent += message.html + `\r\n`;
       }
