@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { SignaturePad } from "@/components/signature/SignaturePad";
 
 // Log au niveau du module pour vérifier le rechargement
 console.log('🔄 PublicQuoteView module loaded at:', new Date().toISOString());
@@ -47,6 +48,7 @@ const PublicQuoteView = () => {
   // Signature form
   const [signerName, setSignerName] = useState("");
   const [signerEmail, setSignerEmail] = useState("");
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [signing, setSigning] = useState(false);
 
@@ -167,6 +169,11 @@ const PublicQuoteView = () => {
       return;
     }
 
+    if (!signatureImage) {
+      toast.error('Veuillez dessiner ou taper votre signature');
+      return;
+    }
+
     if (!acceptTerms) {
       toast.error('Veuillez accepter les conditions');
       return;
@@ -180,6 +187,7 @@ const PublicQuoteView = () => {
           token,
           signerName: signerName.trim(),
           signerEmail: signerEmail.trim() || undefined,
+          signatureImage: signatureImage,
         },
       });
 
@@ -401,6 +409,10 @@ const PublicQuoteView = () => {
                   />
                 </div>
 
+                <div className="pt-4">
+                  <SignaturePad onSignatureChange={setSignatureImage} />
+                </div>
+
                 <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border">
                   <Checkbox
                     id="accept"
@@ -415,7 +427,7 @@ const PublicQuoteView = () => {
 
                 <Button
                   onClick={handleSign}
-                  disabled={signing || !signerName.trim() || !acceptTerms}
+                  disabled={signing || !signerName.trim() || !signatureImage || !acceptTerms}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-6 text-lg"
                   size="lg"
                 >
