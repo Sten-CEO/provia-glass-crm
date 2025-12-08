@@ -226,6 +226,9 @@ serve(async (req) => {
     // Générer le PDF du devis
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
+    // Préparer l'URL frontend (sans slash final)
+    const frontendUrl = (Deno.env.get('FRONTEND_URL') || 'http://localhost:8080').replace(/\/$/, '');
+
     // Préparer le contenu HTML de l'email
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -243,7 +246,7 @@ serve(async (req) => {
           </div>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${Deno.env.get('FRONTEND_URL') || 'http://localhost:8080'}/quote/${token}"
+            <a href="${frontendUrl}/quote/${token}"
                style="display: inline-block; background-color: #4A90E2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
               Consulter et signer le devis en ligne
             </a>
@@ -260,7 +263,7 @@ serve(async (req) => {
     `;
 
     // Préparer le texte brut (fallback)
-    const textContent = finalMessage + `\n\nConsulter le devis: ${Deno.env.get('FRONTEND_URL') || 'http://localhost:8080'}/quote/${token}`;
+    const textContent = finalMessage + `\n\nConsulter le devis: ${frontendUrl}/quote/${token}`;
 
     // Envoyer l'email via SMTP
     console.log('Sending email via SMTP...');
