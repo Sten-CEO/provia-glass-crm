@@ -78,6 +78,7 @@ const PublicQuoteView = () => {
       setPdfFilename(data.pdf.filename);
 
       // Créer une URL blob pour le PDF
+      console.log('Creating PDF Blob from base64 data, length:', data.pdf.data.length);
       const byteCharacters = atob(data.pdf.data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -85,7 +86,9 @@ const PublicQuoteView = () => {
       }
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'application/pdf' });
+      console.log('PDF Blob created, size:', blob.size, 'type:', blob.type);
       const url = URL.createObjectURL(blob);
+      console.log('PDF Blob URL created:', url);
       setPdfUrl(url);
 
       // Pré-remplir le nom et email du client
