@@ -509,18 +509,20 @@ const Templates = () => {
 
                         <BackgroundStyleSelector
                           value={selectedTemplate.background_style || "solid"}
-                          onChange={(v) =>
-                            setSelectedTemplate({ ...selectedTemplate, background_style: v })
-                          }
+                          onChange={(v) => {
+                            console.log('🎨 BackgroundStyleSelector: onChange called with value:', v);
+                            setSelectedTemplate({ ...selectedTemplate, background_style: v });
+                          }}
                           mainColor={selectedTemplate.main_color}
                           accentColor={selectedTemplate.accent_color}
                         />
 
                         <HeaderLayoutSelector
                           value={selectedTemplate.header_layout || "logo-left"}
-                          onChange={(v) =>
-                            setSelectedTemplate({ ...selectedTemplate, header_layout: v })
-                          }
+                          onChange={(v) => {
+                            console.log('📐 HeaderLayoutSelector: onChange called with value:', v);
+                            setSelectedTemplate({ ...selectedTemplate, header_layout: v });
+                          }}
                         />
 
                         <div>
