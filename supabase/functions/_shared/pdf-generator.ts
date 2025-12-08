@@ -147,7 +147,50 @@ function generateQuoteHTMLWithTemplate(quote: QuoteData, template: any): string 
   const fontFamily = template.font_family || 'Arial, sans-serif';
 
   const logoSizeStyle = template.logo_size === 'small' ? 'height: 48px;' : template.logo_size === 'large' ? 'height: 96px;' : 'height: 64px;';
-  const logoAlign = template.logo_position === 'center' ? 'center' : template.logo_position === 'right' ? 'right' : 'left';
+
+  // Generate header HTML based on header_layout
+  const generateHeaderHTML = () => {
+    if (!template.header_logo) return '';
+
+    const logoHTML = `<img src="${template.header_logo}" alt="Logo" style="${logoSizeStyle} object-fit: contain;" />`;
+    const titleHTML = `
+      <div>
+        <h1 style="font-size: 24px; font-weight: bold; margin: 0 0 8px 0; color: ${mainColor};">DEVIS</h1>
+        <p style="font-size: 14px; color: #6b7280; margin: 0;">N° ${quote.numero}</p>
+      </div>
+    `;
+
+    switch (template.header_layout) {
+      case 'logo-center':
+        return `
+          <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
+            <div style="margin-bottom: 16px;">${logoHTML}</div>
+            ${titleHTML}
+          </div>
+        `;
+      case 'logo-right':
+        return `
+          <div style="display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
+            <div>${logoHTML}</div>
+            ${titleHTML}
+          </div>
+        `;
+      case 'split':
+        return `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
+            <div>${logoHTML}</div>
+            ${titleHTML}
+          </div>
+        `;
+      default: // logo-left
+        return `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
+            <div>${logoHTML}</div>
+            ${titleHTML}
+          </div>
+        `;
+    }
+  };
 
   return `
 <!DOCTYPE html>
@@ -167,11 +210,7 @@ function generateQuoteHTMLWithTemplate(quote: QuoteData, template: any): string 
   </style>
 </head>
 <body>
-  ${template.header_logo ? `
-    <div style="text-align: ${logoAlign}; padding-bottom: 16px; border-bottom: 2px solid ${mainColor}; margin-bottom: 24px;">
-      <img src="${template.header_logo}" alt="Logo" style="${logoSizeStyle} object-fit: contain;" />
-    </div>
-  ` : ''}
+  ${generateHeaderHTML()}
 
   ${template.header_html ? `
     <div class="header" style="margin-bottom: 24px;">
@@ -181,9 +220,7 @@ function generateQuoteHTMLWithTemplate(quote: QuoteData, template: any): string 
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; font-size: 14px;">
     <div>
-      <p style="font-weight: 600; font-size: 18px; margin: 0 0 8px 0; color: ${mainColor};">DEVIS</p>
-      <p style="font-weight: 600; margin: 4px 0;">N° ${quote.numero}</p>
-      <p style="margin: 4px 0;">Date: ${issuedDate}</p>
+      <p style="font-weight: 600; margin: 4px 0;">Date: ${issuedDate}</p>
       ${expiryDate ? `<p style="margin: 4px 0;">Valable jusqu'au: ${expiryDate}</p>` : ''}
     </div>
     <div style="text-align: right;">

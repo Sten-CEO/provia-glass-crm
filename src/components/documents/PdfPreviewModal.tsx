@@ -103,7 +103,20 @@ export const PdfPreviewModal = ({
   }
 
   const logoSizeClass = template.logo_size === "small" ? "h-12" : template.logo_size === "large" ? "h-24" : "h-16";
-  const logoAlignClass = template.logo_position === "center" ? "justify-center" : template.logo_position === "right" ? "justify-end" : "justify-start";
+
+  // Header layout classes based on template.header_layout
+  const getHeaderLayoutClass = () => {
+    switch (template.header_layout) {
+      case "logo-center":
+        return "flex flex-col items-center text-center";
+      case "logo-right":
+        return "flex flex-row-reverse items-center justify-between";
+      case "split":
+        return "grid grid-cols-2 gap-4";
+      default: // logo-left
+        return "flex items-center justify-between";
+    }
+  };
 
   const lines = documentData.lignes || [];
 
@@ -131,14 +144,22 @@ export const PdfPreviewModal = ({
               color: "#1a1a1a"
             }}
           >
-            {/* En-tête avec logo */}
+            {/* En-tête avec logo et titre selon le layout */}
             {template.header_logo && (
-              <div className={`flex ${logoAlignClass} pb-4 border-b-2 mb-6`} style={{ borderColor: template.main_color || "#3b82f6" }}>
-                <img 
-                  src={template.header_logo} 
-                  alt="Logo"
-                  className={`${logoSizeClass} object-contain`}
-                />
+              <div className={`${getHeaderLayoutClass()} pb-4 border-b-2 mb-6`} style={{ borderColor: template.main_color || "#3b82f6" }}>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={template.header_logo}
+                    alt="Logo"
+                    className={`${logoSizeClass} object-contain`}
+                  />
+                </div>
+                <div className={template.header_layout === "logo-center" ? "mt-4" : ""}>
+                  <h1 className="text-2xl font-bold" style={{ color: template.main_color || "#3b82f6" }}>
+                    {documentType === "QUOTE" ? "DEVIS" : "FACTURE"}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">N° {documentData.numero}</p>
+                </div>
               </div>
             )}
 
