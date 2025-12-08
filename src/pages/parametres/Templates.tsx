@@ -17,7 +17,6 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Save, Trash2, Star, Copy, FileText, Mail, Palette, Settings } from "lucide-react";
 import { TableColumnsSelector } from "@/components/templates/TableColumnsSelector";
 import { BackgroundStyleSelector } from "@/components/templates/BackgroundStyleSelector";
-import { HeaderLayoutSelector } from "@/components/templates/HeaderLayoutSelector";
 import { LivePdfPreview } from "@/components/templates/LivePdfPreview";
 import { LiveEmailPreview } from "@/components/templates/LiveEmailPreview";
 import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
@@ -515,14 +514,6 @@ const Templates = () => {
                           }}
                           mainColor={selectedTemplate.main_color}
                           accentColor={selectedTemplate.accent_color}
-                        />
-
-                        <HeaderLayoutSelector
-                          value={selectedTemplate.header_layout || "logo-left"}
-                          onChange={(v) => {
-                            console.log('📐 HeaderLayoutSelector: onChange called with value:', v);
-                            setSelectedTemplate({ ...selectedTemplate, header_layout: v });
-                          }}
                         />
 
                         <div>
