@@ -40,6 +40,7 @@ import ServiceCatalog from "./pages/parametres/ServiceCatalog";
 import Taxes from "./pages/parametres/Taxes";
 import Support from "./pages/Support";
 import PublicQuoteView from "./pages/PublicQuoteView";
+import SignedQuoteView from "./pages/SignedQuoteView";
 import NotFound from "./pages/NotFound";
 import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
@@ -100,6 +101,7 @@ const App = () => {
             <Route path="/planning" element={<ProtectedRoute requiredAccess="planning"><Planning /></ProtectedRoute>} />
           <Route path="/devis" element={<ProtectedRoute requiredAccess="devis"><Devis /></ProtectedRoute>} />
           <Route path="/devis/new" element={<ProtectedRoute requiredAccess="devis"><DevisEditor /></ProtectedRoute>} />
+          <Route path="/devis/:id/signed" element={<ProtectedRoute requiredAccess="devis"><SignedQuoteView /></ProtectedRoute>} />
           <Route path="/devis/:id" element={<ProtectedRoute requiredAccess="devis"><DevisEditor /></ProtectedRoute>} />
           <Route path="/factures" element={<ProtectedRoute requiredAccess="factures"><Factures /></ProtectedRoute>} />
             <Route path="/factures/new" element={<ProtectedRoute requiredAccess="factures"><FactureEditor /></ProtectedRoute>} />

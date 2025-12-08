@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Eye, Search, Edit, Menu, Mail, FileText } from "lucide-react";
+import { Plus, Trash2, Eye, Search, Edit, Menu, Mail, FileText, FileCheck } from "lucide-react";
 import { QuoteSendModal } from "@/components/devis/QuoteSendModal";
 import { QuoteConversionDialog } from "@/components/devis/QuoteConversionDialog";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -439,6 +439,20 @@ const Devis = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {quote.statut === 'Accepté' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/devis/${quote.id}/signed`);
+                          }}
+                          title="Voir le devis signé"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <FileCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
