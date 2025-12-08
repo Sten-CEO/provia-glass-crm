@@ -317,13 +317,45 @@ const PublicQuoteView = () => {
             </Button>
           </div>
 
-          {pdfUrl && (
-            <div className="border rounded-lg overflow-hidden">
-              <iframe
-                src={pdfUrl}
+          {pdfUrl ? (
+            <div className="border rounded-lg overflow-hidden bg-slate-50">
+              <object
+                data={pdfUrl}
+                type="application/pdf"
                 className="w-full h-[600px]"
-                title="Devis PDF"
-              />
+              >
+                <div className="p-8 text-center">
+                  <p className="text-slate-700 mb-4">
+                    Le PDF ne peut pas être affiché dans votre navigateur.
+                  </p>
+                  <Button onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger le PDF
+                  </Button>
+                </div>
+              </object>
+            </div>
+          ) : pdfData ? (
+            <div className="border rounded-lg overflow-hidden bg-slate-50">
+              <object
+                data={`data:application/pdf;base64,${pdfData}`}
+                type="application/pdf"
+                className="w-full h-[600px]"
+              >
+                <div className="p-8 text-center">
+                  <p className="text-slate-700 mb-4">
+                    Le PDF ne peut pas être affiché dans votre navigateur.
+                  </p>
+                  <Button onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger le PDF
+                  </Button>
+                </div>
+              </object>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-slate-500">
+              Chargement du PDF...
             </div>
           )}
         </div>
