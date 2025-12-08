@@ -1,370 +1,338 @@
-# Documentation du Système de Templates
+# Système de Templates de Documents - Documentation
 
 ## Vue d'ensemble
 
-Le système de templates de Provia Glass CRM permet de créer des modèles personnalisés pour les devis et factures. Cette documentation explique l'architecture du système, son fonctionnement, et comment ajouter de nouveaux modèles.
+Ce document décrit l'architecture du système de templates de devis/factures dans Provia Glass CRM.
+
+**Objectif principal** : Garantir que le rendu d'un document soit **identique** partout :
+- Aperçu dans l'éditeur de templates
+- Aperçu lors de la création d'un devis
+- PDF généré et envoyé par email
+- Page publique pour le client
 
 ## Architecture
 
 ### Source de vérité unique
 
-Le système est basé sur une **fonction unifiée de rendu** qui garantit que tous les rendus du document (preview, PDF, page publique) sont **strictement identiques**.
+Le système utilise **un seul fichier de rendu HTML** qui est la source de vérité :
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│           FONCTION UNIFIÉE : renderQuoteHTML()           │
-│                                                           │
-│  Génère le HTML complet d'un document basé sur :         │
-│  - Template (couleurs, layout, logo, etc.)               │
-│  - Données du devis (client, lignes, totaux)             │
-└─────────────────────────────────────────────────────────┘
-                             │
-         ┌───────────────────┼───────────────────┐
-         │                   │                   │
-         ▼                   ▼                   ▼
-┌────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│ TemplatePreview│  │ PdfPreviewModal │  │pdf-generator │
-│     .tsx       │  │      .tsx       │  │    .ts       │
-├────────────────┤  ├─────────────────┤  ├──────────────┤
-│ Éditeur de     │  │ Preview avant   │  │ PDF final    │
-│ template       │  │ envoi du devis  │  │ + Page       │
-│                │  │                 │  │ publique     │
-└────────────────┘  └─────────────────┘  └──────────────┘
+📁 Frontend (React)
+└── src/lib/quoteHtmlRenderer.ts          ← SOURCE PRINCIPALE
+
+📁 Backend (Edge Functions)
+└── supabase/functions/_shared/quoteHtmlRenderer.ts  ← COPIE POUR BACKEND
 ```
 
-### Fichiers source
+⚠️ **IMPORTANT** : Ces deux fichiers doivent rester synchronisés. Toute modification
+du rendu doit être appliquée aux DEUX fichiers.
 
-#### Client (React/TypeScript)
+### Composants qui utilisent le renderer
 
-- **`src/lib/quote-template-renderer.ts`**
-  - Fonction : `renderQuoteHTML(template, quoteData)`
-  - Utilisée par : `TemplatePreview.tsx`, `PdfPreviewModal.tsx`
-  - Génère le HTML côté client pour les previews
+| Composant | Fichier | Utilisation |
+|-----------|---------|-------------|
+| Aperçu éditeur | `src/components/templates/LivePdfPreview.tsx` | Aperçu temps réel dans l'éditeur de modèles |
+| Aperçu devis | `src/components/documents/PdfPreviewModal.tsx` | Modal "Aperçu PDF" lors de la création |
+| Génération PDF | `supabase/functions/_shared/pdf-generator.ts` | Génération HTML pour PDF/email |
 
-#### Serveur (Deno/Edge Functions)
+## Structure d'un template
 
-- **`supabase/functions/_shared/quote-template-renderer.ts`**
-  - Fonction : `renderQuoteHTML(template, quoteData)`
-  - Utilisée par : `pdf-generator.ts`
-  - Génère le HTML côté serveur pour les PDFs finaux
-  - **Code identique à la version client**, adapté pour Deno
-
-### Composants utilisant le système
-
-1. **TemplatePreview.tsx** - Preview dans l'éditeur de modèles
-   - Chemin : `src/components/templates/TemplatePreview.tsx`
-   - Affiche un aperçu du template avec des données d'exemple
-
-2. **PdfPreviewModal.tsx** - Preview lors de la création d'un devis
-   - Chemin : `src/components/documents/PdfPreviewModal.tsx`
-   - Affiche le devis final avant envoi avec les vraies données
-
-3. **pdf-generator.ts** - Génération du PDF final
-   - Chemin : `supabase/functions/_shared/pdf-generator.ts`
-   - Génère le HTML qui sera envoyé au client par email et affiché sur la page publique
-
-## Structure d'un Template
-
-### Schéma de données
+### Interface TypeScript
 
 ```typescript
-interface TemplateData {
-  type: 'QUOTE' | 'INVOICE';              // Type de document
-  header_logo: string | null;              // URL du logo
-  header_layout: 'logo-left' | 'logo-center' | 'logo-right' | 'split';
-  logo_size: 'small' | 'medium' | 'large';
-  main_color: string | null;               // Couleur principale (#hex)
-  font_family: string | null;              // Police de caractères
-  show_vat: boolean;                       // Afficher la TVA
-  show_discounts: boolean;                 // Afficher les remises
-  show_remaining_balance: boolean;         // Afficher le solde restant
-  signature_enabled: boolean;              // Activer la signature
-  header_html: string | null;              // HTML personnalisé pour l'en-tête
-  content_html: string | null;             // HTML personnalisé pour le contenu
-  footer_html: string | null;              // HTML personnalisé pour le pied de page
-  css: string | null;                      // CSS personnalisé
+interface DocumentTemplate {
+  id: string;
+  company_id: string;
+  type: "QUOTE" | "INVOICE" | "EMAIL";
+  name: string;
+  is_default: boolean;
+
+  // Apparence
+  theme: string;
+  main_color: string | null;      // Couleur principale (ex: #3b82f6)
+  accent_color: string | null;    // Couleur d'accent (ex: #fbbf24)
+  font_family: string | null;     // Police (Arial, Times, etc.)
+  background_style: string | null; // solid, gradient, pattern, none
+  header_layout: string | null;   // logo-left, logo-center, logo-right, split
+
+  // Logo
+  header_logo: string | null;     // URL du logo
+  logo_position: string | null;   // left, center, right
+  logo_size: string | null;       // small, medium, large
+
+  // Contenu HTML personnalisé
+  header_html: string | null;     // HTML au-dessus du contenu
+  content_html: string;           // HTML principal (remplace le tableau si fourni)
+  footer_html: string | null;     // HTML en bas de page
+  css: string | null;             // CSS personnalisé
+
+  // Options d'affichage
+  show_vat: boolean;              // Afficher la TVA
+  show_discounts: boolean;        // Afficher les remises
+  show_remaining_balance: boolean;
+  signature_enabled: boolean;     // Zone de signature
+
+  // Configuration des colonnes du tableau
+  table_columns: {
+    description: boolean;
+    reference: boolean;
+    quantity: boolean;
+    unit: boolean;
+    unit_price_ht: boolean;
+    vat_rate: boolean;
+    discount: boolean;
+    total_ht: boolean;
+  } | null;
+
+  default_vat_rate: number | null;
+  default_payment_method: string | null;
 }
 ```
 
-### Layouts d'en-tête disponibles
+### Données de rendu
 
-#### 1. `logo-left` (par défaut)
-```
-┌─────────────────────────────────────┐
-│ [LOGO]              DEVIS           │
-│                     N° DEV-2025-001 │
-└─────────────────────────────────────┘
-```
+```typescript
+interface QuoteRenderData {
+  // Document
+  numero: string;
+  title?: string;
+  issued_at?: string;
+  expiry_date?: string;
 
-#### 2. `logo-center`
-```
-┌─────────────────────────────────────┐
-│            [LOGO]                   │
-│                                     │
-│            DEVIS                    │
-│         N° DEV-2025-001             │
-└─────────────────────────────────────┘
-```
+  // Client
+  client_nom: string;
+  client_email?: string;
+  client_telephone?: string;
+  client_adresse?: string;
 
-#### 3. `logo-right`
-```
-┌─────────────────────────────────────┐
-│ DEVIS                    [LOGO]     │
-│ N° DEV-2025-001                     │
-└─────────────────────────────────────┘
-```
+  // Entreprise (Émetteur)
+  company_name?: string;
+  company_email?: string;
+  company_telephone?: string;
+  company_adresse?: string;
+  company_siret?: string;
+  company_website?: string;
 
-#### 4. `split`
-```
-┌─────────────────────────────────────┐
-│ [LOGO]          │  DEVIS            │
-│                 │  N° DEV-2025-001  │
-└─────────────────────────────────────┘
+  // Montants
+  total_ht: number;
+  total_ttc: number;
+  remise?: number;
+  acompte?: number;
+
+  // Lignes du devis
+  lignes: QuoteLine[];
+
+  // Contenu additionnel
+  message_client?: string;
+  conditions?: string;
+
+  // Signature (si signée)
+  signature?: {
+    signed_at?: string;
+    signer_name?: string;
+    signature_image_url?: string;
+  };
+}
 ```
 
 ## Variables de template
 
-### Variables anglaises (accolades simples)
+Le système supporte deux formats de variables :
 
-| Variable | Description | Exemple |
-|----------|-------------|---------|
-| `{company_name}` | Nom de l'entreprise | Provia BASE |
-| `{client_name}` | Nom du client | Jean Dupont |
-| `{document_number}` | Numéro du document | DEV-2025-0001 |
-| `{total_ht}` | Total HT | 1 000,00 € |
-| `{total_ttc}` | Total TTC | 1 200,00 € |
-| `{date}` | Date d'émission | 08/12/2025 |
-| `{due_date}` | Date d'expiration | 07/01/2026 |
-| `{document_type}` | Type de document | Devis |
+### Variables françaises (recommandées)
 
-### Variables françaises (doubles accolades)
+| Variable | Description |
+|----------|-------------|
+| `{{NomEntreprise}}` | Raison sociale |
+| `{{EmailEntreprise}}` | Email de l'entreprise |
+| `{{TelephoneEntreprise}}` | Téléphone entreprise |
+| `{{AdresseEntreprise}}` | Adresse entreprise |
+| `{{SIRETEntreprise}}` | Numéro SIRET |
+| `{{NomClient}}` | Nom du client |
+| `{{EmailClient}}` | Email du client |
+| `{{TelephoneClient}}` | Téléphone client |
+| `{{AdresseClient}}` | Adresse client |
+| `{{NumDevis}}` | Numéro du devis |
+| `{{NumDocument}}` | Numéro (devis ou facture) |
+| `{{TypeDocument}}` | "Devis" ou "Facture" |
+| `{{MontantHT}}` | Total HT formaté |
+| `{{MontantTTC}}` | Total TTC formaté |
+| `{{MontantTVA}}` | TVA formatée |
+| `{{DateEnvoi}}` | Date d'émission |
+| `{{DateCreation}}` | Date de création |
+| `{{DateExpiration}}` | Date de validité |
+| `{{Remise}}` | Montant remise |
+| `{{Acompte}}` | Montant acompte |
 
-| Variable | Description | Exemple |
-|----------|-------------|---------|
-| `{{NomEntreprise}}` | Nom de l'entreprise | Provia BASE |
-| `{{NomClient}}` | Nom du client | Jean Dupont |
-| `{{EmailClient}}` | Email du client | jean.dupont@example.com |
-| `{{TelephoneClient}}` | Téléphone du client | 06 12 34 56 78 |
-| `{{AdresseClient}}` | Adresse du client | 123 Rue Exemple |
-| `{{NumDevis}}` | Numéro du devis | DEV-2025-0001 |
-| `{{NumDocument}}` | Numéro du document | DEV-2025-0001 |
-| `{{TypeDocument}}` | Type de document | Devis |
-| `{{MontantHT}}` | Montant HT | 1 000,00 € |
-| `{{MontantTTC}}` | Montant TTC | 1 200,00 € |
-| `{{DateEnvoi}}` | Date d'envoi | 08/12/2025 |
-| `{{DateCreation}}` | Date de création | 08/12/2025 |
-| `{{DateExpiration}}` | Date d'expiration | 07/01/2026 |
+### Variables anglaises (rétrocompatibilité)
 
-## Blocs HTML personnalisables
+| Variable | Équivalent français |
+|----------|---------------------|
+| `{company_name}` | `{{NomEntreprise}}` |
+| `{client_name}` | `{{NomClient}}` |
+| `{document_number}` | `{{NumDocument}}` |
+| `{total_ht}` | `{{MontantHT}}` |
+| `{total_ttc}` | `{{MontantTTC}}` |
+| `{date}` | `{{DateCreation}}` |
+| `{due_date}` | `{{DateExpiration}}` |
 
-### 1. Header HTML (`header_html`)
+## Rendu du document
 
-Zone personnalisable en haut du document, après le logo et le titre.
+### Structure HTML générée
 
-**Exemple :**
-```html
-<div style="margin-bottom: 24px;">
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-    <div>
-      <h3 style="color: #10b981; margin: 0;">Émetteur</h3>
-      <p><strong>{{NomEntreprise}}</strong></p>
-      <p>123 Rue de la Vitrerie</p>
-      <p>75001 Paris</p>
-    </div>
-    <div style="text-align: right;">
-      <h3 style="color: #10b981; margin: 0;">Client</h3>
-      <p><strong>{{NomClient}}</strong></p>
-      <p>{{EmailClient}}</p>
-      <p>{{TelephoneClient}}</p>
-    </div>
-  </div>
-</div>
+Le document est structuré ainsi :
+
+```
+┌─────────────────────────────────────┐
+│  EN-TÊTE (Logo + Titre DEVIS)       │
+│  selon header_layout                 │
+├─────────────────────────────────────┤
+│  header_html (si défini)             │
+├─────────────────────────────────────┤
+│  ┌───────────┐ ┌───────────┐        │
+│  │ ÉMETTEUR  │ │  CLIENT   │        │
+│  │ Nom       │ │ Nom       │        │
+│  │ Adresse   │ │ Adresse   │        │
+│  │ Tél/Email │ │ Tél/Email │        │
+│  └───────────┘ └───────────┘        │
+├─────────────────────────────────────┤
+│  Date: XX/XX/XXXX                   │
+│  Valable jusqu'au: XX/XX/XXXX       │
+├─────────────────────────────────────┤
+│  Titre du devis (si défini)         │
+├─────────────────────────────────────┤
+│  TABLEAU DES LIGNES                 │
+│  (ou content_html personnalisé)     │
+│  ┌────────────────────────────────┐ │
+│  │ Desc │ Qté │ PU HT │ TVA │ Tot │ │
+│  │──────│─────│───────│─────│─────│ │
+│  │ ...  │ ... │ ...   │ ... │ ... │ │
+│  └────────────────────────────────┘ │
+├─────────────────────────────────────┤
+│               Total HT:    1500,00€ │
+│               TVA:          300,00€ │
+│               ─────────────────────│
+│               TOTAL TTC:   1800,00€ │
+│               Acompte:      450,00€ │
+├─────────────────────────────────────┤
+│  Méthode de paiement (si définie)   │
+├─────────────────────────────────────┤
+│  Message client (si défini)         │
+├─────────────────────────────────────┤
+│  Conditions (si définies)           │
+├─────────────────────────────────────┤
+│  footer_html (si défini)            │
+├─────────────────────────────────────┤
+│  ZONE DE SIGNATURE (si activée)     │
+│  ┌─────────────┐ ┌─────────────┐    │
+│  │ Signature   │ │ Cachet      │    │
+│  │ client      │ │ entreprise  │    │
+│  └─────────────┘ └─────────────┘    │
+└─────────────────────────────────────┘
 ```
 
-### 2. Content HTML (`content_html`)
+### Layouts d'en-tête disponibles
 
-Remplace le tableau des lignes par défaut. Si null, le tableau standard est utilisé.
+| Layout | Description |
+|--------|-------------|
+| `logo-left` | Logo à gauche, titre à droite (défaut) |
+| `logo-center` | Logo centré au-dessus du titre |
+| `logo-right` | Logo à droite, titre à gauche |
+| `split` | Logo à gauche, titre à droite (grille) |
 
-**Exemple :**
-```html
-<div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-  <h3 style="color: #10b981;">Description du projet</h3>
-  <p>Installation de double vitrage pour {{NomClient}}</p>
-  <p>Montant total : {{MontantTTC}}</p>
-</div>
-```
+### Styles de fond
 
-### 3. Footer HTML (`footer_html`)
-
-Zone personnalisable en bas du document, avant la signature.
-
-**Exemple :**
-```html
-<div style="text-align: center; font-size: 12px; color: #666;">
-  <p>{{NomEntreprise}} - SIRET: 123 456 789 00012</p>
-  <p>Capital social: 10 000 € - TVA: FR12345678900</p>
-  <p>Conditions de paiement: 30 jours net</p>
-</div>
-```
-
-## CSS personnalisé
-
-Le champ `css` permet d'ajouter des styles CSS qui seront appliqués au document.
-
-**Exemple :**
-```css
-.header h1 {
-  font-size: 32px;
-  letter-spacing: 2px;
-}
-
-table {
-  border: 2px solid #10b981;
-}
-
-th {
-  background-color: #10b981 !important;
-}
-```
+| Style | Description |
+|-------|-------------|
+| `solid` | Fond blanc (défaut) |
+| `gradient` | Dégradé couleur principale → accent |
+| `pattern` | Motif en diagonale |
+| `none` | Transparent |
 
 ## Ajouter un nouveau modèle
 
-### 1. Via l'interface (recommandé)
+### Via l'interface
 
-1. Aller dans **Paramètres** > **Modèles de documents**
-2. Cliquer sur **Nouveau modèle**
-3. Remplir les informations :
-   - Nom du modèle
-   - Type (Devis/Facture)
-   - Thème
-   - Configuration (couleur, police, layout)
-4. Personnaliser le HTML (header/content/footer)
-5. Tester avec la preview en temps réel
-6. Enregistrer
+1. Aller dans **Paramètres > Templates**
+2. Cliquer sur **"+ Nouveau modèle"**
+3. Configurer les options dans les onglets :
+   - **Général** : Nom, type, police
+   - **Apparence** : Couleurs, logo, layout
+   - **Contenu** : HTML personnalisé
+   - **Colonnes** : Sélection des colonnes du tableau
+   - **Options** : TVA, signature, méthode de paiement
 
-### 2. Via SQL (avancé)
+### Via la base de données
+
+Insérer dans la table `doc_templates` :
 
 ```sql
 INSERT INTO doc_templates (
   company_id,
-  name,
   type,
-  theme,
-  header_layout,
-  logo_size,
+  name,
   main_color,
+  accent_color,
   font_family,
+  header_layout,
   show_vat,
-  show_discounts,
   signature_enabled,
-  header_html,
-  footer_html,
-  css
+  is_default
 ) VALUES (
-  'uuid-de-la-company',
-  'Mon Template Personnalisé',
+  'uuid-company',
   'QUOTE',
-  'modern',
-  'logo-center',
-  'medium',
-  '#10b981',
-  'Inter, sans-serif',
+  'Mon modèle vert',
+  '#16a34a',
+  '#fbbf24',
+  'Arial',
+  'logo-left',
   true,
   true,
-  true,
-  '<div>HTML de l''en-tête</div>',
-  '<div>HTML du pied de page</div>',
-  'body { font-size: 14px; }'
+  false
 );
 ```
 
-## Déploiement des modifications
-
-Après avoir modifié le code du système de templates, **il est impératif** de déployer les Edge Functions pour que les changements soient effectifs :
-
-```bash
-# Déployer la fonction de génération PDF
-npx supabase functions deploy get-quote-public --project-ref rryjcqcxhpccgzkhgdqr
-
-# Déployer la fonction d'envoi d'email
-npx supabase functions deploy send-quote-email --project-ref rryjcqcxhpccgzkhgdqr
-```
-
-⚠️ **Important** : Les modifications dans `supabase/functions/_shared/quote-template-renderer.ts` ou `pdf-generator.ts` ne seront pas visibles côté client tant que les fonctions ne sont pas redéployées.
-
-## Vérification de la cohérence
-
-Pour vérifier que le système fonctionne correctement :
-
-### Test 1 : Preview dans l'éditeur
-
-1. Aller dans **Paramètres** > **Modèles de documents**
-2. Sélectionner un modèle
-3. Observer la preview en temps réel
-4. Vérifier que les variables sont remplacées
-5. Vérifier que le layout d'en-tête est correct
-
-### Test 2 : Preview lors de la création
-
-1. Créer un nouveau devis
-2. Sélectionner un template
-3. Remplir les informations
-4. Cliquer sur **Aperçu PDF**
-5. **Vérifier que le rendu est IDENTIQUE à la preview de l'éditeur**
-
-### Test 3 : PDF final et page publique
-
-1. Envoyer le devis au client par email
-2. Ouvrir le lien public du devis
-3. **Vérifier que le rendu est IDENTIQUE aux previews précédentes**
-
 ## Migration des anciens devis
 
-Les anciens devis créés avant l'implémentation du système unifié continueront de fonctionner :
+Les anciens devis sans `template_id` utilisent automatiquement le **template par défaut**.
+Ce template par défaut est défini dans :
+- `src/lib/quoteHtmlRenderer.ts` → fonction `getSampleQuoteData()`
+- `supabase/functions/_shared/quoteHtmlRenderer.ts` → fonction `getDefaultTemplate()`
 
-- **Avec template** : Utilisent `renderQuoteHTML()` avec leur template assigné
-- **Sans template** : Utilisent `generateQuoteHTML()` (template par défaut bleu)
+## Maintenance
 
-Pas de migration nécessaire.
+### Modifier le rendu
+
+1. Modifier **`src/lib/quoteHtmlRenderer.ts`**
+2. Copier les modifications dans **`supabase/functions/_shared/quoteHtmlRenderer.ts`**
+3. Tester les 3 rendus :
+   - Aperçu dans l'éditeur de templates
+   - Aperçu lors de la création d'un devis
+   - PDF téléchargé/email
+
+### Ajouter une nouvelle variable
+
+1. Ajouter dans `replaceTemplateVariables()` des deux fichiers
+2. Documenter dans `src/lib/templateVariables.ts`
+3. Mettre à jour cette documentation
 
 ## Dépannage
 
+### Le rendu est différent entre l'aperçu et le PDF
+
+Vérifier que les deux fichiers `quoteHtmlRenderer.ts` sont synchronisés.
+
 ### Les variables ne sont pas remplacées
 
-**Cause** : Edge Functions pas déployées ou template mal configuré
+- Vérifier la syntaxe : `{{NomClient}}` (doubles accolades)
+- Vérifier que la variable existe dans `replaceTemplateVariables()`
 
-**Solution** :
-1. Vérifier les logs Supabase pour voir si le template est chargé
-2. Redéployer les Edge Functions
-3. Vérifier que les variables utilisent la bonne syntaxe (`{{Variable}}`)
+### Le logo ne s'affiche pas
 
-### Le layout d'en-tête ne change pas
+- Vérifier que l'URL du logo est accessible publiquement
+- Vérifier le champ `header_logo` dans le template
 
-**Cause** : Le champ `header_layout` est null ou invalide
+### Les couleurs ne s'appliquent pas
 
-**Solution** :
-1. Vérifier dans la base de données que `header_layout` est bien défini
-2. Valeurs acceptées : `logo-left`, `logo-center`, `logo-right`, `split`
-
-### Les 3 rendus sont différents
-
-**Cause** : Code dupliqué ou versions désynchronisées
-
-**Solution** :
-1. Vérifier que tous les composants importent `renderQuoteHTML` depuis `quote-template-renderer.ts`
-2. Vérifier qu'il n'y a pas de code dupliqué dans les fichiers
-3. Redéployer les Edge Functions
-
-## Support
-
-Pour toute question ou problème avec le système de templates :
-
-1. Consulter cette documentation
-2. Vérifier les logs Supabase (Edge Functions)
-3. Vérifier la console navigateur (erreurs JS)
-4. Contacter l'équipe de développement
-
----
-
-**Dernière mise à jour** : Décembre 2025
-**Version** : 2.0 (système unifié)
+- Vérifier les champs `main_color` et `accent_color` (format hex : `#3b82f6`)
+- Vérifier que `background_style` n'est pas `none`

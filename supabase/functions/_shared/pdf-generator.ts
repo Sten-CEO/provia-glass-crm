@@ -1,12 +1,19 @@
 /**
  * PDF Generator Utility
  *
- * Génère des PDFs pour les devis et factures en utilisant les templates HTML
- * et en les convertant en PDF via une API tierce ou via le rendu HTML
+ * Génère des PDFs pour les devis et factures en utilisant le renderer HTML unifié.
+ *
+ * IMPORTANT: Ce fichier utilise maintenant le renderer unifié (quoteHtmlRenderer.ts)
+ * pour garantir que le PDF généré est IDENTIQUE à l'aperçu dans l'application.
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { renderQuoteHTML } from './quote-template-renderer.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import {
+  renderQuoteToHtml,
+  convertQuoteToRenderData,
+  getDefaultTemplate,
+  DocumentTemplate,
+} from './quoteHtmlRenderer.ts';
 
 interface QuoteData {
   id: string;
@@ -15,6 +22,7 @@ interface QuoteData {
   total_ht?: number;
   total_ttc?: number;
   lignes?: any[];
+  template_id?: string;
   [key: string]: any;
 }
 
@@ -29,8 +37,8 @@ interface InvoiceData {
 }
 
 /**
- * Génère un PDF HTML simple pour un devis
- * Utilise le template doc_templates si fourni, sinon utilise le template par défaut
+ * Génère un PDF HTML pour un devis
+ * Utilise le renderer unifié pour garantir la cohérence avec l'aperçu
  */
 export async function generateQuotePDF(
   quote: QuoteData,
@@ -40,7 +48,8 @@ export async function generateQuotePDF(
   console.log('📋 Quote has template_id:', quote.template_id);
 
   // Récupérer le template si template_id est fourni
-  let template = null;
+  let template: Partial<DocumentTemplate> = getDefaultTemplate();
+
   if (quote.template_id) {
     console.log('🔍 Attempting to load template:', quote.template_id);
     const { data, error } = await supabase
@@ -61,324 +70,92 @@ export async function generateQuotePDF(
     console.log('⚠️ No template_id provided, using default template');
   }
 
-  // Utiliser la fonction unifiée de rendu de template
-  const html = template
-    ? renderQuoteHTML(template, quote)
-    : generateQuoteHTML(quote);
-  console.log('📄 Using template function:', template ? 'renderQuoteHTML (unified)' : 'generateQuoteHTML (default)');
+  // Convertir les données du devis au format attendu par le renderer
+  const renderData = convertQuoteToRenderData(quote);
+
+  // Générer le HTML avec le renderer unifié
+  const html = renderQuoteToHtml(renderData, template, {
+    documentType: 'QUOTE',
+    mode: 'pdf',
+  });
+
+  console.log('📄 HTML generated using unified renderer');
 
   // Convertir le HTML en buffer (UTF-8)
   const buffer = new TextEncoder().encode(html);
-
   const filename = `Devis_${quote.numero}.pdf`;
 
   return { buffer, filename };
 }
 
 /**
- * Génère un PDF HTML simple pour une facture
+ * Génère un PDF HTML pour une facture
  */
 export async function generateInvoicePDF(
   invoice: InvoiceData,
   supabase: SupabaseClient
 ): Promise<{ buffer: Uint8Array; filename: string }> {
-  const html = generateInvoiceHTML(invoice);
+  console.log('🎨 generateInvoicePDF called for invoice:', invoice.numero);
+
+  // Récupérer le template si template_id est fourni
+  let template: Partial<DocumentTemplate> = getDefaultTemplate();
+  template.type = 'INVOICE';
+
+  if (invoice.template_id) {
+    const { data, error } = await supabase
+      .from('doc_templates')
+      .select('*')
+      .eq('id', invoice.template_id)
+      .single();
+
+    if (!error && data) {
+      template = data;
+    }
+  }
+
+  // Convertir les données de la facture au format attendu par le renderer
+  const renderData = convertQuoteToRenderData(invoice);
+
+  // Générer le HTML avec le renderer unifié
+  const html = renderQuoteToHtml(renderData, template, {
+    documentType: 'INVOICE',
+    mode: 'pdf',
+  });
+
   const buffer = new TextEncoder().encode(html);
   const filename = `Facture_${invoice.numero}.pdf`;
 
   return { buffer, filename };
 }
 
-// Les fonctions replaceTemplateVariables et de rendu de template personnalisé
-// ont été déplacées dans quote-template-renderer.ts pour éviter la duplication
-// et servir de source de vérité unique.
-
 /**
- * Génère le HTML pour un devis (template par défaut, fallback)
- * Utilisé uniquement quand aucun template personnalisé n'est sélectionné
+ * Exporte le HTML brut pour un devis (utile pour la page publique)
  */
- */
-function generateQuoteHTML(quote: QuoteData): string {
-  const lines = (quote.lignes || [])
-    .map((line: any) => {
-      const description = line.name || line.description || '';
-      const qty = line.qty || line.quantite || 1;
-      const price = line.unit_price_ht || line.prix_unitaire || 0;
-      const total = qty * price;
+export async function generateQuoteHTML(
+  quote: QuoteData,
+  supabase: SupabaseClient
+): Promise<string> {
+  // Récupérer le template si template_id est fourni
+  let template: Partial<DocumentTemplate> = getDefaultTemplate();
 
-      return `
-        <tr>
-          <td style="border: 1px solid #ddd; padding: 12px;">${description}</td>
-          <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${qty}</td>
-          <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">${price.toFixed(2)} €</td>
-          <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">${total.toFixed(2)} €</td>
-        </tr>
-      `;
-    })
-    .join('');
+  if (quote.template_id) {
+    const { data, error } = await supabase
+      .from('doc_templates')
+      .select('*')
+      .eq('id', quote.template_id)
+      .single();
 
-  // Format dates
-  const issuedDate = quote.issued_at ? new Date(quote.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
-  const expiryDate = quote.expiry_date ? new Date(quote.expiry_date).toLocaleDateString('fr-FR') : '';
+    if (!error && data) {
+      template = data;
+    }
+  }
 
-  // Check if quote is signed
-  const signature = quote.quote_signatures && quote.quote_signatures.length > 0 ? quote.quote_signatures[0] : null;
-  const signatureDate = signature?.signed_at ? new Date(signature.signed_at).toLocaleDateString('fr-FR') : '';
-  const signerName = signature?.signer_name || '';
-  const signatureImage = signature?.signature_image_url || '';
+  // Convertir les données du devis au format attendu par le renderer
+  const renderData = convertQuoteToRenderData(quote);
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Devis ${quote.numero}</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 40px;
-      color: #333;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #4A90E2;
-    }
-    .header h1 {
-      color: #4A90E2;
-      margin: 0 0 10px 0;
-      font-size: 36px;
-    }
-    .header .numero {
-      font-size: 18px;
-      color: #666;
-      font-weight: bold;
-    }
-    .info-section {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      margin-bottom: 30px;
-    }
-    .info-box {
-      background: #f9fafb;
-      padding: 20px;
-      border-radius: 8px;
-      border-left: 4px solid #4A90E2;
-    }
-    .info-box h3 {
-      margin: 0 0 10px 0;
-      color: #4A90E2;
-      font-size: 16px;
-    }
-    .info-box p {
-      margin: 5px 0;
-      font-size: 14px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    th {
-      background-color: #4A90E2;
-      color: white;
-      padding: 15px 12px;
-      text-align: left;
-      font-weight: 600;
-    }
-    td {
-      padding: 12px;
-      border: 1px solid #e5e7eb;
-    }
-    tbody tr:nth-child(even) {
-      background-color: #f9fafb;
-    }
-    .totals {
-      text-align: right;
-      margin-top: 30px;
-      padding: 20px;
-      background: #f9fafb;
-      border-radius: 8px;
-    }
-    .totals div {
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    .total-ttc {
-      font-size: 24px;
-      font-weight: bold;
-      color: #4A90E2;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 2px solid #4A90E2;
-    }
-    .footer {
-      margin-top: 50px;
-      padding: 20px;
-      background: #f3f4f6;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #666;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>DEVIS</h1>
-    <div class="numero">N° ${quote.numero}</div>
-  </div>
-
-  <div class="info-section">
-    <div class="info-box">
-      <h3>Client</h3>
-      <p><strong>${quote.client_nom}</strong></p>
-      ${quote.clients?.email ? `<p>${quote.clients.email}</p>` : ''}
-      ${quote.clients?.telephone ? `<p>Tél: ${quote.clients.telephone}</p>` : ''}
-      ${quote.clients?.adresse ? `<p>${quote.clients.adresse}</p>` : ''}
-    </div>
-    <div class="info-box">
-      <h3>Informations</h3>
-      <p><strong>Date:</strong> ${issuedDate}</p>
-      ${expiryDate ? `<p><strong>Valable jusqu'au:</strong> ${expiryDate}</p>` : ''}
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Description</th>
-        <th style="width: 120px; text-align: center;">Quantité</th>
-        <th style="width: 150px; text-align: right;">Prix unit. HT</th>
-        <th style="width: 150px; text-align: right;">Total HT</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${lines || '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #999;">Aucune ligne</td></tr>'}
-    </tbody>
-  </table>
-
-  <div class="totals">
-    <div><strong>Total HT:</strong> ${(quote.total_ht || 0).toFixed(2)} €</div>
-    <div><strong>TVA 20%:</strong> ${(((quote.total_ttc || 0) - (quote.total_ht || 0)) || 0).toFixed(2)} €</div>
-    <div class="total-ttc"><strong>Total TTC:</strong> ${(quote.total_ttc || 0).toFixed(2)} €</div>
-  </div>
-
-  <!-- Signature Box -->
-  <div style="margin-top: 60px; margin-bottom: 40px;">
-    <div style="border: 2px solid #333; padding: 20px; border-radius: 8px; background: #fff;">
-      <div style="margin-bottom: 15px;">
-        <p style="margin: 0; font-weight: bold; font-size: 14px;">Offre valable jusqu'au : ${expiryDate || '..../..../....'}</p>
-        <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">Signature/bon pour accord :</p>
-      </div>
-      ${signatureImage && signatureDate ? `
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; min-height: 100px;">
-          <div>
-            <img src="${signatureImage}" alt="Signature" style="max-width: 300px; max-height: 80px; display: block;" />
-            <p style="margin: 10px 0 0 0; font-size: 12px;"><strong>${signerName}</strong></p>
-          </div>
-          <div style="text-align: right;">
-            <p style="margin: 0; font-size: 12px; color: #666;">Date de signature :</p>
-            <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold;">${signatureDate}</p>
-          </div>
-        </div>
-      ` : `
-        <div style="min-height: 100px; border: 1px dashed #ccc; border-radius: 4px; background: #fafafa;"></div>
-      `}
-    </div>
-  </div>
-
-  <div class="footer">
-    <p>Ce devis est valable 30 jours à compter de sa date d'émission.</p>
-    ${quote.companies?.name ? `<p style="margin-top: 10px;"><strong>${quote.companies.name}</strong></p>` : ''}
-    ${quote.companies?.adresse ? `<p>${quote.companies.adresse}</p>` : ''}
-    ${quote.companies?.telephone ? `<p>Tél: ${quote.companies.telephone}</p>` : ''}
-    ${quote.companies?.email ? `<p>Email: ${quote.companies.email}</p>` : ''}
-  </div>
-</body>
-</html>
-  `.trim();
-}
-
-/**
- * Génère le HTML pour une facture
- */
-function generateInvoiceHTML(invoice: InvoiceData): string {
-  const lines = (invoice.lignes || [])
-    .map((line: any) => {
-      const description = line.description || '';
-      const qty = line.quantite || 1;
-      const price = line.prix_unitaire || 0;
-      const total = line.total || (qty * price);
-
-      return `
-        <tr>
-          <td style="border: 1px solid #ddd; padding: 8px;">${description}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${qty}</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${price.toFixed(2)} €</td>
-          <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${total.toFixed(2)} €</td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Facture ${invoice.numero}</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .header h1 { color: #333; }
-    .info { margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th { background-color: #E74C3C; color: white; padding: 10px; text-align: left; }
-    .totals { text-align: right; margin-top: 20px; }
-    .totals div { margin: 5px 0; }
-    .total-ttc { font-size: 18px; font-weight: bold; color: #E74C3C; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>FACTURE</h1>
-    <p>N° ${invoice.numero}</p>
-  </div>
-
-  <div class="info">
-    <p><strong>Client:</strong> ${invoice.client_nom}</p>
-    <p><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Description</th>
-        <th style="width: 100px; text-align: center;">Quantité</th>
-        <th style="width: 120px; text-align: right;">Prix unit. HT</th>
-        <th style="width: 120px; text-align: right;">Total HT</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${lines}
-    </tbody>
-  </table>
-
-  <div class="totals">
-    <div><strong>Total HT:</strong> ${(invoice.total_ht || 0).toFixed(2)} €</div>
-    <div><strong>TVA 20%:</strong> ${(((invoice.total_ttc || 0) - (invoice.total_ht || 0)) || 0).toFixed(2)} €</div>
-    <div class="total-ttc"><strong>Total TTC:</strong> ${(invoice.total_ttc || 0).toFixed(2)} €</div>
-  </div>
-
-  <div style="margin-top: 40px; font-size: 12px; color: #666;">
-    <p>Facture à régler sous 30 jours. Pénalités de retard: 3 fois le taux d'intérêt légal.</p>
-  </div>
-</body>
-</html>
-  `.trim();
+  // Générer et retourner le HTML
+  return renderQuoteToHtml(renderData, template, {
+    documentType: 'QUOTE',
+    mode: 'pdf',
+  });
 }

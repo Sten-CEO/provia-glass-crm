@@ -115,6 +115,7 @@ export async function createInvoiceFromIntervention(interventionId: string) {
       numero: invoiceNumber,
       client_id: intervention.client_id,
       client_nom: intervention.client_nom,
+      company_id: intervention.company_id,  // AJOUT : company_id pour RLS
       statut: "Brouillon",
       montant: String(total_ttc),
       total_ht,
