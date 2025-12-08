@@ -35,6 +35,7 @@ const PublicQuoteView = () => {
   const [loading, setLoading] = useState(true);
   const [quote, setQuote] = useState<QuoteData | null>(null);
   const [pdfData, setPdfData] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,12 @@ const PublicQuoteView = () => {
 
   useEffect(() => {
     loadQuote();
+    // Cleanup PDF URL when component unmounts
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
   }, [token]);
 
   const loadQuote = async () => {
@@ -69,6 +76,17 @@ const PublicQuoteView = () => {
       setQuote(data.quote);
       setPdfData(data.pdf.data);
       setPdfFilename(data.pdf.filename);
+
+      // Créer une URL blob pour le PDF
+      const byteCharacters = atob(data.pdf.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
 
       // Pré-remplir le nom et email du client
       if (data.quote.client_nom) {
@@ -285,10 +303,10 @@ const PublicQuoteView = () => {
             </Button>
           </div>
 
-          {pdfData && (
+          {pdfUrl && (
             <div className="border rounded-lg overflow-hidden">
               <iframe
-                src={`data:application/pdf;base64,${pdfData}`}
+                src={pdfUrl}
                 className="w-full h-[600px]"
                 title="Devis PDF"
               />
