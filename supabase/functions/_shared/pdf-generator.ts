@@ -88,6 +88,12 @@ function generateQuoteHTML(quote: QuoteData): string {
   const issuedDate = quote.issued_at ? new Date(quote.issued_at).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
   const expiryDate = quote.expiry_date ? new Date(quote.expiry_date).toLocaleDateString('fr-FR') : '';
 
+  // Check if quote is signed
+  const signature = quote.quote_signatures && quote.quote_signatures.length > 0 ? quote.quote_signatures[0] : null;
+  const signatureDate = signature?.signed_at ? new Date(signature.signed_at).toLocaleDateString('fr-FR') : '';
+  const signerName = signature?.signer_name || '';
+  const signatureImage = signature?.signature_image_url || '';
+
   return `
 <!DOCTYPE html>
 <html>
@@ -227,6 +233,30 @@ function generateQuoteHTML(quote: QuoteData): string {
     <div><strong>Total HT:</strong> ${(quote.total_ht || 0).toFixed(2)} €</div>
     <div><strong>TVA 20%:</strong> ${(((quote.total_ttc || 0) - (quote.total_ht || 0)) || 0).toFixed(2)} €</div>
     <div class="total-ttc"><strong>Total TTC:</strong> ${(quote.total_ttc || 0).toFixed(2)} €</div>
+  </div>
+
+  <!-- Signature Box -->
+  <div style="margin-top: 60px; margin-bottom: 40px;">
+    <div style="border: 2px solid #333; padding: 20px; border-radius: 8px; background: #fff;">
+      <div style="margin-bottom: 15px;">
+        <p style="margin: 0; font-weight: bold; font-size: 14px;">Offre valable jusqu'au : ${expiryDate || '..../..../....'}</p>
+        <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 14px;">Signature/bon pour accord :</p>
+      </div>
+      ${signatureImage && signatureDate ? `
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; min-height: 100px;">
+          <div>
+            <img src="${signatureImage}" alt="Signature" style="max-width: 300px; max-height: 80px; display: block;" />
+            <p style="margin: 10px 0 0 0; font-size: 12px;"><strong>${signerName}</strong></p>
+          </div>
+          <div style="text-align: right;">
+            <p style="margin: 0; font-size: 12px; color: #666;">Date de signature :</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: bold;">${signatureDate}</p>
+          </div>
+        </div>
+      ` : `
+        <div style="min-height: 100px; border: 1px dashed #ccc; border-radius: 4px; background: #fafafa;"></div>
+      `}
+    </div>
   </div>
 
   <div class="footer">
