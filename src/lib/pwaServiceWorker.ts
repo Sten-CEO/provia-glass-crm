@@ -1,4 +1,7 @@
 export const registerServiceWorker = () => {
+  console.log('⚠️ Service Worker DÉSACTIVÉ temporairement pour débogage');
+  // Service Worker désactivé temporairement
+  /*
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
@@ -16,6 +19,7 @@ export const registerServiceWorker = () => {
         });
     });
   }
+  */
 };
 
 // Synchronisation en arrière-plan
