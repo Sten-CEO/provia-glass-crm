@@ -5,6 +5,7 @@
  * Supports Gmail, Outlook, OVH, IONOS, and any custom SMTP server
  *
  * Implementation using raw TCP/TLS connections for maximum compatibility
+ * Updated: 2025-12-08 - Fixed multipart/alternative for HTML emails
  */
 
 export interface SmtpConfig {
