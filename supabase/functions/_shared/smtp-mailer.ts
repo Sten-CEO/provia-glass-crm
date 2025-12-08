@@ -182,19 +182,31 @@ export async function sendEmailViaSMTP(
       emailContent += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n`;
       emailContent += `\r\n`;
 
-      // Body part
+      // Body part - use multipart/alternative for HTML + text
+      const altBoundary = `----=_Alt_${Date.now()}`;
       emailContent += `--${boundary}\r\n`;
-      if (message.html) {
-        emailContent += `Content-Type: text/html; charset="UTF-8"\r\n`;
-        emailContent += `Content-Transfer-Encoding: quoted-printable\r\n`;
-        emailContent += `\r\n`;
-        emailContent += message.html + `\r\n`;
-      } else if (message.text) {
+      emailContent += `Content-Type: multipart/alternative; boundary="${altBoundary}"\r\n`;
+      emailContent += `\r\n`;
+
+      // Text version
+      if (message.text) {
+        emailContent += `--${altBoundary}\r\n`;
         emailContent += `Content-Type: text/plain; charset="UTF-8"\r\n`;
         emailContent += `Content-Transfer-Encoding: quoted-printable\r\n`;
         emailContent += `\r\n`;
         emailContent += message.text + `\r\n`;
       }
+
+      // HTML version
+      if (message.html) {
+        emailContent += `--${altBoundary}\r\n`;
+        emailContent += `Content-Type: text/html; charset="UTF-8"\r\n`;
+        emailContent += `Content-Transfer-Encoding: quoted-printable\r\n`;
+        emailContent += `\r\n`;
+        emailContent += message.html + `\r\n`;
+      }
+
+      emailContent += `--${altBoundary}--\r\n`;
 
       // Attachments
       for (const attachment of message.attachments) {
