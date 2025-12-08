@@ -123,13 +123,14 @@ serve(async (req) => {
 
     const companyId = userRole.company_id;
 
-    // Récupérer le devis avec les infos client et entreprise
+    // Récupérer le devis avec les infos client, entreprise et signatures
     const { data: quote, error: quoteError } = await supabase
       .from('devis')
       .select(`
         *,
         clients(*),
-        companies(*)
+        companies(*),
+        quote_signatures(*)
       `)
       .eq('id', quoteId)
       .eq('company_id', companyId) // Sécurité : vérifier que le devis appartient à la company
