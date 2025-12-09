@@ -27,6 +27,7 @@ const FactureDetail = () => {
   const [lignes, setLignes] = useState<LigneFacture[]>([]);
   const [sendModalOpen, setSendModalOpen] = useState(false);
   const [clientData, setClientData] = useState<any>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -87,6 +88,79 @@ const FactureDetail = () => {
     return { totalHT, totalApresRemise, totalTTC };
   };
 
+  const handleGeneratePdf = async () => {
+    if (!id) return;
+
+    setGeneratingPdf(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast.error("Session expirée");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-invoice-pdf`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+          body: JSON.stringify({ invoiceId: id }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la génération du PDF");
+      }
+
+      const result = await response.json();
+
+      if (result.pdf?.data) {
+        // Décoder le base64 en bytes
+        const binaryString = atob(result.pdf.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Décoder l'UTF-8 pour vérifier le type de contenu
+        const decoder = new TextDecoder('utf-8');
+        const decodedContent = decoder.decode(bytes);
+        const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
+
+        // Créer le blob avec le bon type
+        const blob = isHTML
+          ? new Blob([decodedContent], { type: 'text/html; charset=utf-8' })
+          : new Blob([bytes], { type: 'application/pdf' });
+
+        // Ajuster le nom de fichier
+        const filename = isHTML
+          ? result.pdf.filename.replace(/\.pdf$/, '.html')
+          : result.pdf.filename;
+
+        // Télécharger
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        toast.success("PDF téléchargé avec succès");
+      }
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      toast.error(error.message || "Erreur lors de la génération du PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const handleSave = async () => {
     // Use the shared recompute function
     const updatedInvoice = recomputeInvoiceTotals({
@@ -137,9 +211,14 @@ const FactureDetail = () => {
             <Mail className="mr-2 h-4 w-4" />
             Envoyer par email
           </Button>
-          <Button variant="outline" className="glass-card">
+          <Button
+            variant="outline"
+            className="glass-card"
+            onClick={handleGeneratePdf}
+            disabled={generatingPdf}
+          >
             <Download className="mr-2 h-4 w-4" />
-            PDF
+            {generatingPdf ? "Génération..." : "PDF"}
           </Button>
           <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
             <Save className="mr-2 h-4 w-4" />
@@ -313,9 +392,9 @@ const FactureDetail = () => {
         >
           En retard
         </Button>
-        <Button variant="outline" onClick={() => toast.success("PDF généré (stub)")}>
+        <Button variant="outline" onClick={handleGeneratePdf} disabled={generatingPdf}>
           <FileDown className="h-4 w-4 mr-2" />
-          PDF
+          {generatingPdf ? "Génération..." : "PDF"}
         </Button>
       </div>
 

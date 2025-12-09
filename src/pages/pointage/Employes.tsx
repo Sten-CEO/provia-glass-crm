@@ -61,11 +61,12 @@ export default function Employes() {
 
     const companyId = companyIdData;
 
-    // Charger les employés filtrés par company_id
+    // Charger uniquement les employés terrain filtrés par company_id
     const { data } = await supabase
       .from('equipe')
       .select('*')
       .eq('company_id', companyId)
+      .eq('role', 'Employé terrain')
       .order('nom');
 
     if (data) {

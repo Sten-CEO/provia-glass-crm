@@ -115,6 +115,30 @@ serve(async (req) => {
       }
     });
 
+    // Récupérer le company_id du devis pour créer la notification
+    const { data: quoteDetails } = await supabase
+      .from('devis')
+      .select('company_id, client_nom')
+      .eq('id', quote.id)
+      .single();
+
+    // Créer une notification pour l'acceptation du devis
+    if (quoteDetails?.company_id) {
+      await supabase.from('notifications').insert({
+        company_id: quoteDetails.company_id,
+        type: 'quote_signed',
+        title: 'Devis accepté',
+        message: `Le devis ${quote.numero} a été signé électroniquement par ${signerName}${quoteDetails.client_nom ? ` (${quoteDetails.client_nom})` : ''}.`,
+        payload: {
+          quote_id: quote.id,
+          quote_numero: quote.numero,
+          signer_name: signerName,
+          link: `/devis/${quote.id}`
+        }
+      });
+      console.log('Notification created for quote signing');
+    }
+
     console.log('Quote signed successfully:', quote.numero);
 
     return new Response(
