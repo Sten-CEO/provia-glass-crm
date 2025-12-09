@@ -9,7 +9,6 @@ import { RecurrencePanel } from "@/components/interventions/RecurrencePanel";
 import { InterventionDataTab } from "@/components/interventions/InterventionDataTab";
 import { InterventionHistoryTab } from "@/components/interventions/InterventionHistoryTab";
 import { InterventionReportTab } from "@/components/interventions/InterventionReportTab";
-import { InterventionSatisfactionTab } from "@/components/interventions/InterventionSatisfactionTab";
 import { FilesSection } from "@/components/interventions/FilesSection";
 import { useInterventionTimesheetLogger } from "@/hooks/useInterventionTimesheetLogger";
 import { useInterventionStatusLogger } from "@/hooks/useInterventionStatusLogger";
@@ -109,11 +108,10 @@ export default function InterventionDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="data" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="data">Données</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="report">Rapport</TabsTrigger>
-          <TabsTrigger value="satisfaction">Satisfaction</TabsTrigger>
           <TabsTrigger value="files">Fichiers</TabsTrigger>
         </TabsList>
 
@@ -127,10 +125,6 @@ export default function InterventionDetail() {
 
         <TabsContent value="report" className="mt-6">
           <InterventionReportTab job={job} onUpdate={loadJob} />
-        </TabsContent>
-
-        <TabsContent value="satisfaction" className="mt-6">
-          <InterventionSatisfactionTab interventionId={id!} />
         </TabsContent>
 
         <TabsContent value="files" className="mt-6">

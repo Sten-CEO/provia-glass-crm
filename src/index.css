@@ -8,86 +8,101 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 12%;
+    --background: 220 20% 98%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 220 20% 10%;
 
-    /* Primary: Professional Yellow #FBCB45 */
-    --primary: 45 97% 63%;
-    --primary-foreground: 0 0% 12%;
+    /* Primary: Modern Blue-Indigo */
+    --primary: 225 85% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Light Gray #F5F6FA */
-    --secondary: 220 25% 97%;
-    --secondary-foreground: 0 0% 12%;
+    /* Secondary: Elegant Gray */
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 20% 25%;
 
-    --muted: 220 25% 97%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 45 97% 63%;
-    --accent-foreground: 0 0% 12%;
+    /* Accent: Soft Amber/Gold */
+    --accent: 38 95% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    /* Danger: Light Red #F87171 */
-    --destructive: 0 84% 70%;
+    /* Danger: Elegant Red */
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Success: Green #4ADE80 */
-    --success: 142 71% 58%;
-    --success-foreground: 0 0% 12%;
+    /* Success: Fresh Green */
+    --success: 152 70% 42%;
+    --success-foreground: 0 0% 100%;
 
-    /* Warning: Orange */
-    --warning: 38 92% 62%;
-    --warning-foreground: 0 0% 12%;
+    /* Warning: Warm Orange */
+    --warning: 32 95% 52%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 220 25% 90%;
-    --input: 220 25% 90%;
-    --ring: 45 97% 63%;
+    /* Info: Cyan Blue */
+    --info: 200 90% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 225 85% 55%;
 
     --radius: 0.5rem;
 
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.2;
-    --glass-shadow: 0 0% 0% / 0.1;
+    --glass-bg: 0 0% 100% / 0.8;
+    --glass-border: 220 15% 90% / 0.5;
+    --glass-shadow: 220 20% 10% / 0.08;
   }
 
   .dark {
-    --background: 0 0% 12%;
-    --foreground: 0 0% 97%;
+    --background: 220 20% 8%;
+    --foreground: 220 10% 95%;
 
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 97%;
+    --card: 220 20% 12%;
+    --card-foreground: 220 10% 95%;
 
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 97%;
+    --popover: 220 20% 12%;
+    --popover-foreground: 220 10% 95%;
 
-    --primary: 45 97% 63%;
-    --primary-foreground: 0 0% 12%;
+    /* Primary: Modern Blue-Indigo */
+    --primary: 225 85% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 20%;
-    --secondary-foreground: 0 0% 97%;
+    /* Secondary: Dark Elegant Gray */
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 220 10% 85%;
 
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 55%;
 
-    --accent: 45 97% 63%;
-    --accent-foreground: 0 0% 12%;
+    /* Accent: Soft Amber/Gold */
+    --accent: 38 95% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 70%;
-    --destructive-foreground: 0 0% 12%;
+    /* Danger: Elegant Red */
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 58%;
-    --success-foreground: 0 0% 12%;
+    /* Success: Fresh Green */
+    --success: 152 70% 45%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 62%;
-    --warning-foreground: 0 0% 12%;
+    /* Warning: Warm Orange */
+    --warning: 32 95% 52%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
-    --ring: 45 97% 63%;
+    /* Info: Cyan Blue */
+    --info: 200 90% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 225 85% 60%;
   }
 }
 
@@ -123,33 +138,49 @@ All colors MUST be HSL.
     @apply bg-card/60 backdrop-blur-[16px] border-b border-border;
   }
 
-  /* Professional button styles - 8px radius, clean design */
+  /* Professional button styles - Modern design with smooth transitions */
   .btn-pro {
-    @apply h-10 px-4 rounded-lg font-medium text-sm transition-all inline-flex items-center justify-center gap-2;
+    @apply h-10 px-5 rounded-lg font-medium text-sm transition-all duration-200 ease-out inline-flex items-center justify-center gap-2;
+    @apply active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-pro-primary {
-    @apply btn-pro bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow;
+    @apply btn-pro bg-primary hover:bg-primary/90 text-primary-foreground;
+    @apply shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30;
   }
 
   .btn-pro-secondary {
-    @apply btn-pro bg-secondary hover:bg-secondary/80 text-secondary-foreground shadow-sm;
+    @apply btn-pro bg-secondary hover:bg-secondary/80 text-secondary-foreground;
+    @apply shadow-sm hover:shadow;
   }
 
   .btn-pro-success {
-    @apply btn-pro bg-success hover:bg-success/90 text-success-foreground shadow-sm hover:shadow;
+    @apply btn-pro bg-success hover:bg-success/90 text-success-foreground;
+    @apply shadow-md shadow-success/25 hover:shadow-lg hover:shadow-success/30;
   }
 
   .btn-pro-danger {
-    @apply btn-pro bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm hover:shadow;
+    @apply btn-pro bg-destructive hover:bg-destructive/90 text-destructive-foreground;
+    @apply shadow-md shadow-destructive/25 hover:shadow-lg hover:shadow-destructive/30;
+  }
+
+  .btn-pro-warning {
+    @apply btn-pro bg-warning hover:bg-warning/90 text-warning-foreground;
+    @apply shadow-md shadow-warning/25 hover:shadow-lg hover:shadow-warning/30;
   }
 
   .btn-pro-outline {
-    @apply btn-pro border border-input bg-background hover:bg-accent/50 hover:text-accent-foreground;
+    @apply btn-pro border-2 border-border bg-background hover:bg-secondary hover:border-secondary-foreground/20;
+    @apply text-foreground;
   }
 
   .btn-pro-ghost {
-    @apply btn-pro hover:bg-accent/50 hover:text-accent-foreground;
+    @apply btn-pro hover:bg-secondary text-foreground;
+  }
+
+  .btn-pro-accent {
+    @apply btn-pro bg-accent hover:bg-accent/90 text-accent-foreground;
+    @apply shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/30;
   }
 
   /* Professional table styles */
