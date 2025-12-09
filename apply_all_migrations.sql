@@ -273,6 +273,12 @@ DROP POLICY IF EXISTS "Admins can insert notifications" ON public.notifications;
 -- 3. CREATE PROPER COMPANY-SCOPED RLS POLICIES
 -- ========================================
 
+-- Drop any existing company-scoped policies first
+DROP POLICY IF EXISTS "Users can view their company notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can insert notifications in their company" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update their company notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can delete their company notifications" ON public.notifications;
+
 CREATE POLICY "Users can view their company notifications"
   ON public.notifications FOR SELECT
   USING (company_id = get_user_company_id());
