@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     // 1. Backfill accepted quotes (quote_signed)
     const { data: acceptedQuotes } = await supabaseClient
       .from('devis')
-      .select('id, numero, client_nom, accepted_at, signature_date')
+      .select('id, numero, client_nom, accepted_at, signature_date, company_id')
       .in('statut', ['Accepté', 'Signé'])
       .not('accepted_at', 'is', null);
 
@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
           title: 'Devis signé',
           message: `Le devis ${quote.numero} pour ${quote.client_nom} a été accepté`,
           link: `/devis/${quote.id}`,
+          company_id: quote.company_id,  // ✅ ADDED
           created_at: quote.accepted_at || quote.signature_date,
           read_at: new Date().toISOString(), // Mark historical as read
         });
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
     // 2. Backfill invoices to send
     const { data: invoicesToSend } = await supabaseClient
       .from('factures')
-      .select('id, numero, client_nom, created_at')
+      .select('id, numero, client_nom, created_at, company_id')
       .is('sent_at', null)
       .is('paid_at', null);
 
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
           title: 'Facture à envoyer',
           message: `La facture ${invoice.numero} pour ${invoice.client_nom} est prête à être envoyée`,
           link: `/factures/${invoice.id}`,
+          company_id: invoice.company_id,  // ✅ ADDED
           created_at: invoice.created_at,
           read_at: new Date().toISOString(),
         });
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
     // 3. Backfill overdue invoices
     const { data: overdueInvoices } = await supabaseClient
       .from('factures')
-      .select('id, numero, client_nom, due_date')
+      .select('id, numero, client_nom, due_date, company_id')
       .not('sent_at', 'is', null)
       .is('paid_at', null)
       .lt('due_date', new Date().toISOString());
@@ -78,6 +80,7 @@ Deno.serve(async (req) => {
           title: 'Facture en retard',
           message: `La facture ${invoice.numero} pour ${invoice.client_nom} est en retard`,
           link: `/factures/${invoice.id}`,
+          company_id: invoice.company_id,  // ✅ ADDED
           created_at: invoice.due_date,
           read_at: new Date().toISOString(),
         });
@@ -91,7 +94,7 @@ Deno.serve(async (req) => {
 
     const { data: assignments } = await supabaseClient
       .from('intervention_assignments')
-      .select('intervention_id, employee_id, created_at, jobs(titre)')
+      .select('intervention_id, employee_id, created_at, company_id, jobs(titre)')
       .gte('created_at', thirtyDaysAgo.toISOString());
 
     if (assignments && assignments.length > 0) {
@@ -103,6 +106,7 @@ Deno.serve(async (req) => {
           title: 'Nouvelle intervention assignée',
           message: `Une intervention a été assignée: ${job?.titre || 'Sans titre'}`,
           link: `/interventions/${assignment.intervention_id}`,
+          company_id: assignment.company_id,  // ✅ ADDED
           created_at: assignment.created_at,
           read: true,
         });
@@ -113,7 +117,7 @@ Deno.serve(async (req) => {
     // 5. Backfill agenda events (upcoming reminders)
     const { data: agendaEvents } = await supabaseClient
       .from('agenda_events')
-      .select('*')
+      .select('id, title, start_at, company_id')
       .gte('start_at', new Date().toISOString())
       .order('start_at', { ascending: true })
       .limit(100);
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
     if (agendaEvents && agendaEvents.length > 0) {
       for (const event of agendaEvents) {
         const eventDate = new Date(event.start_at);
-        
+
         // Create J-1 reminder at 09:00
         const reminderJ1 = new Date(eventDate);
         reminderJ1.setDate(reminderJ1.getDate() - 1);
@@ -134,6 +138,7 @@ Deno.serve(async (req) => {
             title: 'Rappel agenda',
             message: `Rappel: ${event.title} demain à ${eventDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
             link: `/agenda/${event.id}`,
+            company_id: event.company_id,  // ✅ ADDED
             created_at: reminderJ1.toISOString(),
             read_at: null,
           });
@@ -150,6 +155,7 @@ Deno.serve(async (req) => {
             title: 'Rappel agenda',
             message: `Dans 15 minutes: ${event.title}`,
             link: `/agenda/${event.id}`,
+            company_id: event.company_id,  // ✅ ADDED
             created_at: reminder15min.toISOString(),
             read_at: null,
           });
