@@ -1229,7 +1229,7 @@ BEGIN
     t.tablename::TEXT,
     EXISTS(
       SELECT 1 FROM information_schema.columns c
-      WHERE c.table_name = t.tablename
+      WHERE c.table_name = t.tablename::text
       AND c.column_name = 'company_id'
     ) as has_company_id,
     t.rowsecurity as has_rls_enabled,
@@ -1267,7 +1267,7 @@ BEGIN
   WHERE t.schemaname = 'public'
   AND EXISTS(
     SELECT 1 FROM information_schema.columns c
-    WHERE c.table_name = t.tablename
+    WHERE c.table_name = t.tablename::text
     AND c.column_name = 'company_id'
   )
   AND NOT t.rowsecurity;
@@ -1294,7 +1294,7 @@ BEGIN
   WHERE t.schemaname = 'public'
   AND EXISTS(
     SELECT 1 FROM information_schema.columns c
-    WHERE c.table_name = t.tablename
+    WHERE c.table_name = t.tablename::text
     AND c.column_name = 'company_id'
   )
   AND t.rowsecurity = true
