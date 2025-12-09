@@ -223,7 +223,7 @@ UPDATE public.notifications n
 SET company_id = d.company_id
 FROM public.devis d
 WHERE n.link LIKE '/devis/%'
-  AND n.link = '/devis/' || d.id::text
+  AND n.link = concat('/devis/', d.id::text)
   AND n.company_id IS NULL;
 
 -- From factures
@@ -231,7 +231,7 @@ UPDATE public.notifications n
 SET company_id = f.company_id
 FROM public.factures f
 WHERE n.link LIKE '/factures/%'
-  AND n.link = '/factures/' || f.id::text
+  AND n.link = concat('/factures/', f.id::text)
   AND n.company_id IS NULL;
 
 -- From jobs/interventions
@@ -239,7 +239,7 @@ UPDATE public.notifications n
 SET company_id = j.company_id
 FROM public.jobs j
 WHERE n.link LIKE '/interventions/%'
-  AND n.link = '/interventions/' || j.id::text
+  AND n.link = concat('/interventions/', j.id::text)
   AND n.company_id IS NULL;
 
 -- From agenda
@@ -247,7 +247,7 @@ UPDATE public.notifications n
 SET company_id = a.company_id
 FROM public.agenda_events a
 WHERE n.link LIKE '/agenda/%'
-  AND n.link = '/agenda/' || a.id::text
+  AND n.link = concat('/agenda/', a.id::text)
   AND n.company_id IS NULL;
 
 -- Make company_id NOT NULL after backfill
