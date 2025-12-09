@@ -5,19 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md shadow-destructive/20 hover:shadow-lg hover:shadow-destructive/25",
-        outline: "border-2 border-border bg-background hover:bg-secondary hover:border-secondary-foreground/20 text-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm hover:shadow",
+        default: "bg-primary text-primary-foreground hover:bg-primary/85 shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/40",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-md shadow-destructive/25 hover:shadow-lg hover:shadow-destructive/35",
+        outline: "border-2 border-border bg-background hover:bg-secondary hover:border-primary/30 text-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/70 shadow-sm hover:shadow",
         ghost: "hover:bg-secondary text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-success text-success-foreground hover:bg-success/90 shadow-md shadow-success/20 hover:shadow-lg hover:shadow-success/25",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-md shadow-warning/20 hover:shadow-lg hover:shadow-warning/25",
-        accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md shadow-accent/20 hover:shadow-lg hover:shadow-accent/25",
+        link: "text-primary underline-offset-4 hover:underline font-medium",
+        success: "bg-success text-success-foreground hover:bg-success/90 shadow-md shadow-success/25 hover:shadow-lg hover:shadow-success/35",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90 shadow-md shadow-warning/25 hover:shadow-lg hover:shadow-warning/35",
+        accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-md shadow-accent/25 hover:shadow-lg hover:shadow-accent/35",
       },
       size: {
         default: "h-10 px-5 py-2",
