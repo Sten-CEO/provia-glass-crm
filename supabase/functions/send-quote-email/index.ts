@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { generateQuotePDF } from '../_shared/pdf-generator.ts';
 import { sendEmailViaSMTP } from '../_shared/smtp-mailer.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { validateAuthAndGetCompany, createSupabaseAdmin } from '../_shared/auth.ts';
 
 interface SendQuoteEmailRequest {
   quoteId: string;
@@ -69,44 +70,24 @@ serve(async (req) => {
 
     console.log('Sending quote email:', { quoteId, recipientEmail, templateId });
 
-    // Vérifier l'authentification
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('No authorization header');
-      throw new Error('Non authentifié');
-    }
+    // Create Supabase admin client
+    const supabase = createSupabaseAdmin();
 
-    // Décoder le JWT pour extraire le user_id
-    const jwt = authHeader.replace('Bearer ', '');
-    const parts = jwt.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Token JWT invalide');
-    }
+    // Validate JWT token securely (cryptographic verification)
+    const { userId, companyId, error: authError } = await validateAuthAndGetCompany(req, supabase);
 
-    const payload = JSON.parse(atob(parts[1]));
-    const userId = payload.sub;
-
-    if (!userId) {
-      throw new Error('User ID non trouvé dans le token');
+    if (authError) {
+      console.error('Auth error:', authError);
+      throw new Error(authError);
     }
 
     console.log('User authenticated:', userId);
 
-    // Créer le client Supabase avec SERVICE_ROLE_KEY
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Get company ID - already validated above, but check for employee fallback
+    let finalCompanyId = companyId;
 
-    // Récupérer le company_id de l'utilisateur
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('company_id')
-      .eq('user_id', userId)
-      .single();
-
-    if (roleError || !userRole) {
-      // Essayer de récupérer depuis equipe si c'est un employé
+    if (!finalCompanyId) {
+      // Try to get from equipe table for employees
       const { data: employee } = await supabase
         .from('equipe')
         .select('company_id')
@@ -116,10 +97,8 @@ serve(async (req) => {
       if (!employee) {
         throw new Error('Société non trouvée pour cet utilisateur');
       }
-      userRole = employee;
+      finalCompanyId = employee.company_id;
     }
-
-    const companyId = userRole.company_id;
 
     // Récupérer le devis avec les infos client, entreprise et signatures
     const { data: quote, error: quoteError } = await supabase
@@ -131,7 +110,7 @@ serve(async (req) => {
         quote_signatures(*)
       `)
       .eq('id', quoteId)
-      .eq('company_id', companyId) // Sécurité : vérifier que le devis appartient à la company
+      .eq('company_id', finalCompanyId) // Sécurité : vérifier que le devis appartient à la company
       .single();
 
     if (quoteError || !quote) {
