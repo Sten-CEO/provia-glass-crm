@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { renderQuoteHTML } from "@/lib/quote-template-renderer";
+import { sanitizeTemplateHtml } from "@/lib/sanitize";
 
 interface TemplatePreviewProps {
   template: {
@@ -116,7 +117,7 @@ export const TemplatePreview = ({ template }: TemplatePreviewProps) => {
   return (
     <div className="space-y-4">
       <Card className="p-8 bg-white shadow-lg">
-        <div dangerouslySetInnerHTML={{ __html: html }} />
+        <div dangerouslySetInnerHTML={{ __html: sanitizeTemplateHtml(html) }} />
       </Card>
       <p className="text-xs text-center text-muted-foreground">
         Aperçu du {template.type === "QUOTE" ? "devis" : template.type === "INVOICE" ? "facture" : "document"} - Thème: {template.theme}

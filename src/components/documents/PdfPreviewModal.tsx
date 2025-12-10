@@ -22,6 +22,7 @@ import {
   QuoteRenderData,
   QuoteLine,
 } from "@/lib/quoteHtmlRenderer";
+import { sanitizeTemplateHtml } from "@/lib/sanitize";
 
 interface PdfPreviewModalProps {
   open: boolean;
@@ -272,10 +273,10 @@ export const PdfPreviewModal = ({
             className="bg-white shadow-lg rounded-lg overflow-hidden"
             style={{ maxHeight: "calc(90vh - 150px)", overflow: "auto" }}
           >
-            {/* Render the unified HTML */}
+            {/* Render the unified HTML (sanitized for XSS protection) */}
             <div
               className="quote-preview-content"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+              dangerouslySetInnerHTML={{ __html: sanitizeTemplateHtml(previewHtml) }}
             />
           </div>
         </div>

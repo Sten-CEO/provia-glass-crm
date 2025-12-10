@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { renderQuoteHTML } from "@/lib/quote-template-renderer";
 import { DocumentTemplate } from "@/hooks/useDocumentTemplates";
+import { sanitizeTemplateHtml } from "@/lib/sanitize";
 
 interface LivePdfPreviewProps {
   template: Partial<DocumentTemplate>;
@@ -139,9 +140,9 @@ export function LivePdfPreview({
           ...getBackgroundStyle() // ← Applique le background_style au conteneur
         }}
       >
-        {/* Afficher le HTML généré */}
+        {/* Afficher le HTML généré (sanitized for XSS protection) */}
         <div
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: sanitizeTemplateHtml(html) }}
           style={{
             padding: "40px",
             fontFamily: template.font_family || "Arial, sans-serif",
