@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Mail } from "lucide-react";
 import { replaceVariables, getSampleValues } from "@/lib/templateVariables";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface LiveEmailPreviewProps {
   subject: string;
@@ -64,7 +65,7 @@ export function LiveEmailPreview({
           <div
             className="whitespace-pre-wrap text-sm leading-relaxed text-foreground"
             dangerouslySetInnerHTML={{
-              __html: previewBody.replace(/\n/g, "<br />"),
+              __html: sanitizeHtml(previewBody.replace(/\n/g, "<br />")),
             }}
           />
         </div>

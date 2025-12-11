@@ -126,6 +126,5 @@ export function initializeInventoryEventHandlers() {
   eventBus.on(EVENTS.PURCHASE_RECEIVED, async (data: { purchaseId: string; items: any[] }) => {
     // This event is mainly for notifications/logging
     // The actual inventory update is done by the purchase module
-    console.log("Purchase received:", data.purchaseId);
   });
 }

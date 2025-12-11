@@ -39,14 +39,11 @@ export function useCompany() {
 
   const loadCompany = async () => {
     try {
-      console.log('🟢 [useCompany] Loading company...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('❌ [useCompany] No user found');
         setLoading(false);
         return;
       }
-      console.log('✅ [useCompany] User found:', user.id);
 
       // Get company_id from user_roles (single source of truth)
       const { data: userRole, error: roleError } = await supabase
@@ -67,8 +64,6 @@ export function useCompany() {
         return;
       }
 
-      console.log('✅ [useCompany] Company ID found:', userRole.company_id);
-
       // Get company settings using the company_id from user_roles
       const { data: settings, error: settingsError } = await supabase
         .from("company_settings")
@@ -82,8 +77,6 @@ export function useCompany() {
         return;
       }
 
-      console.log('📊 [useCompany] Company settings:', settings);
-
       if (settings) {
         const companyData = {
           id: userRole.company_id,
@@ -91,7 +84,6 @@ export function useCompany() {
           country: settings.country,
           currency: 'EUR' // Default currency
         };
-        console.log('✅ [useCompany] Setting company:', companyData);
         setCompany(companyData);
       } else {
         console.warn("⚠️ [useCompany] No company settings found for company_id:", userRole.company_id);
@@ -102,7 +94,6 @@ export function useCompany() {
           country: null,
           currency: 'EUR'
         };
-        console.log('⚠️ [useCompany] Setting company with default name:', companyData);
         setCompany(companyData);
       }
     } catch (error) {

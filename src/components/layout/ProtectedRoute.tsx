@@ -25,8 +25,6 @@ export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps
   }
 
   // If access is denied, show the page with overlay (no redirect)
-  console.log(`❌ Access denied to ${requiredAccess} for role ${userRole}`);
-
   return (
     <div className="relative">
       {/* Render the page content (will be blurred by overlay) */}

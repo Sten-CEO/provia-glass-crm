@@ -89,8 +89,7 @@ export function QuoteConversionDialog({
         // Sync consumables and materials from quote to intervention
         try {
           const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
-          const result = await syncQuoteConsumablesToIntervention(quoteId, job.id);
-          console.log(`Synced ${result.consumablesCount} consommables/matériels and ${result.servicesCount} services`);
+          await syncQuoteConsumablesToIntervention(quoteId, job.id);
         } catch (syncError) {
           console.error("Error syncing quote items:", syncError);
         }

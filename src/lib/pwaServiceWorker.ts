@@ -1,19 +1,15 @@
 export const registerServiceWorker = () => {
-  console.log('⚠️ Service Worker DÉSACTIVATION active');
-
   // Désenregistrer tous les Service Workers existants
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       registrations.forEach((registration) => {
-        console.log('🗑️ Désenregistrement du Service Worker:', registration.scope);
         registration.unregister().then(() => {
-          console.log('✅ Service Worker désenregistré avec succès');
+          // Service Worker unregistered successfully
         });
       });
 
       // Forcer le rechargement des contrôleurs de page
       if (registrations.length > 0) {
-        console.log('🔄 Rechargement pour appliquer les changements...');
         setTimeout(() => {
           window.location.reload();
         }, 500);

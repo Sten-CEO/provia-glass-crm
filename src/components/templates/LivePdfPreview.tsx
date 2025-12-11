@@ -55,12 +55,6 @@ export function LivePdfPreview({
 
   // Générer le HTML avec useMemo pour forcer le re-render quand le template change
   const html = useMemo(() => {
-    console.log('🔄 LivePdfPreview: useMemo triggered!', {
-      background_style: template.background_style,
-      header_layout: template.header_layout,
-      main_color: template.main_color,
-    });
-
     // Préparer le template avec les bonnes valeurs par défaut
     const templateData = {
       type: documentType === "quote" ? ("QUOTE" as const) : ("INVOICE" as const),
@@ -81,14 +75,8 @@ export function LivePdfPreview({
       css: template.css,
     };
 
-    console.log('📝 LivePdfPreview: templateData prepared', {
-      background_style: templateData.background_style,
-      header_layout: templateData.header_layout,
-    });
-
     // Générer le HTML avec la fonction unifiée
     const generatedHtml = renderQuoteHTML(templateData, sampleQuoteData as any);
-    console.log('✅ LivePdfPreview: HTML generated, length:', generatedHtml.length);
 
     return generatedHtml;
   }, [

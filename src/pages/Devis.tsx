@@ -380,8 +380,7 @@ const Devis = () => {
                                 // Sync consumables and services from quote to intervention
                                 try {
                                   const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
-                                  const result = await syncQuoteConsumablesToIntervention(q.id, createdJob.id);
-                                  console.log(`Synced ${result.consumablesCount} consumables and ${result.servicesCount} services`);
+                                  await syncQuoteConsumablesToIntervention(q.id, createdJob.id);
                                 } catch (syncError) {
                                   console.error("Error syncing quote items:", syncError);
                                 }

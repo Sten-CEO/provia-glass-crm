@@ -102,13 +102,10 @@ const Equipe = () => {
       if (forceLog) {
         console.error('❌ [Equipe] FORCE RELOAD: Still no company ID available!');
         console.error('❌ [Equipe] Company state:', company);
-      } else {
-        console.log('⚠️ [Equipe] No company ID, skipping load');
       }
       return;
     }
 
-    console.log('🔵 [Equipe] Loading team for company:', company.id);
     const { data, error } = await supabase
       .from("equipe")
       .select("*")
@@ -121,30 +118,23 @@ const Equipe = () => {
       return;
     }
 
-    console.log('✅ [Equipe] Loaded', data?.length || 0, 'team members');
     setTeam((data || []) as TeamMember[]);
   };
 
   useEffect(() => {
-    console.log('🟡 [Equipe] useEffect triggered, company:', company);
     if (company?.id) {
-      console.log('🟢 [Equipe] Setting up team loading for company:', company.id);
       loadTeam();
 
       const channel = supabase
         .channel("equipe-changes")
         .on("postgres_changes", { event: "*", schema: "public", table: "equipe" }, (payload) => {
-          console.log('🔄 [Equipe] Real-time update received:', payload);
           loadTeam();
         })
         .subscribe();
 
       return () => {
-        console.log('🔄 [Equipe] Cleaning up channel');
         supabase.removeChannel(channel);
       };
-    } else {
-      console.log('⚠️ [Equipe] Company not loaded yet, company:', company);
     }
   }, [company?.id]);
 
@@ -184,14 +174,6 @@ const Equipe = () => {
     }
 
     try {
-      console.log("🔵 STEP 1: Creating member in equipe table");
-      console.log("📝 Data being sent:");
-      console.log("   nom:", newMember.nom);
-      console.log("   role:", newMember.role);
-      console.log("   email:", newMember.email);
-      console.log("   access_controls:", JSON.stringify(newMember.access_controls, null, 2));
-      console.log("   company_id:", company.id);
-
       // Step 1: Create entry in equipe table
       const { data: newEmployeeData, error: insertError } = await supabase
         .from("equipe")
@@ -215,11 +197,6 @@ const Equipe = () => {
         return;
       }
 
-      console.log("✅ Member created in DB:");
-      console.log("   id:", newEmployeeData.id);
-      console.log("   role:", newEmployeeData.role);
-      console.log("   access_controls:", JSON.stringify(newEmployeeData.access_controls, null, 2));
-
       // Step 2: Generate temporary password
       const tempPassword = generateTemporaryPassword();
 
@@ -232,13 +209,6 @@ const Equipe = () => {
 
       const mappedRole = mapRoleToDbRole(newMember.role);
 
-      console.log("📝 Creating account for:", newMember.email);
-      console.log("🔑 Generated password:", tempPassword);
-      console.log("👤 Role mapping:", {
-        originalRole: newMember.role,
-        mappedRole: mappedRole,
-      });
-
       const requestBody = {
         employeeId: newEmployeeData.id,
         email: newMember.email,
@@ -249,8 +219,6 @@ const Equipe = () => {
         sendEmail: false,
         role: mappedRole,
       };
-
-      console.log("📤 Sending request to edge function:", requestBody);
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-employee-account`,
@@ -264,8 +232,6 @@ const Equipe = () => {
         }
       );
 
-      console.log("📡 Edge function response status:", response.status);
-
       if (!response.ok) {
         const errorData = await response.json();
         console.error("❌ Edge function error:", errorData);
@@ -273,19 +239,15 @@ const Equipe = () => {
       }
 
       const result = await response.json();
-      console.log("✅ Account created successfully:", result);
 
       // Reload team list to show the new member
-      console.log("🔄 [Equipe] Reloading team list immediately...");
       await loadTeam();
 
       // Force company to reload and then reload team list again after a delay
-      console.log("🔄 [Equipe] Dispatching company-updated event...");
       window.dispatchEvent(new Event('company-updated'));
 
       // Wait a bit and force reload again to ensure we catch the new member
       setTimeout(async () => {
-        console.log("🔄 [Equipe] Force reloading team list after 1 second...");
         await loadTeam(true);
       }, 1000);
 

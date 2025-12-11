@@ -35,7 +35,6 @@ export async function updateExpiredAgendaEvents() {
       return { success: false, error: updateError };
     }
 
-    console.log(`${expiredEvents.length} événement(s) d'agenda mis à jour automatiquement`);
     return { success: true, updated: expiredEvents.length };
   } catch (error) {
     console.error('Erreur inattendue:', error);

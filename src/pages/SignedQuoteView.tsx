@@ -82,7 +82,6 @@ export default function SignedQuoteView() {
         decodedContent = decoder.decode(bytes);
       } catch (error) {
         // Si le décodage échoue, c'est peut-être déjà une chaîne de caractères
-        console.log('PDF data is not base64, using as-is');
         decodedContent = pdfData;
         bytes = new TextEncoder().encode(pdfData);
       }
