@@ -90,7 +90,6 @@ export const SignatureCanvas = ({
 
     try {
       setSaving(true);
-      console.log("Saving signature with company_id:", companyId);
 
       // Convertir le canvas en blob
       const blob = await new Promise<Blob>((resolve) => {
@@ -117,12 +116,6 @@ export const SignatureCanvas = ({
         .from("signatures")
         .getPublicUrl(filePath);
 
-      console.log("📸 Signature image URL:", {
-        filePath,
-        publicUrl,
-        testInBrowser: "Copie cette URL dans ton navigateur pour tester: " + publicUrl
-      });
-
       // Enregistrer dans jobs (intervention) avec la nouvelle colonne signature_url
       const { error: jobError } = await supabase
         .from("jobs")
@@ -136,13 +129,6 @@ export const SignatureCanvas = ({
       if (jobError) throw jobError;
 
       // Optionnel: Enregistrer aussi dans job_signatures pour historique détaillé
-      console.log("Inserting into job_signatures with:", {
-        job_id: jobId,
-        employee_id: employeeId,
-        company_id: companyId,
-        signer_name: signerName,
-      });
-
       const { error: sigError } = await supabase
         .from("job_signatures")
         .insert({
@@ -164,8 +150,6 @@ export const SignatureCanvas = ({
           code: sigError.code,
         });
         // Ne pas bloquer si cette table secondaire échoue
-      } else {
-        console.log("✅ job_signatures insert succeeded");
       }
 
       toast.success("Signature enregistrée avec succès");

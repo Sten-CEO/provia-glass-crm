@@ -119,12 +119,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Debug: Log access controls when they change
-  useEffect(() => {
-    console.log('🔒 Sidebar - Access Controls:', accessControls);
-    console.log('👤 Sidebar - User Role:', userRole);
-  }, [accessControls, userRole]);
-
   // Don't use effectiveCollapsed, use isCollapsed directly
 
   useEffect(() => {

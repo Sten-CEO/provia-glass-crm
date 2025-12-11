@@ -63,8 +63,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       setIsLoadingItems(false);
       return;
     }
-    
-    console.log(`✅ Loaded ${data?.length || 0} items for type: ${dbType}`, data);
+
     setInventoryItems(data || []);
     setIsLoadingItems(false);
   };
@@ -295,13 +294,12 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         {/* Category selector */}
         <div className="space-y-2">
           <Label>Catégorie</Label>
-          <RadioGroup 
-            value={itemCategory} 
+          <RadioGroup
+            value={itemCategory}
             onValueChange={(val) => {
               const newCategory = val as "consumable" | "material";
-              console.log(`🔄 Category change: ${itemCategory} → ${newCategory}`);
               setItemCategory(newCategory);
-            }} 
+            }}
             className="flex gap-4"
           >
             <div className="flex items-center space-x-2">

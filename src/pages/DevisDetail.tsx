@@ -173,7 +173,6 @@ const DevisDetail = () => {
       .single();
 
     if (existingJob) {
-      console.log("Une intervention existe déjà pour ce devis");
       return;
     }
 

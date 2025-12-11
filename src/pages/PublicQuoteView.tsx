@@ -1,4 +1,3 @@
-// Force reload - version 2024-12-08 13:43 - CACHE BUST
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { SignaturePad } from "@/components/signature/SignaturePad";
-
-// Log au niveau du module pour vérifier le rechargement
-console.log('🔄 PublicQuoteView module loaded at:', new Date().toISOString());
 
 interface QuoteData {
   id: string;
@@ -64,37 +60,26 @@ const PublicQuoteView = () => {
 
   const loadQuote = async () => {
     try {
-      console.log('[DEBUG 1] Starting loadQuote, token:', token);
       setLoading(true);
       setError(null);
 
-      console.log('[DEBUG 2] Invoking get-quote-public function');
       const { data, error } = await supabase.functions.invoke('get-quote-public', {
         body: { token },
       });
 
-      console.log('[DEBUG 3] Function response:', { hasData: !!data, hasError: !!error, data });
-
       if (error) {
-        console.log('[DEBUG 4] Error received:', error);
         throw error;
       }
 
-      console.log('[DEBUG 5] Checking if expired:', data.expired);
       if (data.expired) {
         setExpired(true);
         setQuote(data.quote);
         return;
       }
 
-      console.log('[DEBUG 6] Setting quote and PDF data');
-      console.log('[DEBUG 7] PDF data exists?', !!data.pdf, 'PDF data.data exists?', !!data.pdf?.data);
       setQuote(data.quote);
       setPdfData(data.pdf.data);
       setPdfFilename(data.pdf.filename);
-
-      // Créer une URL blob pour le PDF/HTML
-      console.log('Creating Blob from base64 data, length:', data.pdf.data.length);
 
       // Décoder le base64 en Uint8Array (pour gérer correctement l'UTF-8)
       const base64 = data.pdf.data;
@@ -110,20 +95,16 @@ const PublicQuoteView = () => {
 
       // Détecter si c'est du HTML (commence par <!DOCTYPE ou <html)
       const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
-      console.log('Content type detected:', isHTML ? 'HTML' : 'PDF');
 
       if (isHTML) {
         // C'est du HTML, créer un Blob HTML avec le contenu UTF-8 décodé
         const blob = new Blob([decodedContent], { type: 'text/html; charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        console.log('HTML Blob URL created:', url);
         setPdfUrl(url);
       } else {
         // C'est un vrai PDF, créer un Blob PDF avec les bytes bruts
         const blob = new Blob([bytes], { type: 'application/pdf' });
-        console.log('PDF Blob created, size:', blob.size, 'type:', blob.type);
         const url = URL.createObjectURL(blob);
-        console.log('PDF Blob URL created:', url);
         setPdfUrl(url);
       }
 

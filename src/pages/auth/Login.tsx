@@ -40,8 +40,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempt started");
-    
+
     if (!email || !password) {
       toast.error("Veuillez remplir tous les champs");
       return;
@@ -49,13 +48,10 @@ const Login = () => {
 
     setLoading(true);
     try {
-      console.log("Signing in with Supabase...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      console.log("Sign in response:", { data: !!data, error });
 
       if (error) {
         console.error("Sign in error:", error);
@@ -69,15 +65,12 @@ const Login = () => {
       }
 
       if (data.session) {
-        console.log("Session established, fetching role...");
         // Fetch role immediately after login
         const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", data.session.user.id)
           .single();
-
-        console.log("Role fetch result:", { userRole, roleError });
 
         if (roleError) {
           console.error("Role fetch error:", roleError);
@@ -87,11 +80,8 @@ const Login = () => {
           return;
         }
 
-        console.log("Role found:", userRole?.role);
-
         // CRM Login: Block employee accounts
         if (userRole?.role === 'employe_terrain') {
-          console.log("❌ Employee account attempted CRM login - BLOCKING");
           toast.error("Ce compte est réservé à l'application employé. Veuillez utiliser la page de connexion employé.", {
             duration: 5000,
           });
@@ -100,9 +90,7 @@ const Login = () => {
           return;
         }
 
-        console.log("✅ CRM access granted for role:", userRole?.role);
         toast.success("Connexion réussie");
-        console.log("Navigating to: /tableau-de-bord");
         navigate("/tableau-de-bord");
       }
     } catch (error: any) {

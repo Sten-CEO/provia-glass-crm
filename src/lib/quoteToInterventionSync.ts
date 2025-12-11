@@ -17,7 +17,6 @@ export async function syncQuoteConsumablesToIntervention(
 
     // If consumables already exist, don't duplicate
     if (existingConsumables && existingConsumables.length > 0) {
-      console.log("Consumables already exist for this intervention, skipping sync");
       return { consumablesCount: 0, servicesCount: 0 };
     }
 

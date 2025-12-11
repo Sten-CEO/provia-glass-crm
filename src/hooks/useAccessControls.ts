@@ -35,16 +35,13 @@ export function useAccessControls() {
 
   const loadAccessControls = async () => {
     try {
-      console.log('🟢 [useAccessControls.TS] Loading access controls...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('❌ [useAccessControls.TS] No user found');
         setAccessControls(null);
         setUserRole(null);
         setLoading(false);
         return;
       }
-      console.log('✅ [useAccessControls.TS] User found:', user.id);
 
       // Get user's role and access_controls from user_roles table
       const { data: userRoleData, error: roleError } = await supabase
@@ -62,11 +59,9 @@ export function useAccessControls() {
       }
 
       setUserRole(userRoleData.role);
-      console.log('👤 [useAccessControls.TS] User role:', userRoleData.role);
 
       // OWNER and ADMIN have automatic full access
       if (userRoleData.role === 'owner' || userRoleData.role === 'admin') {
-        console.log('✅ [useAccessControls.TS] Owner/Admin detected - granting full access');
         setAccessControls({
           devis: true,
           planning: true,
@@ -99,10 +94,8 @@ export function useAccessControls() {
       }
 
       if (equipeData?.access_controls) {
-        console.log('✅ [useAccessControls.TS] Access controls loaded:', JSON.stringify(equipeData.access_controls, null, 2));
         setAccessControls(equipeData.access_controls as AccessControls);
       } else {
-        console.log('⚠️ [useAccessControls.TS] No access_controls found, setting empty object');
         // NO default access - if no access_controls defined, user has NO access
         setAccessControls({});
       }

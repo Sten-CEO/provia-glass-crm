@@ -509,7 +509,6 @@ const Templates = () => {
                         <BackgroundStyleSelector
                           value={selectedTemplate.background_style || "solid"}
                           onChange={(v) => {
-                            console.log('🎨 BackgroundStyleSelector: onChange called with value:', v);
                             setSelectedTemplate({ ...selectedTemplate, background_style: v });
                           }}
                           mainColor={selectedTemplate.main_color}

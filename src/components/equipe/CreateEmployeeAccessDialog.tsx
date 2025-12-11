@@ -61,8 +61,6 @@ export const CreateEmployeeAccessDialog = ({
         return;
       }
 
-      console.log("Creating employee access with session:", session.user.id);
-
       const response = await supabase.functions.invoke("create-employee-account", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -78,8 +76,6 @@ export const CreateEmployeeAccessDialog = ({
         },
       });
 
-      console.log("Response from edge function:", response);
-
       if (response.error) {
         console.error("Edge function error:", response.error);
 
@@ -93,8 +89,6 @@ export const CreateEmployeeAccessDialog = ({
         }
         return;
       }
-
-      console.log("Edge function response data:", response.data);
 
       if (method === "password" && password) {
         setGeneratedPassword(password);
