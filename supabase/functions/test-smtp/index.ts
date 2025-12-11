@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { testSmtpConfiguration } from '../_shared/smtp-mailer.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { createSupabaseAdmin, validateAuthAndGetCompany } from '../_shared/auth.ts';
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -12,48 +12,15 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    console.log('Testing SMTP configuration...');
+    // Créer le client Supabase admin
+    const supabase = createSupabaseAdmin();
 
-    // Vérifier l'authentification
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Non authentifié');
+    // Valider le JWT de manière sécurisée et récupérer le company_id
+    const { userId, companyId, error: authError } = await validateAuthAndGetCompany(req, supabase);
+
+    if (authError) {
+      throw new Error(authError);
     }
-
-    // Décoder le JWT pour extraire le user_id
-    const jwt = authHeader.replace('Bearer ', '');
-    const parts = jwt.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Token JWT invalide');
-    }
-
-    const payload = JSON.parse(atob(parts[1]));
-    const userId = payload.sub;
-
-    if (!userId) {
-      throw new Error('User ID non trouvé dans le token');
-    }
-
-    console.log('User authenticated:', userId);
-
-    // Créer le client Supabase avec SERVICE_ROLE_KEY
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Récupérer le company_id de l'utilisateur
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('company_id')
-      .eq('user_id', userId)
-      .single();
-
-    if (roleError || !userRole) {
-      throw new Error('Société non trouvée pour cet utilisateur');
-    }
-
-    const companyId = userRole.company_id;
 
     // Récupérer la configuration SMTP de la société
     const { data: company, error: companyError } = await supabase
