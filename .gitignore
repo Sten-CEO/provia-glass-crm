@@ -28,3 +28,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Tauri build artifacts (builds are done via GitHub Actions)
+src-tauri/target/
+*.exe
+*.msi
+*.dmg
+*.app
+*.app.tar.gz
+*.AppImage
+*.deb
+*.rpm

@@ -1,9 +1,33 @@
-import { useState, useEffect } from "react";
-import { Monitor, Smartphone, Apple, Download as DownloadIcon, Share, Plus, MoreVertical } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Monitor, Smartphone, Apple, Download as DownloadIcon, Share, Plus, MoreVertical, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+// GitHub repository info - update these for your repo
+const GITHUB_OWNER = "Sten-CEO";
+const GITHUB_REPO = "provia-glass-crm";
+
 type DeviceType = "ios" | "android" | "desktop";
+
+interface ReleaseAsset {
+  name: string;
+  browser_download_url: string;
+  size: number;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  name: string;
+  published_at: string;
+  assets: ReleaseAsset[];
+}
+
+interface DownloadLinks {
+  windows: string | null;
+  macos: string | null;
+  macosArm: string | null;
+  version: string | null;
+}
 
 const useDeviceType = (): DeviceType => {
   const [device, setDevice] = useState<DeviceType>("desktop");
@@ -22,10 +46,117 @@ const useDeviceType = (): DeviceType => {
   return device;
 };
 
+const useGitHubRelease = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [downloadLinks, setDownloadLinks] = useState<DownloadLinks>({
+    windows: null,
+    macos: null,
+    macosArm: null,
+    version: null,
+  });
+
+  useEffect(() => {
+    const fetchLatestRelease = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+          {
+            headers: {
+              Accept: "application/vnd.github.v3+json",
+            },
+          }
+        );
+
+        if (response.status === 404) {
+          setError("no-release");
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`GitHub API error: ${response.status}`);
+        }
+
+        const release: GitHubRelease = await response.json();
+
+        // Find Windows and macOS assets
+        let windowsUrl: string | null = null;
+        let macosUrl: string | null = null;
+        let macosArmUrl: string | null = null;
+
+        for (const asset of release.assets) {
+          const name = asset.name.toLowerCase();
+
+          // Windows: .exe or .msi
+          if (name.endsWith(".exe") || name.endsWith(".msi")) {
+            if (!name.includes("arm")) {
+              windowsUrl = asset.browser_download_url;
+            }
+          }
+
+          // macOS: .dmg or .app.tar.gz
+          if (name.endsWith(".dmg")) {
+            if (name.includes("aarch64") || name.includes("arm")) {
+              macosArmUrl = asset.browser_download_url;
+            } else if (name.includes("x64") || name.includes("x86_64") || !name.includes("aarch")) {
+              macosUrl = asset.browser_download_url;
+            }
+          }
+        }
+
+        // If only one macOS version, use it for both
+        if (!macosUrl && macosArmUrl) macosUrl = macosArmUrl;
+        if (!macosArmUrl && macosUrl) macosArmUrl = macosUrl;
+
+        setDownloadLinks({
+          windows: windowsUrl,
+          macos: macosUrl,
+          macosArm: macosArmUrl,
+          version: release.tag_name,
+        });
+      } catch (err) {
+        console.error("Failed to fetch release:", err);
+        setError("fetch-error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLatestRelease();
+  }, []);
+
+  return { loading, error, downloadLinks };
+};
+
+// Simple QR Code generator using Google Charts API
+const QRCode = ({ url, size = 128 }: { url: string; size?: number }) => {
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&margin=1`;
+
+  return (
+    <img
+      src={qrUrl}
+      alt="QR Code pour l'app mobile"
+      width={size}
+      height={size}
+      className="rounded-lg"
+    />
+  );
+};
+
 const Download = () => {
   const deviceType = useDeviceType();
+  const { loading, error, downloadLinks } = useGitHubRelease();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+
+  // Get production URL for QR code
+  const employeeAppUrl = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/employee`;
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -50,6 +181,11 @@ const Download = () => {
         setIsInstallable(false);
       }
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
   };
 
   const InstallInstructionsiOS = () => (
@@ -112,6 +248,58 @@ const Download = () => {
     </div>
   );
 
+  const NoReleaseMessage = () => (
+    <div className="text-center p-6 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+      <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+      <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        Aucune version disponible
+      </p>
+      <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+        La version desktop sera bientot disponible.
+      </p>
+    </div>
+  );
+
+  const DownloadButton = ({
+    href,
+    icon: Icon,
+    label,
+    variant = "default",
+    disabled = false
+  }: {
+    href: string | null;
+    icon: any;
+    label: string;
+    variant?: "default" | "outline";
+    disabled?: boolean;
+  }) => {
+    if (!href || disabled) {
+      return (
+        <Button
+          className="w-full h-12 text-base"
+          variant={variant}
+          disabled
+        >
+          <Icon className="w-5 h-5 mr-2" />
+          {label}
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        className="w-full h-12 text-base"
+        variant={variant}
+        asChild
+      >
+        <a href={href} download>
+          <Icon className="w-5 h-5 mr-2" />
+          {label}
+        </a>
+      </Button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
@@ -149,33 +337,47 @@ const Download = () => {
               <CardDescription>
                 Installez le CRM comme un logiciel sur votre ordinateur
               </CardDescription>
+              {downloadLinks.version && (
+                <span className="inline-block mt-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                  Version {downloadLinks.version}
+                </span>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3">
-                <Button
-                  className="w-full h-12 text-base"
-                  variant="default"
-                  asChild
-                >
-                  <a href="/downloads/Provia-BASE-Setup.exe" download>
-                    <DownloadIcon className="w-5 h-5 mr-2" />
-                    Telecharger pour Windows
-                  </a>
-                </Button>
-                <Button
-                  className="w-full h-12 text-base"
-                  variant="outline"
-                  asChild
-                >
-                  <a href="/downloads/Provia-BASE.dmg" download>
-                    <Apple className="w-5 h-5 mr-2" />
-                    Telecharger pour macOS
-                  </a>
-                </Button>
-              </div>
-              <p className="text-xs text-center text-muted-foreground mt-4">
-                Windows 10+ / macOS 10.13+
-              </p>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : error === "no-release" ? (
+                <NoReleaseMessage />
+              ) : error ? (
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Erreur lors du chargement des telechargements.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-3">
+                    <DownloadButton
+                      href={downloadLinks.windows}
+                      icon={DownloadIcon}
+                      label="Telecharger pour Windows"
+                      disabled={!downloadLinks.windows}
+                    />
+                    <DownloadButton
+                      href={downloadLinks.macos}
+                      icon={Apple}
+                      label="Telecharger pour macOS"
+                      variant="outline"
+                      disabled={!downloadLinks.macos}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-4">
+                    Windows 10+ / macOS 10.13+
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -194,18 +396,18 @@ const Download = () => {
               {deviceType === "desktop" ? (
                 <>
                   <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      Scannez ce QR code avec votre telephone ou ouvrez cette page sur votre appareil mobile.
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Scannez ce QR code avec votre telephone pour installer l'app terrain.
                     </p>
-                    <div className="mt-4 mx-auto w-32 h-32 bg-white p-2 rounded-lg shadow-inner flex items-center justify-center">
-                      <div className="w-full h-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                        <span className="text-xs text-gray-400">QR Code</span>
+                    <div className="flex justify-center">
+                      <div className="bg-white p-2 rounded-lg shadow-inner">
+                        <QRCode url={employeeAppUrl} size={128} />
                       </div>
                     </div>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground">
-                      Ou visitez <strong>/employee</strong> sur votre telephone
+                      Ou visitez <strong className="font-mono">{employeeAppUrl}</strong> sur votre telephone
                     </p>
                   </div>
                 </>
