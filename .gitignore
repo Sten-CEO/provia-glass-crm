@@ -29,6 +29,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Bun lock file (use npm for CI compatibility)
+bun.lockb
+
 # Tauri build artifacts (builds are done via GitHub Actions)
 src-tauri/target/
 *.exe
