@@ -41,6 +41,7 @@ import Taxes from "./pages/parametres/Taxes";
 import Support from "./pages/Support";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import SignedQuoteView from "./pages/SignedQuoteView";
+import Download from "./pages/Download";
 import NotFound from "./pages/NotFound";
 import DevisEditor from "./pages/DevisEditor";
 import FactureDetail from "./pages/FactureDetail";
@@ -76,6 +77,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/auth/login" replace />} />
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/download" element={<Download />} />
           <Route path="/quote/:token" element={<PublicQuoteView />} />
           
           {/* Employee PWA Routes */}
