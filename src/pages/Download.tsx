@@ -7,7 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const GITHUB_OWNER = "Sten-CEO";
 const GITHUB_REPO = "provia-glass-crm";
 
-// Optional: Direct download URLs (fallback if env vars are set)
+// Direct download URLs for v1.0.0 release
+const MACOS_DOWNLOAD_URL = "https://github.com/Sten-CEO/provia-glass-crm/releases/download/v1.0.0/Provia.BASE_1.0.0_x64.dmg";
+
+// Optional: Override download URLs via env vars
 const ENV_WINDOWS_URL = import.meta.env.VITE_WINDOWS_DOWNLOAD_URL;
 const ENV_MACOS_URL = import.meta.env.VITE_MACOS_DOWNLOAD_URL;
 
@@ -66,13 +69,13 @@ const useGitHubRelease = () => {
         setLoading(true);
         setError(null);
 
-        // Check if env vars are set (direct URLs)
+        // Check if env vars are set (direct URLs override everything)
         if (ENV_WINDOWS_URL || ENV_MACOS_URL) {
           setDownloadLinks({
             windows: ENV_WINDOWS_URL || null,
-            macos: ENV_MACOS_URL || null,
-            macosArm: ENV_MACOS_URL || null,
-            version: "latest",
+            macos: ENV_MACOS_URL || MACOS_DOWNLOAD_URL,
+            macosArm: ENV_MACOS_URL || MACOS_DOWNLOAD_URL,
+            version: "v1.0.0",
           });
           setLoading(false);
           return;
@@ -89,7 +92,13 @@ const useGitHubRelease = () => {
         );
 
         if (response.status === 404) {
-          setError("no-release");
+          // No GitHub release found, but still provide macOS download
+          setDownloadLinks({
+            windows: null,
+            macos: MACOS_DOWNLOAD_URL,
+            macosArm: MACOS_DOWNLOAD_URL,
+            version: "v1.0.0",
+          });
           return;
         }
 
@@ -128,15 +137,25 @@ const useGitHubRelease = () => {
         if (!macosUrl && macosArmUrl) macosUrl = macosArmUrl;
         if (!macosArmUrl && macosUrl) macosArmUrl = macosUrl;
 
+        // Use hardcoded macOS URL as fallback
+        const finalMacosUrl = macosUrl || MACOS_DOWNLOAD_URL;
+        const finalMacosArmUrl = macosArmUrl || MACOS_DOWNLOAD_URL;
+
         setDownloadLinks({
           windows: windowsUrl,
-          macos: macosUrl,
-          macosArm: macosArmUrl,
-          version: release.tag_name,
+          macos: finalMacosUrl,
+          macosArm: finalMacosArmUrl,
+          version: release.tag_name || "v1.0.0",
         });
       } catch (err) {
         console.error("Failed to fetch release:", err);
-        setError("fetch-error");
+        // Even on error, provide macOS download URL
+        setDownloadLinks({
+          windows: null,
+          macos: MACOS_DOWNLOAD_URL,
+          macosArm: MACOS_DOWNLOAD_URL,
+          version: "v1.0.0",
+        });
       } finally {
         setLoading(false);
       }
