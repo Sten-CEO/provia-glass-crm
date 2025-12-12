@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  release:
+    types: [created]
   workflow_dispatch:
     inputs:
       version:
@@ -14,67 +16,35 @@ on:
 permissions:
   contents: write
 
+env:
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: get_version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Provia BASE ${{ steps.get_version.outputs.version }}
-          body: |
-            ## Provia BASE ${{ steps.get_version.outputs.version }}
-
-            ### Telechargements
-            - **Windows**: `Provia-BASE_${{ steps.get_version.outputs.version }}_x64-setup.exe`
-            - **macOS**: `Provia-BASE_${{ steps.get_version.outputs.version }}_x64.dmg`
-
-            ### Installation
-            1. Telechargez le fichier correspondant a votre systeme
-            2. Executez l'installateur
-            3. Lancez Provia BASE depuis votre bureau
-
-            ### Notes
-            Cette version inclut les dernieres mises a jour du CRM.
-          draft: false
-          prerelease: false
-
   build-tauri:
-    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
+          # macOS Intel
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
             rust_target: 'x86_64-apple-darwin'
+            name: 'macOS-Intel'
+          # macOS Apple Silicon
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             rust_target: 'aarch64-apple-darwin'
+            name: 'macOS-ARM'
+          # Windows
           - platform: 'windows-latest'
             args: ''
             rust_target: ''
+            name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.name }})
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -86,15 +56,14 @@ jobs:
           cache: 'npm'
 
       - name: Install Rust stable
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
 
-      - name: Install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
       - name: Install frontend dependencies
         run: npm ci
@@ -102,25 +71,54 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Get version
+        id: get_version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          tagName: ${{ steps.get_version.outputs.version }}
+          releaseName: 'Provia BASE ${{ steps.get_version.outputs.version }}'
+          releaseBody: |
+            ## Provia BASE ${{ steps.get_version.outputs.version }}
+
+            ### Telechargements
+            - **Windows**: `.exe` (installateur) ou `.msi`
+            - **macOS Intel**: `.dmg` (x64)
+            - **macOS Apple Silicon**: `.dmg` (aarch64)
+
+            ### Installation
+            1. Telechargez le fichier correspondant a votre systeme
+            2. Executez l'installateur
+            3. Lancez Provia BASE depuis votre bureau
+
+            ### Notes
+            Cette version inclut les dernieres mises a jour du CRM.
+          releaseDraft: false
+          prerelease: false
           args: ${{ matrix.args }}
 
-  update-release:
-    needs: [create-release, build-tauri]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update release to published
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
-              draft: false
-            });
+      - name: List built artifacts (Debug)
+        shell: bash
+        run: |
+          echo "=== Built artifacts ==="
+          if [ -d "src-tauri/target/release/bundle" ]; then
+            find src-tauri/target/release/bundle -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" \) 2>/dev/null || echo "No bundle artifacts found"
+          fi
+          if [ -d "src-tauri/target/x86_64-apple-darwin/release/bundle" ]; then
+            find src-tauri/target/x86_64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) 2>/dev/null || echo "No x86_64 artifacts"
+          fi
+          if [ -d "src-tauri/target/aarch64-apple-darwin/release/bundle" ]; then
+            find src-tauri/target/aarch64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.msi" \) 2>/dev/null || echo "No aarch64 artifacts"
+          fi

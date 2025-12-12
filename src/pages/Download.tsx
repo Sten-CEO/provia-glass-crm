@@ -3,11 +3,18 @@ import { Monitor, Smartphone, Apple, Download as DownloadIcon, Share, Plus, More
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Windows icon component
+const WindowsIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
+  </svg>
+);
+
 // GitHub repository info for fetching releases
 const GITHUB_OWNER = "Sten-CEO";
 const GITHUB_REPO = "provia-glass-crm";
 
-// Direct download URLs for v1.0.0 release
+// Direct download URLs for v1.0.0 release (fallback)
 const MACOS_DOWNLOAD_URL = "https://github.com/Sten-CEO/provia-glass-crm/releases/download/v1.0.0/Provia.BASE_1.0.0_x64.dmg";
 
 // Optional: Override download URLs via env vars
@@ -15,6 +22,7 @@ const ENV_WINDOWS_URL = import.meta.env.VITE_WINDOWS_DOWNLOAD_URL;
 const ENV_MACOS_URL = import.meta.env.VITE_MACOS_DOWNLOAD_URL;
 
 type DeviceType = "ios" | "android" | "desktop";
+type DesktopOS = "windows" | "macos" | "linux" | "unknown";
 
 interface ReleaseAsset {
   name: string;
@@ -51,6 +59,33 @@ const useDeviceType = (): DeviceType => {
   }, []);
 
   return device;
+};
+
+const useDesktopOS = (): DesktopOS => {
+  const [os, setOS] = useState<DesktopOS>("unknown");
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const platform = navigator.platform?.toLowerCase() || "";
+
+    // Check for Windows
+    if (userAgent.includes("windows") || platform.includes("win")) {
+      setOS("windows");
+    }
+    // Check for macOS
+    else if (userAgent.includes("macintosh") || userAgent.includes("mac os") || platform.includes("mac")) {
+      setOS("macos");
+    }
+    // Check for Linux
+    else if (userAgent.includes("linux") && !userAgent.includes("android")) {
+      setOS("linux");
+    }
+    else {
+      setOS("unknown");
+    }
+  }, []);
+
+  return os;
 };
 
 const useGitHubRelease = () => {
@@ -184,6 +219,7 @@ const QRCode = ({ url, size = 140 }: { url: string; size?: number }) => {
 
 const Download = () => {
   const deviceType = useDeviceType();
+  const desktopOS = useDesktopOS();
   const { loading, error, downloadLinks } = useGitHubRelease();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -460,23 +496,92 @@ const Download = () => {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-col gap-3">
-                    <DownloadButton
-                      href={downloadLinks.windows}
-                      icon={DownloadIcon}
-                      label="Telecharger pour Windows"
-                      sublabel=".exe - Windows 10+"
-                      disabled={!downloadLinks.windows}
-                    />
-                    <DownloadButton
-                      href={downloadLinks.macos}
-                      icon={Apple}
-                      label="Telecharger pour macOS"
-                      sublabel=".dmg - macOS 10.13+"
-                      variant="outline"
-                      disabled={!downloadLinks.macos}
-                    />
-                  </div>
+                  {/* OS-specific download buttons */}
+                  {desktopOS === "windows" && (
+                    <div className="flex flex-col gap-3">
+                      <DownloadButton
+                        href={downloadLinks.windows}
+                        icon={WindowsIcon}
+                        label="Telecharger pour Windows"
+                        sublabel=".exe - Windows 10+"
+                        disabled={!downloadLinks.windows}
+                      />
+                      {downloadLinks.macos && (
+                        <DownloadButton
+                          href={downloadLinks.macos}
+                          icon={Apple}
+                          label="Telecharger pour macOS"
+                          sublabel=".dmg - macOS 10.13+"
+                          variant="outline"
+                        />
+                      )}
+                      {!downloadLinks.windows && (
+                        <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                            Version Windows bientot disponible
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+                            La version Windows est en cours de preparation.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {desktopOS === "macos" && (
+                    <div className="flex flex-col gap-3">
+                      <DownloadButton
+                        href={downloadLinks.macos}
+                        icon={Apple}
+                        label="Telecharger pour macOS"
+                        sublabel=".dmg - macOS 10.13+"
+                        disabled={!downloadLinks.macos}
+                      />
+                      {downloadLinks.windows && (
+                        <DownloadButton
+                          href={downloadLinks.windows}
+                          icon={WindowsIcon}
+                          label="Telecharger pour Windows"
+                          sublabel=".exe - Windows 10+"
+                          variant="outline"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {(desktopOS === "linux" || desktopOS === "unknown") && (
+                    <div className="flex flex-col gap-3">
+                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <Monitor className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {desktopOS === "linux" ? "Version Linux" : "Votre systeme"} - Bientot disponible
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          En attendant, telechargez pour Windows ou macOS ci-dessous
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <DownloadButton
+                          href={downloadLinks.windows}
+                          icon={WindowsIcon}
+                          label="Windows"
+                          sublabel=".exe"
+                          variant="outline"
+                          disabled={!downloadLinks.windows}
+                        />
+                        <DownloadButton
+                          href={downloadLinks.macos}
+                          icon={Apple}
+                          label="macOS"
+                          sublabel=".dmg"
+                          variant="outline"
+                          disabled={!downloadLinks.macos}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {(!downloadLinks.windows && !downloadLinks.macos) && (
                     <NoReleaseMessage />
                   )}
