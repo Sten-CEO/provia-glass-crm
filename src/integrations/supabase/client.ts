@@ -5,13 +5,43 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Validate environment variables
+export const validateEnvVars = (): { valid: boolean; missing: string[] } => {
+  const missing: string[] = [];
+
+  if (!SUPABASE_URL) {
+    missing.push('VITE_SUPABASE_URL');
+  }
+  if (!SUPABASE_PUBLISHABLE_KEY) {
+    missing.push('VITE_SUPABASE_PUBLISHABLE_KEY');
+  }
+
+  return {
+    valid: missing.length === 0,
+    missing
+  };
+};
+
+// Create client only if env vars are valid
+const createSupabaseClient = () => {
+  const { valid } = validateEnvVars();
+
+  if (!valid) {
+    // Return a mock client that will show errors gracefully
+    // The app will display an error page instead of crashing
+    return null as any;
+  }
+
+  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  });
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+export const supabase = createSupabaseClient();
