@@ -201,7 +201,9 @@ serve(async (req) => {
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
     // Préparer l'URL frontend (sans slash final)
-    const frontendUrl = (Deno.env.get('FRONTEND_URL') || 'http://localhost:8080').replace(/\/$/, '');
+    // Priority: 1. FRONTEND_URL env var, 2. Origin header, 3. Referer header
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
+    const frontendUrl = (Deno.env.get('FRONTEND_URL') || origin || 'https://provia-glass.app').replace(/\/$/, '');
 
     // Préparer le contenu HTML de l'email
     const htmlContent = `
