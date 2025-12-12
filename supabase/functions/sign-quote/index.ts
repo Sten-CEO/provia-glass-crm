@@ -28,8 +28,6 @@ serve(async (req) => {
       throw new Error('Signature requise');
     }
 
-    console.log('Signing quote with token:', token);
-
     // Créer le client Supabase avec SERVICE_ROLE_KEY pour accès public
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -134,10 +132,7 @@ serve(async (req) => {
           link: `/devis/${quote.id}`
         }
       });
-      console.log('Notification created for quote signing');
     }
-
-    console.log('Quote signed successfully:', quote.numero);
 
     return new Response(
       JSON.stringify({

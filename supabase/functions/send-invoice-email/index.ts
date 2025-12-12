@@ -68,8 +68,6 @@ serve(async (req) => {
   try {
     const { invoiceId, recipientEmail, recipientName, subject, message, templateId }: SendInvoiceEmailRequest = await req.json();
 
-    console.log('Sending invoice email:', { invoiceId, recipientEmail, templateId });
-
     // Create Supabase admin client
     const supabase = createSupabaseAdmin();
 
@@ -80,8 +78,6 @@ serve(async (req) => {
       console.error('Auth error:', authError);
       throw new Error(authError);
     }
-
-    console.log('User authenticated:', userId);
 
     // Get company ID - check for employee fallback if needed
     let finalCompanyId = companyId;
@@ -207,7 +203,6 @@ serve(async (req) => {
     const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}`;
 
     // Envoyer l'email via SMTP
-    console.log('Sending email via SMTP...');
     const emailResult = await sendEmailViaSMTP(
       {
         host: company.smtp_host,
@@ -235,8 +230,6 @@ serve(async (req) => {
     if (!emailResult.success) {
       throw new Error(emailResult.error || 'Erreur lors de l\'envoi de l\'email');
     }
-
-    console.log('Email sent successfully via SMTP');
 
     return new Response(
       JSON.stringify({

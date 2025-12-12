@@ -50,7 +50,6 @@ export const EmployeePlanning = () => {
           filter: `employee_id=eq.${employeeId}`
         },
         (payload) => {
-          console.log('Planning assignment changed:', payload);
           loadPlanning();
         }
       )
@@ -62,13 +61,10 @@ export const EmployeePlanning = () => {
           table: 'jobs'
         },
         (payload) => {
-          console.log('Planning job updated:', payload);
           loadPlanning();
         }
       )
-      .subscribe((status) => {
-        console.log('Planning realtime status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

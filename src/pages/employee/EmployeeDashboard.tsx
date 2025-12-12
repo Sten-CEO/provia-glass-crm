@@ -65,7 +65,6 @@ export const EmployeeDashboard = () => {
           filter: `employee_id=eq.${employeeId}`
         },
         (payload) => {
-          console.log('Assignment changed:', payload);
           loadDashboardData();
         }
       )
@@ -77,7 +76,6 @@ export const EmployeeDashboard = () => {
           table: 'jobs'
         },
         (payload) => {
-          console.log('Job changed:', payload);
           loadDashboardData();
         }
       )
@@ -90,13 +88,10 @@ export const EmployeeDashboard = () => {
           filter: `employee_id=eq.${employeeId}`
         },
         (payload) => {
-          console.log('Timesheet changed:', payload);
           loadDashboardData();
         }
       )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

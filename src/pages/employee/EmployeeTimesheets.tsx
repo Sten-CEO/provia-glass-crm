@@ -165,13 +165,6 @@ export const EmployeeTimesheets = () => {
       // Use currentEntry.company_id if available, otherwise fallback to companyId from context
       const breakCompanyId = currentEntry.company_id || companyId;
 
-      // Debug logging
-      console.log("=== DEBUG startBreak ===");
-      console.log("currentEntry:", currentEntry);
-      console.log("currentEntry.company_id:", currentEntry.company_id);
-      console.log("companyId from context:", companyId);
-      console.log("breakCompanyId:", breakCompanyId);
-
       if (!breakCompanyId) {
         toast.error("Erreur: company_id manquant");
         console.error("breakCompanyId is null or undefined");
@@ -180,7 +173,6 @@ export const EmployeeTimesheets = () => {
 
       // If currentEntry.company_id is null, update it first to fix RLS policy
       if (!currentEntry.company_id && companyId) {
-        console.log("Updating currentEntry with company_id:", companyId);
         const { error: updateError } = await supabase
           .from("timesheets_entries")
           .update({ company_id: companyId })
@@ -194,7 +186,6 @@ export const EmployeeTimesheets = () => {
 
         // Update local state
         setCurrentEntry({ ...currentEntry, company_id: companyId });
-        console.log("currentEntry updated successfully");
       }
 
       const insertData = {
@@ -202,7 +193,6 @@ export const EmployeeTimesheets = () => {
         start_at: format(now, "HH:mm:ss"),
         company_id: breakCompanyId,
       };
-      console.log("Inserting with data:", insertData);
 
       const { data, error } = await supabase
         .from("timesheet_breaks")
@@ -215,7 +205,6 @@ export const EmployeeTimesheets = () => {
         throw error;
       }
 
-      console.log("Break created successfully:", data);
       setCurrentBreak(data);
       setOnBreak(true);
       toast.success("Pause démarrée");

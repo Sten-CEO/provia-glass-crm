@@ -58,14 +58,6 @@ serve(async (req) => {
 
     const { employeeId, email, password, firstName, lastName, phone, sendEmail } = await req.json();
 
-    console.log('📥 Received request data:', {
-      employeeId,
-      email,
-      firstName,
-      lastName,
-      passwordLength: password?.length
-    });
-
     if (!employeeId || !email) {
       throw new Error('Missing required fields: employeeId and email are required');
     }
@@ -98,19 +90,10 @@ serve(async (req) => {
     const employeeRole = employeeData.role || 'Employé terrain';
     const dbRole = roleMapping[employeeRole] || 'employe_terrain';
 
-    console.log('🎭 Role mapping:', {
-      employeeUIRole: employeeRole,
-      mappedDBRole: dbRole,
-      employeeCompanyId: employeeData.company_id,
-      callerCompanyId: companyId
-    });
-
     // Vérifier que l'employé appartient à la même company
     if (employeeData.company_id !== companyId) {
       throw new Error('Employee belongs to a different company');
     }
-
-    console.log('✅ Validation passed, creating user account...');
 
     // Créer l'utilisateur Supabase (ne déclenche PAS handle_new_user car c'est admin.createUser)
     const { data: newUser, error: createError} = await supabaseAdmin.auth.admin.createUser({
@@ -134,8 +117,6 @@ serve(async (req) => {
       throw createError;
     }
 
-    console.log('User created:', newUser.user.id);
-
     // Lier l'utilisateur à l'équipe avec le même company_id
     const { error: updateError } = await supabaseAdmin
       .from('equipe')
@@ -155,8 +136,6 @@ serve(async (req) => {
       throw updateError;
     }
 
-    console.log('✅ Equipe updated with user_id:', newUser.user.id);
-
     // Créer le rôle dans user_roles avec le rôle déterminé depuis la table equipe
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -173,8 +152,6 @@ serve(async (req) => {
       throw new Error('Failed to create user role: ' + roleError.message);
     }
 
-    console.log('✅ User role created successfully:', dbRole);
-
     // TODO: Envoyer l'email d'invitation si sendEmail === true
     // Nécessite l'intégration Resend
 
@@ -182,7 +159,6 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         userId: newUser.user.id,
-        temporaryPassword: password || null,
         role: dbRole,
         email: email,
       }),

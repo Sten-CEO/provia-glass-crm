@@ -48,17 +48,12 @@ const Parametres = () => {
         return;
       }
 
-      console.log("User ID:", user.id);
-
       // 2. Récupérer le company_id depuis user_roles
       const { data: userRole, error: roleError } = await supabase
         .from("user_roles")
         .select("company_id")
         .eq("user_id", user.id)
         .maybeSingle();
-
-      console.log("User role data:", userRole);
-      console.log("Role error:", roleError);
 
       if (roleError) {
         console.error("Error fetching user role:", roleError);
@@ -72,7 +67,6 @@ const Parametres = () => {
         return;
       }
 
-      console.log("Company ID found:", userRole.company_id);
       setCompanyId(userRole.company_id);
 
       // 3. Charger les données de la société
@@ -81,9 +75,6 @@ const Parametres = () => {
         .select("*")
         .eq("id", userRole.company_id)
         .maybeSingle();
-
-      console.log("Company data:", data);
-      console.log("Company error:", error);
 
       if (error) {
         console.error("Error fetching company:", error);
@@ -109,10 +100,7 @@ const Parametres = () => {
         setSmtpUsername(data.smtp_username || "");
         setSmtpPassword(data.smtp_password || "");
         setSmtpSecure(data.smtp_secure ?? false);
-
-        console.log("Company data loaded successfully");
       } else {
-        console.log("No company found");
         toast.error("Société non trouvée");
       }
     } catch (error) {
@@ -122,8 +110,6 @@ const Parametres = () => {
   };
 
   const handleSave = async () => {
-    console.log("HandleSave called, companyId:", companyId);
-
     if (!companyId) {
       console.error("No companyId available for save");
       toast.error("Impossible de sauvegarder : société non trouvée. Rechargez la page.");
@@ -134,7 +120,6 @@ const Parametres = () => {
 
     try {
       // Mise à jour de la société
-      console.log("Updating company:", companyId);
       const { error } = await supabase
         .from("companies")
         .update({
@@ -161,7 +146,6 @@ const Parametres = () => {
         console.error("Erreur update:", error);
         throw error;
       }
-      console.log("Update successful");
 
       toast.success("Paramètres enregistrés avec succès");
 

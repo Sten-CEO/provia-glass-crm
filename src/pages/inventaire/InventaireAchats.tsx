@@ -225,7 +225,6 @@ const InventaireAchats = () => {
 
     if (movements.length === 0) return;
 
-    console.log("Creating movements:", movements);
     const { error } = await supabase.from("inventory_movements").insert(movements);
 
     if (error) {
@@ -233,8 +232,6 @@ const InventaireAchats = () => {
       toast.error("Erreur lors de la création des mouvements");
       return;
     }
-
-    console.log(`✅ ${movements.length} movements created successfully`);
 
     // Update stock quantities
     for (const item of items.filter((i) => i.qty_received > 0 && i.item_id)) {
@@ -246,7 +243,6 @@ const InventaireAchats = () => {
 
       if (currentItem) {
         const newQty = currentItem.qty_on_hand + item.qty_received;
-        console.log(`Updating stock for item ${item.item_id}: ${currentItem.qty_on_hand} + ${item.qty_received} = ${newQty}`);
 
         await supabase
           .from("inventory_items")
