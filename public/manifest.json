@@ -1,31 +1,38 @@
 {
-  "name": "Provia Base – Employés",
-  "short_name": "Provia",
-  "description": "Application mobile pour les techniciens Provia Base",
+  "name": "Provia BASE - Terrain",
+  "short_name": "Provia Terrain",
+  "description": "Application mobile pour les techniciens Provia BASE",
   "start_url": "/employee",
+  "scope": "/employee",
   "display": "standalone",
   "background_color": "#FACC15",
   "theme_color": "#FACC15",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/logo.jpg",
+      "src": "/logo.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.jpg",
+      "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
   "screenshots": [
     {
-      "src": "/logo.jpg",
+      "src": "/logo.png",
       "sizes": "540x720",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "narrow"
     }
   ],
@@ -35,15 +42,15 @@
       "name": "Mes interventions",
       "short_name": "Jobs",
       "description": "Voir mes interventions du jour",
-      "url": "/employee/interventions",
-      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+      "url": "/employee/jobs",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     },
     {
       "name": "Pointage",
       "short_name": "Temps",
-      "description": "Gérer mon temps de travail",
+      "description": "Gerer mon temps de travail",
       "url": "/employee/timesheets",
-      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }
