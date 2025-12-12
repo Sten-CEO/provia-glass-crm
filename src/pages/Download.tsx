@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Monitor, Smartphone, Apple, Download as DownloadIcon, Share, Plus, MoreVertical, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { Monitor, Smartphone, Apple, Download as DownloadIcon, Share, Plus, MoreVertical, Loader2, AlertCircle, ExternalLink, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -10,38 +10,27 @@ const WindowsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// GitHub repository info for fetching releases
+// GitHub repository info
 const GITHUB_OWNER = "Sten-CEO";
 const GITHUB_REPO = "provia-glass-crm";
-
-// Direct download URLs for v1.0.0 release (fallback)
-const MACOS_DOWNLOAD_URL = "https://github.com/Sten-CEO/provia-glass-crm/releases/download/v1.0.0/Provia.BASE_1.0.0_x64.dmg";
-
-// Optional: Override download URLs via env vars
-const ENV_WINDOWS_URL = import.meta.env.VITE_WINDOWS_DOWNLOAD_URL;
-const ENV_MACOS_URL = import.meta.env.VITE_MACOS_DOWNLOAD_URL;
+const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
 
 type DeviceType = "ios" | "android" | "desktop";
 type DesktopOS = "windows" | "macos" | "linux" | "unknown";
+type MacArchitecture = "arm64" | "x64" | "unknown";
 
-interface ReleaseAsset {
-  name: string;
-  browser_download_url: string;
-  size: number;
-}
-
-interface GitHubRelease {
-  tag_name: string;
-  name: string;
-  published_at: string;
-  assets: ReleaseAsset[];
-}
-
-interface DownloadLinks {
-  windows: string | null;
-  macos: string | null;
-  macosArm: string | null;
-  version: string | null;
+interface ReleaseData {
+  version: string;
+  releaseUrl: string;
+  publishedAt: string;
+  windows: {
+    exe: string | null;
+    msi: string | null;
+  };
+  mac: {
+    dmg_x64: string | null;
+    dmg_arm64: string | null;
+  };
 }
 
 const useDeviceType = (): DeviceType => {
@@ -68,19 +57,13 @@ const useDesktopOS = (): DesktopOS => {
     const userAgent = navigator.userAgent.toLowerCase();
     const platform = navigator.platform?.toLowerCase() || "";
 
-    // Check for Windows
     if (userAgent.includes("windows") || platform.includes("win")) {
       setOS("windows");
-    }
-    // Check for macOS
-    else if (userAgent.includes("macintosh") || userAgent.includes("mac os") || platform.includes("mac")) {
+    } else if (userAgent.includes("macintosh") || userAgent.includes("mac os") || platform.includes("mac")) {
       setOS("macos");
-    }
-    // Check for Linux
-    else if (userAgent.includes("linux") && !userAgent.includes("android")) {
+    } else if (userAgent.includes("linux") && !userAgent.includes("android")) {
       setOS("linux");
-    }
-    else {
+    } else {
       setOS("unknown");
     }
   }, []);
@@ -88,118 +71,102 @@ const useDesktopOS = (): DesktopOS => {
   return os;
 };
 
-const useGitHubRelease = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [downloadLinks, setDownloadLinks] = useState<DownloadLinks>({
-    windows: null,
-    macos: null,
-    macosArm: null,
-    version: null,
-  });
+// Detect Apple Silicon vs Intel Mac
+const useMacArchitecture = (): MacArchitecture => {
+  const [arch, setArch] = useState<MacArchitecture>("unknown");
 
   useEffect(() => {
-    const fetchLatestRelease = async () => {
+    const detectArchitecture = async () => {
+      const userAgent = navigator.userAgent;
+      const platform = navigator.platform?.toLowerCase() || "";
+
+      // Check if it's a Mac first
+      if (!platform.includes("mac") && !userAgent.toLowerCase().includes("macintosh")) {
+        return;
+      }
+
+      // Method 1: Check for ARM in userAgent (Safari on Apple Silicon)
+      if (userAgent.includes("ARM") || userAgent.includes("arm")) {
+        setArch("arm64");
+        return;
+      }
+
+      // Method 2: Check GPU renderer (WebGL)
+      try {
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (gl) {
+          const debugInfo = (gl as WebGLRenderingContext).getExtension("WEBGL_debug_renderer_info");
+          if (debugInfo) {
+            const renderer = (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            // Apple Silicon GPUs contain "Apple" in the renderer string
+            if (renderer && typeof renderer === "string") {
+              if (renderer.includes("Apple M") || renderer.includes("Apple GPU")) {
+                setArch("arm64");
+                return;
+              }
+              // Intel GPUs on older Macs
+              if (renderer.includes("Intel")) {
+                setArch("x64");
+                return;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // WebGL not available
+      }
+
+      // Method 3: Check platform for ARM hints (less reliable)
+      // On Apple Silicon with Rosetta, platform might still say "MacIntel"
+      // So we default to unknown if we can't determine
+
+      // For now, if we're on a Mac but can't determine, we'll show both options
+      setArch("unknown");
+    };
+
+    detectArchitecture();
+  }, []);
+
+  return arch;
+};
+
+const useRelease = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [release, setRelease] = useState<ReleaseData | null>(null);
+
+  useEffect(() => {
+    const fetchRelease = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Check if env vars are set (direct URLs override everything)
-        if (ENV_WINDOWS_URL || ENV_MACOS_URL) {
-          setDownloadLinks({
-            windows: ENV_WINDOWS_URL || null,
-            macos: ENV_MACOS_URL || MACOS_DOWNLOAD_URL,
-            macosArm: ENV_MACOS_URL || MACOS_DOWNLOAD_URL,
-            version: "v1.0.0",
-          });
-          setLoading(false);
-          return;
-        }
-
-        // Fetch from GitHub Releases API
-        const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
-          {
-            headers: {
-              Accept: "application/vnd.github.v3+json",
-            },
-          }
-        );
+        const response = await fetch("/api/releases/latest");
 
         if (response.status === 404) {
-          // No GitHub release found, but still provide macOS download
-          setDownloadLinks({
-            windows: null,
-            macos: MACOS_DOWNLOAD_URL,
-            macosArm: MACOS_DOWNLOAD_URL,
-            version: "v1.0.0",
-          });
+          setError("no-release");
           return;
         }
 
         if (!response.ok) {
-          throw new Error(`GitHub API error: ${response.status}`);
+          throw new Error(`API error: ${response.status}`);
         }
 
-        const release: GitHubRelease = await response.json();
-
-        // Find Windows and macOS assets
-        let windowsUrl: string | null = null;
-        let macosUrl: string | null = null;
-        let macosArmUrl: string | null = null;
-
-        for (const asset of release.assets) {
-          const name = asset.name.toLowerCase();
-
-          // Windows: .exe or .msi
-          if (name.endsWith(".exe") || name.endsWith(".msi")) {
-            if (!name.includes("arm")) {
-              windowsUrl = asset.browser_download_url;
-            }
-          }
-
-          // macOS: .dmg
-          if (name.endsWith(".dmg")) {
-            if (name.includes("aarch64") || name.includes("arm")) {
-              macosArmUrl = asset.browser_download_url;
-            } else if (name.includes("x64") || name.includes("x86_64") || !name.includes("aarch")) {
-              macosUrl = asset.browser_download_url;
-            }
-          }
-        }
-
-        // If only one macOS version, use it for both
-        if (!macosUrl && macosArmUrl) macosUrl = macosArmUrl;
-        if (!macosArmUrl && macosUrl) macosArmUrl = macosUrl;
-
-        // Use hardcoded macOS URL as fallback
-        const finalMacosUrl = macosUrl || MACOS_DOWNLOAD_URL;
-        const finalMacosArmUrl = macosArmUrl || MACOS_DOWNLOAD_URL;
-
-        setDownloadLinks({
-          windows: windowsUrl,
-          macos: finalMacosUrl,
-          macosArm: finalMacosArmUrl,
-          version: release.tag_name || "v1.0.0",
-        });
+        const data: ReleaseData = await response.json();
+        setRelease(data);
       } catch (err) {
         console.error("Failed to fetch release:", err);
-        // Even on error, provide macOS download URL
-        setDownloadLinks({
-          windows: null,
-          macos: MACOS_DOWNLOAD_URL,
-          macosArm: MACOS_DOWNLOAD_URL,
-          version: "v1.0.0",
-        });
+        setError("fetch-error");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLatestRelease();
+    fetchRelease();
   }, []);
 
-  return { loading, error, downloadLinks };
+  return { loading, error, release };
 };
 
 // QR Code component using external API
@@ -209,7 +176,7 @@ const QRCode = ({ url, size = 140 }: { url: string; size?: number }) => {
   return (
     <img
       src={qrUrl}
-      alt="QR Code pour l'app mobile"
+      alt="QR Code pour telecharger l'app"
       width={size}
       height={size}
       className="rounded-lg"
@@ -220,20 +187,22 @@ const QRCode = ({ url, size = 140 }: { url: string; size?: number }) => {
 const Download = () => {
   const deviceType = useDeviceType();
   const desktopOS = useDesktopOS();
-  const { loading, error, downloadLinks } = useGitHubRelease();
+  const macArch = useMacArchitecture();
+  const { loading, error, release } = useRelease();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [showAllDownloads, setShowAllDownloads] = useState(false);
 
-  // Get production URL for QR code
-  const employeeAppUrl = useMemo(() => {
+  // Get download page URL for QR code (points to /download, NOT /employee)
+  const downloadPageUrl = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/employee`;
+    return `${origin}/download`;
   }, []);
 
   // Check if PWA is already installed
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
   }, []);
@@ -248,7 +217,6 @@ const Download = () => {
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Listen for app installed event
     const installedHandler = () => {
       setIsInstalled(true);
       setIsInstallable(false);
@@ -271,6 +239,20 @@ const Download = () => {
         setIsInstallable(false);
       }
     }
+  };
+
+  // Get the best macOS download URL based on architecture
+  const getMacDownloadUrl = (): string | null => {
+    if (!release) return null;
+
+    if (macArch === "arm64" && release.mac.dmg_arm64) {
+      return release.mac.dmg_arm64;
+    }
+    if (macArch === "x64" && release.mac.dmg_x64) {
+      return release.mac.dmg_x64;
+    }
+    // Fallback: return whichever is available
+    return release.mac.dmg_arm64 || release.mac.dmg_x64;
   };
 
   const InstallInstructionsiOS = () => (
@@ -305,7 +287,7 @@ const Download = () => {
         <Button variant="outline" size="sm" className="w-full" asChild>
           <a href="/employee">
             <ExternalLink className="w-4 h-4 mr-2" />
-            Ouvrir /employee dans Safari
+            Ouvrir l'app Terrain
           </a>
         </Button>
       </div>
@@ -357,7 +339,7 @@ const Download = () => {
         <Button variant="outline" size="sm" className="w-full" asChild>
           <a href="/employee">
             <ExternalLink className="w-4 h-4 mr-2" />
-            Ouvrir l'app terrain
+            Ouvrir l'app Terrain
           </a>
         </Button>
       </div>
@@ -375,6 +357,14 @@ const Download = () => {
       <p className="text-sm text-green-600 dark:text-green-400">
         Provia BASE Terrain est deja installe sur cet appareil. Recherchez l'icone sur votre ecran d'accueil.
       </p>
+      <div className="mt-3">
+        <Button variant="outline" size="sm" className="w-full" asChild>
+          <a href="/employee">
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Ouvrir l'app Terrain
+          </a>
+        </Button>
+      </div>
     </div>
   );
 
@@ -384,9 +374,33 @@ const Download = () => {
       <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
         Aucune version disponible
       </p>
-      <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
+      <p className="text-xs text-amber-600 dark:text-amber-300 mt-1 mb-4">
         La version desktop sera bientot disponible.
       </p>
+      <Button variant="outline" size="sm" asChild>
+        <a href={GITHUB_RELEASES_URL} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Voir les releases GitHub
+        </a>
+      </Button>
+    </div>
+  );
+
+  const ErrorMessage = () => (
+    <div className="text-center p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+      <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
+      <p className="text-sm font-medium text-red-800 dark:text-red-200">
+        Erreur de chargement
+      </p>
+      <p className="text-xs text-red-600 dark:text-red-300 mt-1 mb-4">
+        Impossible de recuperer les informations de telechargement.
+      </p>
+      <Button variant="outline" size="sm" asChild>
+        <a href={GITHUB_RELEASES_URL} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Telecharger depuis GitHub
+        </a>
+      </Button>
     </div>
   );
 
@@ -396,7 +410,8 @@ const Download = () => {
     label,
     sublabel,
     variant = "default",
-    disabled = false
+    disabled = false,
+    className = "",
   }: {
     href: string | null;
     icon: any;
@@ -404,11 +419,12 @@ const Download = () => {
     sublabel?: string;
     variant?: "default" | "outline";
     disabled?: boolean;
+    className?: string;
   }) => {
     if (!href || disabled) {
       return (
         <Button
-          className="w-full h-14 text-base flex flex-col items-center justify-center"
+          className={`w-full h-14 text-base flex flex-col items-center justify-center ${className}`}
           variant={variant}
           disabled
         >
@@ -423,11 +439,11 @@ const Download = () => {
 
     return (
       <Button
-        className="w-full h-14 text-base flex flex-col items-center justify-center"
+        className={`w-full h-14 text-base flex flex-col items-center justify-center ${className}`}
         variant={variant}
         asChild
       >
-        <a href={href}>
+        <a href={href} target="_blank" rel="noopener noreferrer" download>
           <span className="flex items-center">
             <Icon className="w-5 h-5 mr-2" />
             {label}
@@ -435,6 +451,283 @@ const Download = () => {
           {sublabel && <span className="text-xs opacity-70">{sublabel}</span>}
         </a>
       </Button>
+    );
+  };
+
+  // Windows download section
+  const WindowsDownloadSection = () => {
+    if (!release) return null;
+
+    const hasExe = !!release.windows.exe;
+    const hasMsi = !!release.windows.msi;
+
+    if (!hasExe && !hasMsi) {
+      return (
+        <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            Version Windows bientot disponible
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-3">
+        <DownloadButton
+          href={release.windows.exe}
+          icon={WindowsIcon}
+          label="Telecharger pour Windows"
+          sublabel=".exe - Windows 10+"
+          disabled={!hasExe}
+        />
+        {hasMsi && (
+          <DownloadButton
+            href={release.windows.msi}
+            icon={WindowsIcon}
+            label="Telecharger MSI"
+            sublabel=".msi - Installation entreprise"
+            variant="outline"
+          />
+        )}
+      </div>
+    );
+  };
+
+  // macOS download section
+  const MacOSDownloadSection = () => {
+    if (!release) return null;
+
+    const hasArm = !!release.mac.dmg_arm64;
+    const hasIntel = !!release.mac.dmg_x64;
+    const hasBoth = hasArm && hasIntel && release.mac.dmg_arm64 !== release.mac.dmg_x64;
+
+    if (!hasArm && !hasIntel) {
+      return (
+        <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+          <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            Version macOS bientot disponible
+          </p>
+        </div>
+      );
+    }
+
+    // If we know the architecture and have the right download
+    if (macArch === "arm64" && hasArm) {
+      return (
+        <div className="flex flex-col gap-3">
+          <DownloadButton
+            href={release.mac.dmg_arm64}
+            icon={Apple}
+            label="Telecharger pour Mac"
+            sublabel="Apple Silicon (M1/M2/M3)"
+          />
+          {hasIntel && hasBoth && (
+            <DownloadButton
+              href={release.mac.dmg_x64}
+              icon={Apple}
+              label="Version Intel"
+              sublabel=".dmg - Mac Intel"
+              variant="outline"
+            />
+          )}
+        </div>
+      );
+    }
+
+    if (macArch === "x64" && hasIntel) {
+      return (
+        <div className="flex flex-col gap-3">
+          <DownloadButton
+            href={release.mac.dmg_x64}
+            icon={Apple}
+            label="Telecharger pour Mac"
+            sublabel="Intel (x64)"
+          />
+          {hasArm && hasBoth && (
+            <DownloadButton
+              href={release.mac.dmg_arm64}
+              icon={Apple}
+              label="Version Apple Silicon"
+              sublabel=".dmg - M1/M2/M3"
+              variant="outline"
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Unknown architecture or only one version available - show both if available
+    if (hasBoth) {
+      return (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground text-center mb-1">
+            Choisissez la version adaptee a votre Mac :
+          </p>
+          <DownloadButton
+            href={release.mac.dmg_arm64}
+            icon={Apple}
+            label="Apple Silicon"
+            sublabel="M1 / M2 / M3"
+          />
+          <DownloadButton
+            href={release.mac.dmg_x64}
+            icon={Apple}
+            label="Intel"
+            sublabel="Mac Intel (avant 2020)"
+            variant="outline"
+          />
+          <p className="text-xs text-muted-foreground text-center">
+            <a href="https://support.apple.com/fr-fr/HT211814" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+              Comment verifier si j'ai un Mac Apple Silicon ou Intel ?
+            </a>
+          </p>
+        </div>
+      );
+    }
+
+    // Single version available
+    return (
+      <DownloadButton
+        href={getMacDownloadUrl()}
+        icon={Apple}
+        label="Telecharger pour macOS"
+        sublabel=".dmg - macOS 10.13+"
+      />
+    );
+  };
+
+  // Cross-platform download section (for Linux/unknown or when user wants all options)
+  const AllDownloadsSection = () => {
+    if (!release) return null;
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mb-2">
+          <Monitor className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Toutes les versions disponibles
+          </p>
+        </div>
+
+        {/* Windows */}
+        {(release.windows.exe || release.windows.msi) && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <WindowsIcon className="w-3 h-3" /> Windows
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {release.windows.exe && (
+                <DownloadButton
+                  href={release.windows.exe}
+                  icon={DownloadIcon}
+                  label=".exe"
+                  variant="outline"
+                />
+              )}
+              {release.windows.msi && (
+                <DownloadButton
+                  href={release.windows.msi}
+                  icon={DownloadIcon}
+                  label=".msi"
+                  variant="outline"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* macOS */}
+        {(release.mac.dmg_x64 || release.mac.dmg_arm64) && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Apple className="w-3 h-3" /> macOS
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {release.mac.dmg_arm64 && (
+                <DownloadButton
+                  href={release.mac.dmg_arm64}
+                  icon={DownloadIcon}
+                  label="Apple Silicon"
+                  variant="outline"
+                />
+              )}
+              {release.mac.dmg_x64 && (
+                <DownloadButton
+                  href={release.mac.dmg_x64}
+                  icon={DownloadIcon}
+                  label="Intel"
+                  variant="outline"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        <Button variant="link" size="sm" className="text-xs" asChild>
+          <a href={release.releaseUrl} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="w-3 h-3 mr-1" />
+            Voir tous les fichiers sur GitHub
+          </a>
+        </Button>
+      </div>
+    );
+  };
+
+  // Determine what to show based on OS
+  const DesktopDownloadContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
+    if (error === "no-release") {
+      return <NoReleaseMessage />;
+    }
+
+    if (error || !release) {
+      return <ErrorMessage />;
+    }
+
+    // Check if any downloads are available
+    const hasAnyDownload = release.windows.exe || release.windows.msi || release.mac.dmg_x64 || release.mac.dmg_arm64;
+
+    if (!hasAnyDownload) {
+      return <NoReleaseMessage />;
+    }
+
+    if (showAllDownloads || desktopOS === "linux" || desktopOS === "unknown") {
+      return <AllDownloadsSection />;
+    }
+
+    return (
+      <>
+        {desktopOS === "windows" && <WindowsDownloadSection />}
+        {desktopOS === "macos" && <MacOSDownloadSection />}
+
+        {/* Toggle to show all downloads */}
+        {(desktopOS === "windows" || desktopOS === "macos") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-2 text-xs text-muted-foreground"
+            onClick={() => setShowAllDownloads(!showAllDownloads)}
+          >
+            <ChevronDown className={`w-4 h-4 mr-1 transition-transform ${showAllDownloads ? "rotate-180" : ""}`} />
+            {showAllDownloads ? "Masquer" : "Voir toutes les versions"}
+          </Button>
+        )}
+
+        {showAllDownloads && (
+          <div className="mt-4 pt-4 border-t">
+            <AllDownloadsSection />
+          </div>
+        )}
+      </>
     );
   };
 
@@ -475,118 +768,14 @@ const Download = () => {
               <CardDescription>
                 Installez le CRM comme un logiciel sur votre ordinateur
               </CardDescription>
-              {downloadLinks.version && (
+              {release?.version && (
                 <span className="inline-block mt-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full font-medium">
-                  Version {downloadLinks.version}
+                  Version {release.version}
                 </span>
               )}
             </CardHeader>
             <CardContent className="space-y-4">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : error === "no-release" ? (
-                <NoReleaseMessage />
-              ) : error ? (
-                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    Erreur lors du chargement. Reessayez plus tard.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* OS-specific download buttons */}
-                  {desktopOS === "windows" && (
-                    <div className="flex flex-col gap-3">
-                      <DownloadButton
-                        href={downloadLinks.windows}
-                        icon={WindowsIcon}
-                        label="Telecharger pour Windows"
-                        sublabel=".exe - Windows 10+"
-                        disabled={!downloadLinks.windows}
-                      />
-                      {downloadLinks.macos && (
-                        <DownloadButton
-                          href={downloadLinks.macos}
-                          icon={Apple}
-                          label="Telecharger pour macOS"
-                          sublabel=".dmg - macOS 10.13+"
-                          variant="outline"
-                        />
-                      )}
-                      {!downloadLinks.windows && (
-                        <div className="text-center p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <AlertCircle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                            Version Windows bientot disponible
-                          </p>
-                          <p className="text-xs text-amber-600 dark:text-amber-300 mt-1">
-                            La version Windows est en cours de preparation.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {desktopOS === "macos" && (
-                    <div className="flex flex-col gap-3">
-                      <DownloadButton
-                        href={downloadLinks.macos}
-                        icon={Apple}
-                        label="Telecharger pour macOS"
-                        sublabel=".dmg - macOS 10.13+"
-                        disabled={!downloadLinks.macos}
-                      />
-                      {downloadLinks.windows && (
-                        <DownloadButton
-                          href={downloadLinks.windows}
-                          icon={WindowsIcon}
-                          label="Telecharger pour Windows"
-                          sublabel=".exe - Windows 10+"
-                          variant="outline"
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {(desktopOS === "linux" || desktopOS === "unknown") && (
-                    <div className="flex flex-col gap-3">
-                      <div className="text-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <Monitor className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {desktopOS === "linux" ? "Version Linux" : "Votre systeme"} - Bientot disponible
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          En attendant, telechargez pour Windows ou macOS ci-dessous
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <DownloadButton
-                          href={downloadLinks.windows}
-                          icon={WindowsIcon}
-                          label="Windows"
-                          sublabel=".exe"
-                          variant="outline"
-                          disabled={!downloadLinks.windows}
-                        />
-                        <DownloadButton
-                          href={downloadLinks.macos}
-                          icon={Apple}
-                          label="macOS"
-                          sublabel=".dmg"
-                          variant="outline"
-                          disabled={!downloadLinks.macos}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {(!downloadLinks.windows && !downloadLinks.macos) && (
-                    <NoReleaseMessage />
-                  )}
-                </>
-              )}
+              <DesktopDownloadContent />
             </CardContent>
           </Card>
 
@@ -615,22 +804,34 @@ const Download = () => {
                     </p>
                     <div className="flex justify-center">
                       <div className="bg-white p-3 rounded-xl shadow-lg">
-                        <QRCode url={employeeAppUrl} size={140} />
+                        <QRCode url={downloadPageUrl} size={140} />
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-4">
-                      <strong className="font-mono text-primary">{employeeAppUrl}</strong>
+                      Pointe vers <strong className="font-mono text-primary">/download</strong>
                     </p>
                   </div>
+
+                  {/* PWA Installation instructions for desktop users */}
                   <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                     <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-center">
                       <strong className="text-blue-700 dark:text-blue-300">iOS</strong>
-                      <p>Safari → Partager → Ecran d'accueil</p>
+                      <p>Safari &rarr; <Share className="w-3 h-3 inline" /> &rarr; Ecran d'accueil</p>
                     </div>
                     <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded text-center">
                       <strong className="text-green-700 dark:text-green-300">Android</strong>
-                      <p>Chrome → Menu → Installer</p>
+                      <p>Chrome &rarr; <MoreVertical className="w-3 h-3 inline" /> &rarr; Installer</p>
                     </div>
+                  </div>
+
+                  {/* Secondary action - open employee app */}
+                  <div className="pt-2 border-t">
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href="/employee">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Ouvrir l'app Terrain (web)
+                      </a>
+                    </Button>
                   </div>
                 </>
               ) : deviceType === "ios" ? (
@@ -681,6 +882,11 @@ const Download = () => {
       <footer className="border-t mt-16 py-8 bg-white/50 dark:bg-gray-900/50">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>&copy; 2024 Provia BASE. Tous droits reserves.</p>
+          <p className="mt-2">
+            <a href={GITHUB_RELEASES_URL} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              Voir toutes les releases sur GitHub
+            </a>
+          </p>
         </div>
       </footer>
     </div>
