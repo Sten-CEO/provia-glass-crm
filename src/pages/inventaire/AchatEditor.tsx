@@ -424,19 +424,11 @@ const AchatEditor = () => {
       } catch (e) {
         console.error("Sync mouvements achat:", e);
       }
-      
+
       // Créer notification si statut en_attente avec date prévue
-      console.log("🔔 Vérification notification pending:", {
-        status: formData.status,
-        hasDate: !!formData.expected_date,
-        hasCompany: !!company?.id,
-        companyId: company?.id
-      });
-      
       if (formData.status === "en_attente" && formData.expected_date && company?.id) {
         const dateFormatted = new Date(formData.expected_date).toLocaleDateString('fr-FR');
-        console.log("🔔 Tentative création notification pending...");
-        
+
         const notifData = {
           kind: "purchase_pending",
           type: "purchase_pending",
@@ -446,14 +438,11 @@ const AchatEditor = () => {
           link: `/inventaire/achats/${refId}`,
           level: "info",
         };
-        console.log("🔔 Données notification:", notifData);
-        
+
         const { data: notifResult, error: notifError } = await supabase.from("notifications").insert(notifData).select();
-        
+
         if (notifError) {
           console.error("❌ Erreur création notification pending:", notifError);
-        } else {
-          console.log("✅ Notification pending créée:", notifResult);
         }
       }
       
@@ -523,8 +512,6 @@ const AchatEditor = () => {
         .eq("id", id);
 
       // Créer une notification (CRM uniquement, pas pour l'app mobile)
-      console.log("🔔 Tentative création notification received, company:", company?.id);
-      
       if (company?.id) {
         const notifData = {
           kind: "purchase_received",
@@ -535,14 +522,11 @@ const AchatEditor = () => {
           link: `/inventaire/achats/${id}`,
           level: "success",
         };
-        console.log("🔔 Données notification received:", notifData);
-        
+
         const { data: notifResult, error: notifError } = await supabase.from("notifications").insert(notifData).select();
-        
+
         if (notifError) {
           console.error("❌ Erreur création notification received:", notifError);
-        } else {
-          console.log("✅ Notification received créée avec succès:", notifResult);
         }
       } else {
         console.warn("⚠️ Pas de company_id, notification non créée");

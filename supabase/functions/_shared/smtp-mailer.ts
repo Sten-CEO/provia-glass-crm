@@ -64,7 +64,6 @@ async function sendCommand(
   }
 
   const response = decoder.decode(buffer.subarray(0, n));
-  console.log(`S: ${response.trim()}`);
 
   // Check response code if expected
   if (expectedCode) {
@@ -90,7 +89,6 @@ async function readResponse(conn: Deno.Conn, expectedCode?: number): Promise<str
   }
 
   const response = decoder.decode(buffer.subarray(0, n));
-  console.log(`S: ${response.trim()}`);
 
   if (expectedCode) {
     const code = parseInt(response.substring(0, 3));
@@ -112,8 +110,6 @@ export async function sendEmailViaSMTP(
   let conn: Deno.Conn | null = null;
 
   try {
-    console.log(`Connecting to ${config.host}:${config.port} (secure: ${config.secure})`);
-
     // Connect to SMTP server
     if (config.secure) {
       // SSL/TLS connection (port 465)
@@ -253,8 +249,6 @@ export async function sendEmailViaSMTP(
 
     // Close connection
     conn.close();
-
-    console.log("Email sent successfully via SMTP");
 
     return {
       success: true,

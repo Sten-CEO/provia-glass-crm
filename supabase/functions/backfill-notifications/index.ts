@@ -15,8 +15,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Starting notifications backfill...');
-
     // 1. Backfill accepted quotes (quote_signed)
     const { data: acceptedQuotes } = await supabaseClient
       .from('devis')
@@ -37,7 +35,6 @@ Deno.serve(async (req) => {
           read_at: new Date().toISOString(), // Mark historical as read
         });
       }
-      console.log(`Created ${acceptedQuotes.length} quote_signed notifications`);
     }
 
     // 2. Backfill invoices to send
@@ -60,7 +57,6 @@ Deno.serve(async (req) => {
           read_at: new Date().toISOString(),
         });
       }
-      console.log(`Created ${invoicesToSend.length} invoice_to_send notifications`);
     }
 
     // 3. Backfill overdue invoices
@@ -84,7 +80,6 @@ Deno.serve(async (req) => {
           read_at: new Date().toISOString(),
         });
       }
-      console.log(`Created ${overdueInvoices.length} invoice_overdue notifications`);
     }
 
     // 4. Backfill job assignments (last 30 days)
@@ -110,7 +105,6 @@ Deno.serve(async (req) => {
           read: true,
         });
       }
-      console.log(`Created ${assignments.length} job_assigned notifications`);
     }
 
     // 5. Backfill agenda events (upcoming reminders)
@@ -160,7 +154,6 @@ Deno.serve(async (req) => {
           });
         }
       }
-      console.log(`Created agenda reminders for ${agendaEvents.length} events`);
     }
 
     return new Response(

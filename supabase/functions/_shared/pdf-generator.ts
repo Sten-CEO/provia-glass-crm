@@ -44,14 +44,10 @@ export async function generateQuotePDF(
   quote: QuoteData,
   supabase: SupabaseClient
 ): Promise<{ buffer: Uint8Array; filename: string }> {
-  console.log('🎨 generateQuotePDF called for quote:', quote.numero);
-  console.log('📋 Quote has template_id:', quote.template_id);
-
   // Récupérer le template si template_id est fourni
   let template: Partial<DocumentTemplate> = getDefaultTemplate();
 
   if (quote.template_id) {
-    console.log('🔍 Attempting to load template:', quote.template_id);
     const { data, error } = await supabase
       .from('doc_templates')
       .select('*')
@@ -61,13 +57,8 @@ export async function generateQuotePDF(
     if (error) {
       console.error('❌ Error loading template:', error);
     } else if (data) {
-      console.log('✅ Template loaded successfully:', data.name, '| Main color:', data.main_color);
       template = data;
-    } else {
-      console.log('⚠️ No template data returned for id:', quote.template_id);
     }
-  } else {
-    console.log('⚠️ No template_id provided, using default template');
   }
 
   // Convertir les données du devis au format attendu par le renderer
@@ -78,8 +69,6 @@ export async function generateQuotePDF(
     documentType: 'QUOTE',
     mode: 'pdf',
   });
-
-  console.log('📄 HTML generated using unified renderer');
 
   // Convertir le HTML en buffer (UTF-8)
   const buffer = new TextEncoder().encode(html);
@@ -95,8 +84,6 @@ export async function generateInvoicePDF(
   invoice: InvoiceData,
   supabase: SupabaseClient
 ): Promise<{ buffer: Uint8Array; filename: string }> {
-  console.log('🎨 generateInvoicePDF called for invoice:', invoice.numero);
-
   // Récupérer le template si template_id est fourni
   let template: Partial<DocumentTemplate> = getDefaultTemplate();
   template.type = 'INVOICE';

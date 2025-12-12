@@ -50,7 +50,6 @@ export const EmployeeJobs = () => {
           filter: `employee_id=eq.${employeeId}`
         },
         (payload) => {
-          console.log('Job assignment changed:', payload);
           loadJobs();
         }
       )
@@ -62,13 +61,10 @@ export const EmployeeJobs = () => {
           table: 'jobs'
         },
         (payload) => {
-          console.log('Job updated:', payload);
           loadJobs();
         }
       )
-      .subscribe((status) => {
-        console.log('Jobs realtime status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

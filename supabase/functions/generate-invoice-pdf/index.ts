@@ -55,8 +55,6 @@ serve(async (req) => {
     // Convertir le buffer en base64
     const base64 = btoa(String.fromCharCode(...buffer));
 
-    console.log('PDF generated successfully:', filename);
-
     return new Response(
       JSON.stringify({
         success: true,

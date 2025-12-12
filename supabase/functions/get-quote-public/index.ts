@@ -20,8 +20,6 @@ serve(async (req) => {
       throw new Error('Token manquant');
     }
 
-    console.log('Fetching public quote with token:', token);
-
     // Créer le client Supabase avec SERVICE_ROLE_KEY pour accès public
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -72,8 +70,6 @@ serve(async (req) => {
 
     // Convertir le PDF en base64 (méthode correcte pour préserver l'encodage UTF-8)
     const pdfBase64 = base64Encode(pdfBuffer);
-
-    console.log('Quote fetched successfully, PDF size:', pdfBuffer.byteLength);
 
     return new Response(
       JSON.stringify({

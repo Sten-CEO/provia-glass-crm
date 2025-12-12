@@ -208,7 +208,6 @@ const DevisEditor = () => {
         console.error("Error loading quote templates:", error);
         throw error;
       }
-      console.log("Loaded quote templates:", data);
       setQuoteTemplates(data || []);
       const def = (data || []).find((t: any) => t.is_default);
       if (def && !selectedTemplateId) setSelectedTemplateId(def.id);
@@ -407,20 +406,10 @@ const DevisEditor = () => {
       }
       
       setQuote((q) => ({ ...q, numero: finalNumber }));
-      
-      // Log pour debug
-      console.log("Auto-create check:", {
-        auto_create_enabled: payload.auto_create_job_on_accept,
-        new_status: payload.statut,
-        prev_status: prevStatus,
-        should_create: payload.auto_create_job_on_accept &&
-          (payload.statut === "Accepté" || payload.statut === "Signé")
-      });
-      
+
       // Auto-créer l'intervention si activé et statut est Accepté/Signé
-      if (payload.auto_create_job_on_accept && 
+      if (payload.auto_create_job_on_accept &&
           (payload.statut === "Accepté" || payload.statut === "Signé")) {
-        console.log("Création automatique de l'intervention (mode édition)...");
         await createJobFromQuote();
       }
     } else {
@@ -448,7 +437,6 @@ const DevisEditor = () => {
       // Auto-créer l'intervention si activé et statut est Accepté/Signé
       if (payload.auto_create_job_on_accept &&
           (payload.statut === "Accepté" || payload.statut === "Signé")) {
-        console.log("Création automatique de l'intervention (création de devis)...");
         await createJobFromQuote(newQuoteState);
       }
       navigate(`/devis/${data.id}`, { replace: true });
@@ -476,8 +464,6 @@ const DevisEditor = () => {
       return;
     }
 
-    console.log("createJobFromQuote appelée pour devis:", src.id);
-
     // Vérifier qu'aucune intervention n'existe déjà
     const { data: existingJob } = await supabase
       .from("jobs")
@@ -486,7 +472,6 @@ const DevisEditor = () => {
       .maybeSingle();
 
     if (existingJob) {
-      console.log("Une intervention existe déjà pour ce devis:", existingJob.id);
       toast.info("Une intervention existe déjà pour ce devis");
       return;
     }
@@ -519,8 +504,6 @@ const DevisEditor = () => {
       })) as unknown as any,
     };
 
-    console.log("Payload intervention:", jobPayload);
-
     const { data: newJob, error: jobError } = await supabase
       .from("jobs")
       .insert([jobPayload])
@@ -539,15 +522,12 @@ const DevisEditor = () => {
       return;
     }
 
-    console.log("Intervention créée avec succès:", newJob.id);
-
     // Import the sync function
     const { syncQuoteConsumablesToIntervention } = await import("@/lib/quoteToInterventionSync");
     
     // Sync consumables and services from quote
     try {
       await syncQuoteConsumablesToIntervention(src.id, newJob.id);
-      console.log("Articles du devis synchronisés");
     } catch (syncError) {
       console.error("Error syncing quote items:", syncError);
     }

@@ -56,8 +56,6 @@ serve(async (req) => {
       throw new Error(result.error || 'Échec du test SMTP');
     }
 
-    console.log('SMTP test successful');
-
     return new Response(
       JSON.stringify({
         success: true,
