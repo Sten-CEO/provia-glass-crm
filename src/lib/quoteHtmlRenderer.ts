@@ -616,7 +616,8 @@ export function renderQuoteToHtml(
 
   ${renderTitle()}
 
-  ${customContentHtml ? `<div style="margin-bottom: 24px;">${customContentHtml}</div>` : renderLinesTable()}
+  ${renderLinesTable()}
+  ${customContentHtml ? `<div style="margin-bottom: 24px;">${customContentHtml}</div>` : ""}
 
   ${renderTotals()}
 
