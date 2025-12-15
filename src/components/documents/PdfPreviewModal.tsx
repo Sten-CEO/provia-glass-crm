@@ -195,7 +195,22 @@ export const PdfPreviewModal = ({
   // Générer le HTML avec le renderer unifié
   const previewHtml = useMemo(() => {
     if (!template) return "";
-    return renderQuoteToHtml(quoteRenderData, template, {
+
+    // Nettoyer le template pour éviter les placeholders qui écrasent le contenu
+    const cleanedTemplate = {
+      ...template,
+      // Ignorer content_html s'il contient du texte placeholder
+      content_html: template.content_html &&
+        !template.content_html.includes("Contenu du document") &&
+        !template.content_html.includes("{{")
+          ? template.content_html
+          : null,
+    };
+
+    console.log("PDF Preview - Data:", quoteRenderData);
+    console.log("PDF Preview - Template:", cleanedTemplate);
+
+    return renderQuoteToHtml(quoteRenderData, cleanedTemplate, {
       documentType,
       mode: "preview",
     });

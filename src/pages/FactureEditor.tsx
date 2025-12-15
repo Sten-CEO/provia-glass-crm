@@ -111,10 +111,12 @@ export default function FactureEditor() {
 
   const loadCompanyInfo = async () => {
     // Charger les infos entreprise depuis company_settings
-    const { data: settings } = await supabase
+    const { data: settings, error } = await supabase
       .from("company_settings")
       .select("*")
       .single();
+
+    console.log("Company settings loaded:", settings, error);
 
     if (settings) {
       setCompanyInfo({
@@ -129,11 +131,13 @@ export default function FactureEditor() {
   };
 
   const loadClientDetails = async (clientId: string) => {
-    const { data: client } = await supabase
+    const { data: client, error } = await supabase
       .from("clients")
       .select("nom, email, telephone, adresse")
       .eq("id", clientId)
       .single();
+
+    console.log("Client details loaded:", client, error);
 
     if (client) {
       setClientInfo({
