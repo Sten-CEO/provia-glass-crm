@@ -18,6 +18,7 @@ import { QuickCreateDialog } from "@/components/clients/QuickCreateDialog";
 import { ContractUploadSection } from "@/components/clients/ContractUploadSection";
 import { SecondaryAddressesSection } from "@/components/clients/SecondaryAddressesSection";
 import { ClientPlanningSection } from "@/components/clients/ClientPlanningSection";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 const subFunctions = [
   { label: "Contrats", path: "/clients?filter=contrats" },
@@ -33,6 +34,7 @@ const ClientDetail = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
+  const { companyId } = useCurrentCompany();
   const [client, setClient] = useState<any>(null);
   const [devis, setDevis] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -76,14 +78,29 @@ const ClientDetail = () => {
   };
 
   useEffect(() => {
-    if (id) {
+    if (id && companyId) {
       loadClient();
       loadHistory();
     }
-  }, [id]);
+  }, [id, companyId]);
 
   const loadClient = async () => {
-    const { data } = await supabase.from("clients").select("*").eq("id", id).single();
+    if (!companyId) return;
+
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", id)
+      .eq("company_id", companyId)  // Security: filter by company
+      .single();
+
+    if (error) {
+      console.error("Error loading client:", error);
+      toast.error("Client introuvable ou accès non autorisé");
+      navigate("/clients");
+      return;
+    }
+
     if (data) {
       setClient(data);
       setFormData(data);
@@ -91,13 +108,17 @@ const ClientDetail = () => {
   };
 
   const loadHistory = async () => {
-    const { data: devisData } = await supabase.from("devis").select("*").eq("client_id", id);
-    const { data: jobsData } = await supabase.from("jobs").select("*").eq("client_id", id);
-    const { data: facturesData } = await supabase.from("factures").select("*").eq("client_id", id);
-    
-    if (devisData) setDevis(devisData);
-    if (jobsData) setJobs(jobsData);
-    if (facturesData) setFactures(facturesData);
+    if (!companyId) return;
+
+    const [devisRes, jobsRes, facturesRes] = await Promise.all([
+      supabase.from("devis").select("*").eq("client_id", id).eq("company_id", companyId),
+      supabase.from("jobs").select("*").eq("client_id", id).eq("company_id", companyId),
+      supabase.from("factures").select("*").eq("client_id", id).eq("company_id", companyId),
+    ]);
+
+    if (devisRes.data) setDevis(devisRes.data);
+    if (jobsRes.data) setJobs(jobsRes.data);
+    if (facturesRes.data) setFactures(facturesRes.data);
   };
 
   const handleSave = async () => {

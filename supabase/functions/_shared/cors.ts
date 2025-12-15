@@ -2,33 +2,41 @@
  * CORS Configuration for Edge Functions
  *
  * This file centralizes CORS settings for all Edge Functions.
- * Update ALLOWED_ORIGINS with your production domains.
  */
 
-// List of allowed origins - UPDATE THIS WITH YOUR DOMAINS
+// List of allowed origins
 const ALLOWED_ORIGINS = [
   // Development
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
 
-  // Production - ADD YOUR DOMAINS HERE
-  // 'https://your-app.vercel.app',
-  // 'https://your-domain.com',
-  // 'https://www.your-domain.com',
+  // Production domains
+  'https://provia-glass.app',
+  'https://www.provia-glass.app',
+  'https://app.provia-glass.com',
+];
+
+// Allowed domain patterns for dynamic checking
+const ALLOWED_DOMAIN_PATTERNS = [
+  /^https:\/\/[a-z0-9-]+\.lovable\.app$/,  // Lovable preview domains
+  /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/,  // Lovable branch previews
 ];
 
 /**
  * Get CORS headers based on request origin
- * Only allows origins in the ALLOWED_ORIGINS list
+ * Only allows origins in the ALLOWED_ORIGINS list or matching patterns
  */
 export function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
 
-  // Check if origin is allowed
-  const isAllowed = ALLOWED_ORIGINS.includes(origin) ||
-                    origin.endsWith('.supabase.co') ||  // Allow Supabase domains
-                    origin.endsWith('.lovable.app');     // Allow Lovable domains if used
+  // Check if origin is in explicit allow list
+  let isAllowed = ALLOWED_ORIGINS.includes(origin);
+
+  // Check against allowed patterns if not in explicit list
+  if (!isAllowed && origin) {
+    isAllowed = ALLOWED_DOMAIN_PATTERNS.some(pattern => pattern.test(origin));
+  }
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
