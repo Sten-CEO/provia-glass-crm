@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAccessControls, type AccessControls } from "@/hooks/useAccessControls";
-import { AccessDeniedOverlay } from "./AccessDeniedOverlay";
+import { ShieldX, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -8,7 +10,8 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps) => {
-  const { hasAccess, loading, userRole } = useAccessControls();
+  const { hasAccess, loading } = useAccessControls();
+  const navigate = useNavigate();
 
   // Show loading while checking permissions
   if (loading) {
@@ -24,16 +27,23 @@ export const ProtectedRoute = ({ children, requiredAccess }: ProtectedRouteProps
     return <>{children}</>;
   }
 
-  // If access is denied, show the page with overlay (no redirect)
+  // If access is denied, BLOCK access completely - don't render children at all
   return (
-    <div className="relative">
-      {/* Render the page content (will be blurred by overlay) */}
-      <div className="pointer-events-none select-none">
-        {children}
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-background via-background/95 to-muted/20">
+      <div className="text-center max-w-md p-8 glass-card rounded-2xl">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
+          <ShieldX className="w-8 h-8 text-destructive" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Accès refusé</h2>
+        <p className="text-muted-foreground mb-6">
+          Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+          Contactez votre administrateur si vous pensez qu'il s'agit d'une erreur.
+        </p>
+        <Button onClick={() => navigate(-1)} variant="outline" className="gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Retour
+        </Button>
       </div>
-
-      {/* Show access denied overlay on top */}
-      <AccessDeniedOverlay />
     </div>
   );
 };

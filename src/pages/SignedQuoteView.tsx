@@ -4,29 +4,37 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Download, FileCheck } from "lucide-react";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 export default function SignedQuoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { companyId, loading: companyLoading } = useCurrentCompany();
   const [loading, setLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [quoteNumber, setQuoteNumber] = useState<string>("");
 
   useEffect(() => {
-    loadSignedQuote();
+    if (!companyLoading && companyId) {
+      loadSignedQuote();
+    }
     return () => {
       if (pdfUrl) {
         URL.revokeObjectURL(pdfUrl);
       }
     };
-  }, [id]);
+  }, [id, companyId, companyLoading]);
 
   const loadSignedQuote = async () => {
     try {
       setLoading(true);
 
-      // Récupérer le devis avec sa signature
+      if (!companyId) {
+        throw new Error('Société non identifiée');
+      }
+
+      // Récupérer le devis avec sa signature - SECURITY: filter by company_id
       const { data: quote, error: quoteError } = await supabase
         .from('devis')
         .select(`
@@ -36,10 +44,13 @@ export default function SignedQuoteView() {
           quote_signatures(*)
         `)
         .eq('id', id)
+        .eq('company_id', companyId)  // Security: only access own company's quotes
         .single();
 
       if (quoteError || !quote) {
-        throw new Error('Devis introuvable');
+        toast.error('Devis introuvable ou accès non autorisé');
+        navigate('/devis');
+        return;
       }
 
       setQuoteNumber(quote.numero);

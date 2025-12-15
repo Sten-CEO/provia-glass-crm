@@ -28,6 +28,18 @@ function formatDate(dateString: string): string {
   return new Intl.DateTimeFormat('fr-FR').format(date);
 }
 
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, char => htmlEntities[char] || char);
+}
+
 // Replace template variables
 function replaceVariables(template: string, values: Record<string, any>): string {
   let result = template;
@@ -205,18 +217,24 @@ serve(async (req) => {
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
     const frontendUrl = (Deno.env.get('FRONTEND_URL') || origin || 'https://provia-glass.app').replace(/\/$/, '');
 
-    // Préparer le contenu HTML de l'email
+    // Préparer le contenu HTML de l'email (with XSS protection)
+    const safeCompanyName = escapeHtml(company.name || 'Provia Glass');
+    const safeQuoteNumero = escapeHtml(quote.numero || '');
+    const safeCompanyAdresse = company.adresse ? escapeHtml(company.adresse) : '';
+    const safeCompanyTelephone = company.telephone ? escapeHtml(company.telephone) : '';
+    const safeCompanyEmail = company.email ? escapeHtml(company.email) : '';
+
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #4A90E2; color: white; padding: 20px; text-align: center;">
-          <h1 style="margin: 0;">${company.name || 'Provia Glass'}</h1>
+          <h1 style="margin: 0;">${safeCompanyName}</h1>
         </div>
 
         <div style="padding: 30px; background-color: #f9f9f9;">
-          ${finalMessage.split('\n').map(line => `<p>${line}</p>`).join('')}
+          ${finalMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
 
           <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #4A90E2;">
-            <h2 style="margin-top: 0; color: #333;">Devis ${quote.numero}</h2>
+            <h2 style="margin-top: 0; color: #333;">Devis ${safeQuoteNumero}</h2>
             <p style="color: #666; margin: 5px 0;"><strong>Montant TTC:</strong> ${formatCurrency(quote.total_ttc || 0)}</p>
             <p style="color: #666; margin: 5px 0;"><strong>Valable jusqu'au:</strong> ${quote.expiry_date ? formatDate(quote.expiry_date) : 'N/A'}</p>
           </div>
@@ -229,10 +247,10 @@ serve(async (req) => {
           </div>
 
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
-            <p>${company.name || 'Provia Glass'}</p>
-            ${company.adresse ? `<p>${company.adresse}</p>` : ''}
-            ${company.telephone ? `<p>Tél: ${company.telephone}</p>` : ''}
-            ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+            <p>${safeCompanyName}</p>
+            ${safeCompanyAdresse ? `<p>${safeCompanyAdresse}</p>` : ''}
+            ${safeCompanyTelephone ? `<p>Tél: ${safeCompanyTelephone}</p>` : ''}
+            ${safeCompanyEmail ? `<p>Email: ${safeCompanyEmail}</p>` : ''}
           </div>
         </div>
       </div>
