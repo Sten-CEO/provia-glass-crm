@@ -21,6 +21,22 @@ interface LigneFacture {
   total: number;
 }
 
+interface ClientInfo {
+  nom: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+}
+
+interface CompanyInfo {
+  name: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+  siret: string;
+  website: string;
+}
+
 interface InvoiceState {
   id?: string;
   numero: string;
@@ -48,6 +64,8 @@ export default function FactureEditor() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const generateNumberMutation = useGenerateDocumentNumber("invoice");
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
 
   const [facture, setFacture] = useState<InvoiceState>({
     numero: "",
@@ -65,9 +83,17 @@ export default function FactureEditor() {
 
   useEffect(() => {
     loadClients();
+    loadCompanyInfo();
     if (!isNew && id) loadInvoice(id);
     else if (isNew && interventionId) loadInterventionData(interventionId);
   }, [id, interventionId]);
+
+  // Charger les infos client quand le client_id change
+  useEffect(() => {
+    if (facture.client_id) {
+      loadClientDetails(facture.client_id);
+    }
+  }, [facture.client_id]);
 
   useEffect(() => {
     if (!selectedTemplateId && defaultTemplate) setSelectedTemplateId(defaultTemplate.id);
@@ -81,6 +107,42 @@ export default function FactureEditor() {
   const loadClients = async () => {
     const { data } = await supabase.from("clients").select("id, nom, email");
     setClients(data || []);
+  };
+
+  const loadCompanyInfo = async () => {
+    // Charger les infos entreprise depuis company_settings
+    const { data: settings } = await supabase
+      .from("company_settings")
+      .select("*")
+      .single();
+
+    if (settings) {
+      setCompanyInfo({
+        name: settings.company_name || "",
+        email: settings.company_email || "",
+        telephone: settings.company_phone || "",
+        adresse: settings.company_address || "",
+        siret: settings.siret || "",
+        website: settings.website || "",
+      });
+    }
+  };
+
+  const loadClientDetails = async (clientId: string) => {
+    const { data: client } = await supabase
+      .from("clients")
+      .select("nom, email, telephone, adresse")
+      .eq("id", clientId)
+      .single();
+
+    if (client) {
+      setClientInfo({
+        nom: client.nom || "",
+        email: client.email || "",
+        telephone: client.telephone || "",
+        adresse: client.adresse || "",
+      });
+    }
   };
 
   const loadInvoice = async (invoiceId: string) => {
@@ -459,7 +521,23 @@ export default function FactureEditor() {
           open={pdfPreviewOpen}
           onOpenChange={setPdfPreviewOpen}
           documentType="INVOICE"
-          documentData={facture}
+          documentData={{
+            ...facture,
+            // Infos client pour le PDF
+            client_nom: clientInfo?.nom || facture.client_nom,
+            contact_email: clientInfo?.email || "",
+            contact_phone: clientInfo?.telephone || "",
+            property_address: clientInfo?.adresse || "",
+            // Infos entreprise pour le PDF
+            companies: companyInfo ? {
+              name: companyInfo.name,
+              email: companyInfo.email,
+              telephone: companyInfo.telephone,
+              adresse: companyInfo.adresse,
+              siret: companyInfo.siret,
+              website: companyInfo.website,
+            } : undefined,
+          }}
           templateId={selectedTemplateId}
         />
       )}
