@@ -6,6 +6,8 @@ import { Upload, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { validateFile, generateSafeFilename, DOCUMENT_TYPES } from "@/lib/fileValidation";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Contract {
   id: string;
@@ -22,6 +24,7 @@ interface ContractUploadSectionProps {
 export const ContractUploadSection = ({ clientId }: ContractUploadSectionProps) => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [uploading, setUploading] = useState(false);
+  const { company } = useCompany();
 
   useEffect(() => {
     loadContracts();
@@ -59,10 +62,34 @@ export const ContractUploadSection = ({ clientId }: ContractUploadSectionProps) 
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type and size
+    const validation = validateFile(file, DOCUMENT_TYPES);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${clientId}/${Date.now()}.${fileExt}`;
+      // Verify client belongs to user's company (ownership check)
+      if (!company?.id) {
+        throw new Error('Entreprise non trouvée');
+      }
+
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('nom, company_id')
+        .eq('id', clientId)
+        .eq('company_id', company.id) // Security: verify ownership
+        .single();
+
+      if (clientError || !clientData) {
+        throw new Error('Client non trouvé ou accès non autorisé');
+      }
+
+      // Generate safe filename to prevent path traversal
+      const safeFilename = generateSafeFilename(file.name);
+      const filePath = `${clientId}/${safeFilename}`;
 
       const { error: uploadError } = await supabase.storage
         .from('client-contracts')
@@ -73,13 +100,6 @@ export const ContractUploadSection = ({ clientId }: ContractUploadSectionProps) 
       const { data: { publicUrl } } = supabase.storage
         .from('client-contracts')
         .getPublicUrl(filePath);
-
-      // Récupérer les infos du client
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('nom')
-        .eq('id', clientId)
-        .single();
 
       // Générer un numéro de contrat unique
       const contractNumber = `CONT-${Date.now()}`;
