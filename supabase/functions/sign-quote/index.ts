@@ -28,6 +28,20 @@ serve(async (req) => {
       throw new Error('Signature requise');
     }
 
+    // Valider le format de la signature (doit être une image base64 valide)
+    const signatureRegex = /^data:image\/(png|jpeg|jpg);base64,[A-Za-z0-9+/=]+$/;
+    if (!signatureRegex.test(signatureImage)) {
+      throw new Error('Format de signature invalide');
+    }
+
+    // Limiter la taille de la signature (max 5MB)
+    const base64Data = signatureImage.split(',')[1] || '';
+    const sizeInBytes = (base64Data.length * 3) / 4;
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    if (sizeInBytes > maxSizeBytes) {
+      throw new Error('Signature trop volumineuse (max 5MB)');
+    }
+
     // Créer le client Supabase avec SERVICE_ROLE_KEY pour accès public
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',

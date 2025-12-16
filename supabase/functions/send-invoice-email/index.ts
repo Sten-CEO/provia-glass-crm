@@ -28,6 +28,18 @@ function formatDate(dateString: string): string {
   return new Intl.DateTimeFormat('fr-FR').format(date);
 }
 
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, char => htmlEntities[char] || char);
+}
+
 // Replace template variables
 function replaceVariables(template: string, values: Record<string, any>): string {
   let result = template;
@@ -179,7 +191,7 @@ serve(async (req) => {
         </div>
 
         <div style="padding: 30px; background-color: #f9f9f9;">
-          ${finalMessage.split('\n').map(line => `<p>${line}</p>`).join('')}
+          ${finalMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
 
           <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #E74C3C;">
             <h2 style="margin-top: 0; color: #333;">Facture ${invoice.numero}</h2>
