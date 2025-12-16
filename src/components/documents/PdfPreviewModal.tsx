@@ -46,11 +46,13 @@ export const PdfPreviewModal = ({
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    console.log("PdfPreview: useEffect triggered, open:", open, "templateId:", templateId);
     if (open) {
       // Charger les infos entreprise depuis company_settings
       loadCompanySettings();
 
       // Charger les infos client si client_id est fourni
+      console.log("PdfPreview: documentData.client_id:", documentData.client_id);
       if (documentData.client_id) {
         loadClientDetails(documentData.client_id);
       }
@@ -123,15 +125,20 @@ export const PdfPreviewModal = ({
 
       if (company) {
         console.log("PdfPreview: Company loaded from companies table:", company);
-        // Mapper les données de companies vers le format de company_settings
-        setCompanySettings({
-          company_name: company.name,
+        // Mapper les données de companies vers le format attendu
+        // La table companies utilise: telephone, adresse (noms français)
+        const mappedSettings = {
+          company_name: company.name || "",
           email: company.email || "",
-          phone: company.phone || company.telephone || "",
-          address: company.address || company.adresse || "",
+          phone: company.telephone || "",
+          address: company.adresse || "",
+          city: company.ville || "",
+          postal_code: company.code_postal || "",
           siret: company.siret || "",
           website: company.website || "",
-        });
+        };
+        console.log("PdfPreview: Mapped company settings:", mappedSettings);
+        setCompanySettings(mappedSettings);
       }
     } catch (error) {
       console.error("PdfPreview: Error in loadCompanySettings:", error);
