@@ -41,16 +41,84 @@ export const PdfPreviewModal = ({
 }: PdfPreviewModalProps) => {
   const [template, setTemplate] = useState<DocumentTemplate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [clientDetails, setClientDetails] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open && templateId) {
-      loadTemplate();
-    } else if (open && !templateId) {
-      // Charger le template par défaut si aucun n'est spécifié
-      loadDefaultTemplate();
+    if (open) {
+      // Charger les infos entreprise depuis company_settings
+      loadCompanySettings();
+
+      // Charger les infos client si client_id est fourni
+      if (documentData.client_id) {
+        loadClientDetails(documentData.client_id);
+      }
+
+      if (templateId) {
+        loadTemplate();
+      } else {
+        // Charger le template par défaut si aucun n'est spécifié
+        loadDefaultTemplate();
+      }
     }
-  }, [open, templateId]);
+  }, [open, templateId, documentData.client_id]);
+
+  const loadCompanySettings = async () => {
+    try {
+      // D'abord récupérer le company_id de l'utilisateur via user_roles
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("company_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!userRole?.company_id) {
+        console.warn("PdfPreview: No company_id found for user");
+        return;
+      }
+
+      // Charger les settings de l'entreprise
+      const { data: settings, error } = await supabase
+        .from("company_settings")
+        .select("*")
+        .eq("company_id", userRole.company_id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("PdfPreview: Error loading company settings:", error);
+        return;
+      }
+
+      console.log("PdfPreview: Company settings loaded:", settings);
+      setCompanySettings(settings);
+    } catch (error) {
+      console.error("PdfPreview: Error in loadCompanySettings:", error);
+    }
+  };
+
+  const loadClientDetails = async (clientId: string) => {
+    try {
+      const { data: client, error } = await supabase
+        .from("clients")
+        .select("nom, email, telephone, adresse")
+        .eq("id", clientId)
+        .single();
+
+      if (error) {
+        console.error("PdfPreview: Error loading client details:", error);
+        return;
+      }
+
+      console.log("PdfPreview: Client details loaded:", client);
+      setClientDetails(client);
+    } catch (error) {
+      console.error("PdfPreview: Error in loadClientDetails:", error);
+    }
+  };
 
   const loadTemplate = async () => {
     try {
@@ -152,8 +220,22 @@ export const PdfPreviewModal = ({
       total: line.total || ((line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0)),
     }));
 
-    // Récupérer les infos entreprise
+    // Récupérer les infos entreprise - priorité à documentData.companies, sinon companySettings
     const company = documentData.companies || {};
+
+    // Utiliser companySettings si company est vide
+    const companyName = company.name || company.nom || companySettings?.company_name || "";
+    const companyEmail = company.email || companySettings?.company_email || "";
+    const companyTelephone = company.telephone || company.phone || companySettings?.company_phone || "";
+    const companyAdresse = company.adresse || company.address || companySettings?.company_address || "";
+    const companySiret = company.siret || companySettings?.siret || "";
+    const companyWebsite = company.website || company.site_web || companySettings?.website || "";
+
+    // Utiliser clientDetails si les infos client ne sont pas fournies dans documentData
+    const clientNom = documentData.client_nom || clientDetails?.nom || "";
+    const clientEmail = documentData.contact_email || documentData.email || clientDetails?.email || "";
+    const clientTelephone = documentData.contact_phone || documentData.telephone || clientDetails?.telephone || "";
+    const clientAdresse = documentData.property_address || documentData.adresse || clientDetails?.adresse || "";
 
     return {
       numero: documentData.numero || "",
@@ -161,17 +243,17 @@ export const PdfPreviewModal = ({
       issued_at: documentData.issued_at || documentData.issue_date || new Date().toISOString(),
       expiry_date: documentData.expiry_date || documentData.echeance || "",
 
-      client_nom: documentData.client_nom || "",
-      client_email: documentData.contact_email || documentData.email || "",
-      client_telephone: documentData.contact_phone || documentData.telephone || "",
-      client_adresse: documentData.property_address || documentData.adresse || "",
+      client_nom: clientNom,
+      client_email: clientEmail,
+      client_telephone: clientTelephone,
+      client_adresse: clientAdresse,
 
-      company_name: company.name || company.nom || "",
-      company_email: company.email || "",
-      company_telephone: company.telephone || company.phone || "",
-      company_adresse: company.adresse || company.address || "",
-      company_siret: company.siret || "",
-      company_website: company.website || company.site_web || "",
+      company_name: companyName,
+      company_email: companyEmail,
+      company_telephone: companyTelephone,
+      company_adresse: companyAdresse,
+      company_siret: companySiret,
+      company_website: companyWebsite,
 
       total_ht: documentData.total_ht || 0,
       total_ttc: documentData.total_ttc || 0,
@@ -190,7 +272,7 @@ export const PdfPreviewModal = ({
         signature_image_url: documentData.quote_signatures[0].signature_image_url,
       } : undefined,
     };
-  }, [documentData]);
+  }, [documentData, companySettings, clientDetails]);
 
   // Générer le HTML avec le renderer unifié
   const previewHtml = useMemo(() => {
