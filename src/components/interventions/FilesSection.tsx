@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { validateFile, ALL_TYPES } from "@/lib/fileValidation";
+import { useCompany } from "@/hooks/useCompany";
 
 interface FilesSectionProps {
   interventionId: string | undefined;
@@ -12,6 +14,7 @@ interface FilesSectionProps {
 
 export function FilesSection({ interventionId }: FilesSectionProps) {
   const [files, setFiles] = useState<any[]>([]);
+  const { company } = useCompany();
 
   useEffect(() => {
     if (interventionId) {
@@ -35,18 +38,31 @@ export function FilesSection({ interventionId }: FilesSectionProps) {
       return;
     }
 
+    if (!company?.id) {
+      toast.error("Entreprise non trouvée");
+      return;
+    }
+
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      
+
+      // Validate file type and size
+      const validation = validateFile(file, ALL_TYPES);
+      if (!validation.valid) {
+        toast.error(`${file.name}: ${validation.error}`);
+        continue;
+      }
+
       // Pour simplifier, on enregistre juste les métadonnées
       // Dans un vrai système, on uploadrait vers Supabase Storage
       const { data, error } = await supabase
         .from("intervention_files")
         .insert([{
           intervention_id: interventionId,
+          company_id: company.id, // Security: include company_id
           file_name: file.name,
           file_url: URL.createObjectURL(file), // Temporaire
           file_type: file.type,

@@ -5,6 +5,7 @@ import { Camera, Upload, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEmployee } from "@/contexts/EmployeeContext";
+import { validateFile, generateSafeFilename, IMAGE_TYPES } from "@/lib/fileValidation";
 
 interface JobPhotoCaptureProps {
   jobId: string;
@@ -29,6 +30,13 @@ export const JobPhotoCapture = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type and size
+    const validation = validateFile(file, IMAGE_TYPES);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
     // Afficher un aperçu
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -43,9 +51,14 @@ export const JobPhotoCapture = ({
     try {
       setUploading(true);
 
-      // Upload vers Supabase Storage
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${jobId}/${employeeId}/${Date.now()}.${fileExt}`;
+      // Verify companyId is available (ownership check via context)
+      if (!companyId) {
+        throw new Error('Entreprise non trouvée');
+      }
+
+      // Upload vers Supabase Storage with safe filename
+      const safeFilename = generateSafeFilename(file.name);
+      const fileName = `${jobId}/${employeeId}/${safeFilename}`;
       const filePath = `intervention-photos/${fileName}`;
 
       const { error: uploadError, data } = await supabase.storage
