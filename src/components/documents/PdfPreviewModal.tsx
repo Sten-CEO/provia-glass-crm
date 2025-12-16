@@ -68,33 +68,71 @@ export const PdfPreviewModal = ({
     try {
       // D'abord récupérer le company_id de l'utilisateur via user_roles
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.warn("PdfPreview: No authenticated user");
+        return;
+      }
 
-      const { data: userRole } = await supabase
+      const { data: userRole, error: roleError } = await supabase
         .from("user_roles")
         .select("company_id")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      if (roleError) {
+        console.error("PdfPreview: Error loading user role:", roleError);
+      }
 
       if (!userRole?.company_id) {
         console.warn("PdfPreview: No company_id found for user");
         return;
       }
 
-      // Charger les settings de l'entreprise
-      const { data: settings, error } = await supabase
+      console.log("PdfPreview: Loading company data for company_id:", userRole.company_id);
+
+      // Essayer de charger company_settings
+      const { data: settings, error: settingsError } = await supabase
         .from("company_settings")
         .select("*")
         .eq("company_id", userRole.company_id)
         .maybeSingle();
 
-      if (error) {
-        console.error("PdfPreview: Error loading company settings:", error);
+      if (settingsError) {
+        console.error("PdfPreview: Error loading company settings:", settingsError);
+      }
+
+      // Si company_settings existe et a des données, l'utiliser
+      if (settings && settings.company_name) {
+        console.log("PdfPreview: Company settings loaded:", settings);
+        setCompanySettings(settings);
         return;
       }
 
-      console.log("PdfPreview: Company settings loaded:", settings);
-      setCompanySettings(settings);
+      // Sinon, essayer de charger depuis la table companies comme fallback
+      console.log("PdfPreview: No company_settings, trying companies table...");
+      const { data: company, error: companyError } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("id", userRole.company_id)
+        .single();
+
+      if (companyError) {
+        console.error("PdfPreview: Error loading company:", companyError);
+        return;
+      }
+
+      if (company) {
+        console.log("PdfPreview: Company loaded from companies table:", company);
+        // Mapper les données de companies vers le format de company_settings
+        setCompanySettings({
+          company_name: company.name,
+          email: company.email || "",
+          phone: company.phone || company.telephone || "",
+          address: company.address || company.adresse || "",
+          siret: company.siret || "",
+          website: company.website || "",
+        });
+      }
     } catch (error) {
       console.error("PdfPreview: Error in loadCompanySettings:", error);
     }
@@ -224,10 +262,11 @@ export const PdfPreviewModal = ({
     const company = documentData.companies || {};
 
     // Utiliser companySettings si company est vide
+    // Note: company_settings a les colonnes: company_name, email, phone, address, siret, etc.
     const companyName = company.name || company.nom || companySettings?.company_name || "";
-    const companyEmail = company.email || companySettings?.company_email || "";
-    const companyTelephone = company.telephone || company.phone || companySettings?.company_phone || "";
-    const companyAdresse = company.adresse || company.address || companySettings?.company_address || "";
+    const companyEmail = company.email || companySettings?.email || "";
+    const companyTelephone = company.telephone || company.phone || companySettings?.phone || "";
+    const companyAdresse = company.adresse || company.address || companySettings?.address || "";
     const companySiret = company.siret || companySettings?.siret || "";
     const companyWebsite = company.website || company.site_web || companySettings?.website || "";
 
