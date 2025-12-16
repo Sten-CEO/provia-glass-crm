@@ -13,6 +13,7 @@ import { useTemplates } from "@/hooks/useTemplates";
 import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { logInvoiceLink } from "@/lib/interventionLogger";
+import { useCompany } from "@/hooks/useCompany";
 
 interface LigneFacture {
   description: string;
@@ -58,6 +59,7 @@ export default function FactureEditor() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const interventionId = searchParams.get("intervention");
+  const { company } = useCompany();
 
   const [clients, setClients] = useState<any[]>([]);
   const { templates, defaultTemplate } = useTemplates("invoice");
@@ -83,10 +85,16 @@ export default function FactureEditor() {
 
   useEffect(() => {
     loadClients();
-    loadCompanyInfo();
     if (!isNew && id) loadInvoice(id);
     else if (isNew && interventionId) loadInterventionData(interventionId);
   }, [id, interventionId]);
+
+  // Charger les infos entreprise quand company.id est disponible
+  useEffect(() => {
+    if (company?.id) {
+      loadCompanyInfo(company.id);
+    }
+  }, [company?.id]);
 
   // Charger les infos client quand le client_id change
   useEffect(() => {
@@ -109,23 +117,24 @@ export default function FactureEditor() {
     setClients(data || []);
   };
 
-  const loadCompanyInfo = async () => {
-    // Charger les infos entreprise depuis company_settings
-    const { data: settings, error } = await supabase
-      .from("company_settings")
+  const loadCompanyInfo = async (companyId: string) => {
+    // Charger les infos entreprise depuis la table companies (comme Parametres.tsx)
+    const { data: companyData, error } = await supabase
+      .from("companies")
       .select("*")
+      .eq("id", companyId)
       .single();
 
-    console.log("Company settings loaded:", settings, error);
+    console.log("Company data loaded:", companyData, error);
 
-    if (settings) {
+    if (companyData) {
       setCompanyInfo({
-        name: settings.company_name || "",
-        email: settings.company_email || "",
-        telephone: settings.company_phone || "",
-        adresse: settings.company_address || "",
-        siret: settings.siret || "",
-        website: settings.website || "",
+        name: companyData.name || "",
+        email: companyData.email || "",
+        telephone: companyData.telephone || "",
+        adresse: companyData.adresse || "",
+        siret: companyData.siret || "",
+        website: companyData.website || "",
       });
     }
   };
