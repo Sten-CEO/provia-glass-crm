@@ -29,10 +29,34 @@ export function GuidecrmProgressBar() {
     setShowGuide,
   } = useGuidecrm();
 
+  // Debug log
+  console.log('[GuideCRM ProgressBar] State:', {
+    loading,
+    isOnboardingComplete,
+    showGuide,
+    hasProgress: !!progress,
+    currentStep: currentStep?.key,
+  });
+
   // Don't show if loading, complete, or hidden
-  if (loading || isOnboardingComplete || !showGuide) {
+  if (loading) {
+    console.log('[GuideCRM ProgressBar] Hidden: still loading');
     return null;
   }
+  if (isOnboardingComplete) {
+    console.log('[GuideCRM ProgressBar] Hidden: onboarding complete');
+    return null;
+  }
+  if (!showGuide) {
+    console.log('[GuideCRM ProgressBar] Hidden: showGuide is false');
+    return null;
+  }
+  if (!progress) {
+    console.log('[GuideCRM ProgressBar] Hidden: no progress data');
+    return null;
+  }
+
+  console.log('[GuideCRM ProgressBar] ✅ Showing progress bar!');
 
   return (
     <div
