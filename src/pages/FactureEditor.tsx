@@ -14,6 +14,7 @@ import { useGenerateDocumentNumber } from "@/hooks/useDocumentNumbering";
 import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { logInvoiceLink } from "@/lib/interventionLogger";
 import { useCompany } from "@/hooks/useCompany";
+import { guidecrmInvoiceCreated } from "@/components/guidecrm"; // GUIDECRM
 
 interface LigneFacture {
   description: string;
@@ -333,6 +334,7 @@ export default function FactureEditor() {
       }
 
       toast.success("Facture créée");
+      guidecrmInvoiceCreated(); // GUIDECRM: Mark invoice creation step complete
       navigate(`/factures/${data.id}`);
     } else {
       const { error } = await supabase.from("factures").update(payload).eq("id", facture.id);
@@ -373,7 +375,7 @@ export default function FactureEditor() {
           <Button variant="outline">
             <Mail className="h-4 w-4 mr-2" /> Envoyer
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} data-onboarding="btn-save-facture">
             <Save className="h-4 w-4 mr-2" /> Enregistrer
           </Button>
         </div>

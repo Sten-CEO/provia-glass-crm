@@ -11,6 +11,7 @@ import Taxes from "./parametres/Taxes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { guidecrmCompanySaved } from "@/components/guidecrm"; // GUIDECRM
 
 const Parametres = () => {
   const [companyName, setCompanyName] = useState("");
@@ -158,6 +159,9 @@ const Parametres = () => {
 
       toast.success("Paramètres enregistrés avec succès");
 
+      // GUIDECRM: Mark company step as complete
+      guidecrmCompanySaved();
+
       // Déclencher la mise à jour du nom de l'entreprise dans le header
       window.dispatchEvent(new Event('company-updated'));
 
@@ -197,9 +201,9 @@ const Parametres = () => {
 
       <Tabs defaultValue="societe" className="space-y-6">
         <TabsList className="glass-card">
-          <TabsTrigger value="societe" className="uppercase tracking-wide">Société</TabsTrigger>
+          <TabsTrigger value="societe" data-onboarding="tab-societe" className="uppercase tracking-wide">Société</TabsTrigger>
           <TabsTrigger value="email" className="uppercase tracking-wide">Email (SMTP)</TabsTrigger>
-          <TabsTrigger value="modeles" className="uppercase tracking-wide">Modèles</TabsTrigger>
+          <TabsTrigger value="modeles" data-onboarding="tab-modeles" className="uppercase tracking-wide">Modèles</TabsTrigger>
           <TabsTrigger value="catalogue" className="uppercase tracking-wide">Catalogue</TabsTrigger>
           <TabsTrigger value="taxes" className="uppercase tracking-wide">Taxes</TabsTrigger>
           <TabsTrigger value="rgpd" className="uppercase tracking-wide">RGPD</TabsTrigger>
@@ -322,6 +326,7 @@ const Parametres = () => {
             </div>
 
             <Button
+              data-onboarding="btn-save-company" /* GUIDECRM */
               className="bg-primary hover:bg-primary/90 text-foreground font-semibold w-full"
               onClick={handleSave}
               disabled={loading}
