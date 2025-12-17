@@ -44,7 +44,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showGuide, setShowGuide] = useState(true);
+  const [dismissed, setDismissed] = useState(false); // User manually dismissed
   const [highlightedTarget, setHighlightedTarget] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -289,7 +289,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   }, [progress, goToStep]);
 
   const dismissOnboarding = useCallback(() => {
-    setShowGuide(false);
+    setDismissed(true);
     // Store dismiss per user to avoid affecting other accounts
     if (userId) {
       localStorage.setItem(`guidecrm_dismissed_${userId}`, 'true');
@@ -323,7 +323,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     // Also clean up old global keys
     localStorage.removeItem('guidecrm_dismissed');
     localStorage.removeItem('guidecrm_celebration_shown');
-    setShowGuide(true);
+    setDismissed(false);
     await fetchProgress();
   }, [userId, companyId, fetchProgress]);
 
@@ -352,33 +352,51 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     return getCompletedStepsCount(progress);
   }, [progress]);
 
-  // Check if dismissed (per user)
-  useEffect(() => {
-    // Wait for userId to be available
-    if (!userId) return;
-
-    // Check per-user dismiss key
-    const dismissedPerUser = localStorage.getItem(`guidecrm_dismissed_${userId}`);
-
-    // Clean up old global key if it exists (don't migrate - each user starts fresh)
-    const dismissedGlobal = localStorage.getItem('guidecrm_dismissed');
-    if (dismissedGlobal) {
+  // Computed showGuide - synchronous calculation to avoid race conditions
+  const showGuide = useMemo(() => {
+    // Don't show while loading
+    if (loading) {
+      log('showGuide: false (loading)');
+      return false;
+    }
+    // Don't show if no userId yet
+    if (!userId) {
+      log('showGuide: false (no userId)');
+      return false;
+    }
+    // Don't show if onboarding is complete
+    if (isOnboardingComplete) {
+      log('showGuide: false (onboarding complete)');
+      return false;
+    }
+    // Don't show if user dismissed in this session
+    if (dismissed) {
+      log('showGuide: false (dismissed this session)');
+      return false;
+    }
+    // Check localStorage for persistent dismiss
+    const dismissedInStorage = localStorage.getItem(`guidecrm_dismissed_${userId}`);
+    if (dismissedInStorage === 'true') {
+      log('showGuide: false (dismissed in localStorage)');
+      return false;
+    }
+    // Clean up old global key if exists
+    const oldGlobalKey = localStorage.getItem('guidecrm_dismissed');
+    if (oldGlobalKey) {
       localStorage.removeItem('guidecrm_dismissed');
     }
+    log('showGuide: true ✅');
+    return true;
+  }, [loading, userId, isOnboardingComplete, dismissed]);
 
-    // Determine if guide should show
-    if (isOnboardingComplete) {
-      log('Guide hidden: onboarding complete');
-      setShowGuide(false);
-    } else if (dismissedPerUser === 'true') {
-      log('Guide hidden: dismissed by this user');
-      setShowGuide(false);
+  // setShowGuide for compatibility (uses setDismissed internally)
+  const setShowGuide = useCallback((value: boolean) => {
+    if (!value) {
+      setDismissed(true);
     } else {
-      // Explicitly show guide for users who haven't dismissed it
-      log('Guide shown: user has not dismissed');
-      setShowGuide(true);
+      setDismissed(false);
     }
-  }, [isOnboardingComplete, userId]);
+  }, []);
 
   // =========================================
   // CONTEXT VALUE
