@@ -15,6 +15,9 @@ const ALLOWED_ORIGINS = [
   'https://provia-glass.app',
   'https://www.provia-glass.app',
   'https://app.provia-glass.com',
+  'https://proviabase.fr',
+  'https://www.proviabase.fr',
+  'https://download.proviabase.fr',
 ];
 
 // Allowed domain patterns for dynamic checking
