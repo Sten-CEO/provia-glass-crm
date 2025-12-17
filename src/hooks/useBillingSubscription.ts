@@ -155,7 +155,8 @@ export async function updateBillingSeats(ownerUserId: string, activeSeats: numbe
   error?: string;
 }> {
   try {
-    const response = await fetch('https://proviabase.fr/api/seats/set', {
+    // Use www subdomain to avoid CORS redirect issues
+    const response = await fetch('https://www.proviabase.fr/api/seats/set', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
