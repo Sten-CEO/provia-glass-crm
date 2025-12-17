@@ -10,6 +10,11 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
+// Emails exemptés de la vérification d'abonnement (comptes admin/support)
+const BILLING_EXEMPT_EMAILS = [
+  'support@proviabase.fr',
+];
+
 export const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,6 +23,9 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
   const { role, companyId, loading: roleLoading } = useUserRole();
   const { isActive, loading: subscriptionLoading } = useBillingSubscription(ownerUserId || undefined);
+
+  // Check if user is exempt from billing
+  const isBillingExempt = user?.email && BILLING_EXEMPT_EMAILS.includes(user.email);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -104,8 +112,8 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
-  // Bloquer l'accès si l'abonnement n'est pas actif (sauf pour les employés terrain)
-  if (ownerUserId && !isActive && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
+  // Bloquer l'accès si l'abonnement n'est pas actif (sauf pour les employés terrain et comptes exemptés)
+  if (ownerUserId && !isActive && !isBillingExempt && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
     return (
       <div className="flex items-center justify-center h-screen p-8 bg-background">
         <div className="glass-modal max-w-lg p-8 text-center">
