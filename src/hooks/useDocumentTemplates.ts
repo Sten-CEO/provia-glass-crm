@@ -219,6 +219,19 @@ export function useDocumentTemplates(options: UseDocumentTemplatesOptions = {}) 
    */
   const deleteTemplate = async (id: string): Promise<boolean> => {
     try {
+      // First, remove template references from factures and devis
+      // This prevents foreign key constraint errors
+      await supabase
+        .from("factures")
+        .update({ template_id: null })
+        .eq("template_id", id);
+
+      await supabase
+        .from("devis")
+        .update({ template_id: null })
+        .eq("template_id", id);
+
+      // Now delete the template
       const { error: deleteError } = await supabase
         .from("doc_templates")
         .delete()

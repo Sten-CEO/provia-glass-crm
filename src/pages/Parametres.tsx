@@ -69,39 +69,49 @@ const Parametres = () => {
 
       setCompanyId(userRole.company_id);
 
-      // 3. Charger les données de la société
+      // 3. Charger les données depuis company_settings
       const { data, error } = await supabase
-        .from("companies")
+        .from("company_settings")
         .select("*")
-        .eq("id", userRole.company_id)
+        .eq("company_id", userRole.company_id)
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching company:", error);
+        console.error("Error fetching company settings:", error);
         toast.error("Erreur lors du chargement des paramètres");
         return;
       }
 
       if (data) {
-        setCompanyName(data.name || "");
+        setCompanyName(data.company_name || "");
         setSiret(data.siret || "");
         setTva(data.tva_intracom || "");
         setEmail(data.email || "");
-        setEmailFrom(data.email_from || "");
-        setTelephone(data.telephone || "");
-        setAdresse(data.adresse || "");
-        setVille(data.ville || "");
-        setCodePostal(data.code_postal || "");
+        setEmailFrom(""); // Not in company_settings
+        setTelephone(data.phone || "");
+        setAdresse(data.address || "");
+        setVille(data.city || "");
+        setCodePostal(data.postal_code || "");
 
-        // SMTP Configuration
-        setSmtpEnabled(data.smtp_enabled || false);
-        setSmtpHost(data.smtp_host || "");
-        setSmtpPort(data.smtp_port || 587);
-        setSmtpUsername(data.smtp_username || "");
-        setSmtpPassword(data.smtp_password || "");
-        setSmtpSecure(data.smtp_secure ?? false);
+        // SMTP Configuration - check if columns exist
+        setSmtpEnabled((data as any).smtp_enabled || false);
+        setSmtpHost((data as any).smtp_host || "");
+        setSmtpPort((data as any).smtp_port || 587);
+        setSmtpUsername((data as any).smtp_username || "");
+        setSmtpPassword((data as any).smtp_password || "");
+        setSmtpSecure((data as any).smtp_secure ?? false);
       } else {
-        toast.error("Société non trouvée");
+        // Create default settings if none exist
+        const { error: insertError } = await supabase
+          .from("company_settings")
+          .insert({
+            company_id: userRole.company_id,
+            company_name: "Mon entreprise"
+          });
+
+        if (!insertError) {
+          setCompanyName("Mon entreprise");
+        }
       }
     } catch (error) {
       console.error("Error loading company settings:", error);
@@ -119,33 +129,32 @@ const Parametres = () => {
     setLoading(true);
 
     try {
-      // Mise à jour de la société
+      // Mise à jour de company_settings
       const { error } = await supabase
-        .from("companies")
+        .from("company_settings")
         .update({
-          name: companyName,
+          company_name: companyName,
           siret: siret,
           tva_intracom: tva,
           email: email,
-          email_from: emailFrom,
-          telephone: telephone,
-          adresse: adresse,
-          ville: ville,
-          code_postal: codePostal,
-          smtp_enabled: smtpEnabled,
-          smtp_host: smtpHost,
-          smtp_port: smtpPort,
-          smtp_username: smtpUsername,
-          smtp_password: smtpPassword,
-          smtp_secure: smtpSecure,
+          phone: telephone,
+          address: adresse,
+          city: ville,
+          postal_code: codePostal,
           updated_at: new Date().toISOString()
         })
-        .eq("id", companyId);
+        .eq("company_id", companyId);
 
       if (error) {
         console.error("Erreur update:", error);
         throw error;
       }
+
+      // Also update the company name in companies table
+      await supabase
+        .from("companies")
+        .update({ name: companyName })
+        .eq("id", companyId);
 
       toast.success("Paramètres enregistrés avec succès");
 
