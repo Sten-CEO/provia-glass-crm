@@ -296,6 +296,7 @@ export default function FactureEditor() {
     const client = clients.find((c) => c.id === facture.client_id);
 
     const payload: any = {
+      company_id: company?.id, // Required for RLS
       numero: facture.numero,
       client_id: facture.client_id,
       client_nom: client?.nom || facture.client_nom,

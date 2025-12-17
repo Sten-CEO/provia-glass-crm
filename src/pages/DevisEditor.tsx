@@ -330,11 +330,18 @@ const DevisEditor = () => {
     let finalNumber = quote.numero;
     if (finalNumber.startsWith("DRAFT-")) {
       try {
-        const { data } = await supabase
+        let query = supabase
           .from("devis")
           .select("numero")
           .order("created_at", { ascending: false })
           .limit(1);
+
+        // Filter by company_id to avoid conflicts with other companies
+        if (company?.id) {
+          query = query.eq("company_id", company.id);
+        }
+
+        const { data } = await query;
         const lastNum = data?.[0]?.numero || "DEV-0000";
         const num = parseInt(lastNum.split("-")[1]) + 1;
         finalNumber = `DEV-${String(num).padStart(4, "0")}`;
@@ -344,6 +351,7 @@ const DevisEditor = () => {
     }
 
     const payload = {
+      company_id: company?.id, // Required for RLS
       numero: finalNumber,
       title: quote.title,
       client_id: quote.client_id,

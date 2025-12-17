@@ -491,6 +491,7 @@ const Clients = () => {
 
     const { error } = await supabase.from("clients").insert([
       {
+        company_id: companyId, // Required for RLS
         nom: newClient.nom,
         email: newClient.email || null,
         telephone: newClient.telephone || null,
@@ -813,6 +814,7 @@ const Clients = () => {
         
         const values = lines[i].split(",").map(v => v.replace(/"/g, "").trim());
         const client: any = {
+          company_id: companyId, // Required for RLS
           nom: values[0],
           email: values[1] || null,
           telephone: values[2] || null,

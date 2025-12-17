@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
+import { useCurrentCompany } from "@/hooks/useCurrentCompany";
 
 interface QuickCreateDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ interface QuickCreateDialogProps {
 
 export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientName, clientData }: QuickCreateDialogProps) {
   const navigate = useNavigate();
+  const { companyId } = useCurrentCompany();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({
     titre: "",
@@ -39,6 +41,7 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
     try {
       if (type === "devis") {
         const { data, error } = await supabase.from("devis").insert({
+          company_id: companyId, // Required for RLS
           client_id: clientId,
           client_nom: clientName,
           numero: `TEMP-${Date.now()}`,
@@ -60,6 +63,7 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
         onOpenChange(false);
       } else if (type === "intervention") {
         const { data, error } = await supabase.from("jobs").insert({
+          company_id: companyId, // Required for RLS
           client_id: clientId,
           client_nom: clientName,
           titre: formData.titre || "Nouvelle intervention",
@@ -74,6 +78,7 @@ export function QuickCreateDialog({ open, onOpenChange, type, clientId, clientNa
         onOpenChange(false);
       } else if (type === "facture") {
         const { data, error } = await supabase.from("factures").insert({
+          company_id: companyId, // Required for RLS
           client_id: clientId,
           client_nom: clientName,
           numero: `TEMP-${Date.now()}`,
