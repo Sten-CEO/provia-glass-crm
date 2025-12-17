@@ -21,10 +21,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 // Allowed domain patterns for dynamic checking
-const ALLOWED_DOMAIN_PATTERNS = [
-  /^https:\/\/[a-z0-9-]+\.lovable\.app$/,  // Lovable preview domains
-  /^https:\/\/[a-z0-9-]+--[a-z0-9-]+\.lovable\.app$/,  // Lovable branch previews
-];
+const ALLOWED_DOMAIN_PATTERNS: RegExp[] = [];
 
 /**
  * Get CORS headers based on request origin
