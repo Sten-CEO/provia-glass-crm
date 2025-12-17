@@ -17,16 +17,22 @@ export function GuidecrmCompletion() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [hasShownBefore, setHasShownBefore] = useState(false);
 
-  // Check if we should show the celebration
+  // Get userId from progress
+  const userId = progress?.user_id;
+
+  // Check if we should show the celebration (per user)
   useEffect(() => {
-    const alreadyShown = localStorage.getItem('guidecrm_celebration_shown');
+    if (!userId) return;
+
+    const celebrationKey = `guidecrm_celebration_${userId}`;
+    const alreadyShown = localStorage.getItem(celebrationKey);
 
     if (isOnboardingComplete && !alreadyShown && !hasShownBefore) {
       // Small delay to ensure smooth transition
       const timer = setTimeout(() => {
         setShowCelebration(true);
         setHasShownBefore(true);
-        localStorage.setItem('guidecrm_celebration_shown', 'true');
+        localStorage.setItem(celebrationKey, 'true');
 
         // Trigger confetti
         triggerConfetti();
@@ -34,7 +40,7 @@ export function GuidecrmCompletion() {
 
       return () => clearTimeout(timer);
     }
-  }, [isOnboardingComplete, hasShownBefore]);
+  }, [isOnboardingComplete, hasShownBefore, userId]);
 
   const triggerConfetti = () => {
     // Multiple bursts of confetti

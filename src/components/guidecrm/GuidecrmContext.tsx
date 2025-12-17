@@ -290,8 +290,11 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
 
   const dismissOnboarding = useCallback(() => {
     setShowGuide(false);
-    localStorage.setItem('guidecrm_dismissed', 'true');
-  }, []);
+    // Store dismiss per user to avoid affecting other accounts
+    if (userId) {
+      localStorage.setItem(`guidecrm_dismissed_${userId}`, 'true');
+    }
+  }, [userId]);
 
   const resetOnboarding = useCallback(async () => {
     if (!userId || !companyId) return;
@@ -312,6 +315,12 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
       .eq('user_id', userId)
       .eq('company_id', companyId) as any);
 
+    // Remove per-user localStorage items
+    if (userId) {
+      localStorage.removeItem(`guidecrm_dismissed_${userId}`);
+      localStorage.removeItem(`guidecrm_celebration_${userId}`);
+    }
+    // Also clean up old global keys
     localStorage.removeItem('guidecrm_dismissed');
     localStorage.removeItem('guidecrm_celebration_shown');
     setShowGuide(true);
@@ -343,16 +352,26 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     return getCompletedStepsCount(progress);
   }, [progress]);
 
-  // Check if dismissed
+  // Check if dismissed (per user)
   useEffect(() => {
-    const dismissed = localStorage.getItem('guidecrm_dismissed');
-    if (dismissed === 'true' && !isOnboardingComplete) {
+    // Check per-user dismiss key first, then fall back to old global key
+    const dismissedPerUser = userId ? localStorage.getItem(`guidecrm_dismissed_${userId}`) : null;
+    const dismissedGlobal = localStorage.getItem('guidecrm_dismissed');
+
+    // If old global key exists, migrate it to per-user and remove global
+    if (dismissedGlobal === 'true' && userId) {
+      localStorage.removeItem('guidecrm_dismissed');
+      // Don't migrate to per-user - let each user decide fresh
+    }
+
+    if (dismissedPerUser === 'true' && !isOnboardingComplete) {
+      log('Guide dismissed for this user');
       setShowGuide(false);
     }
     if (isOnboardingComplete) {
       setShowGuide(false);
     }
-  }, [isOnboardingComplete]);
+  }, [isOnboardingComplete, userId]);
 
   // =========================================
   // CONTEXT VALUE
