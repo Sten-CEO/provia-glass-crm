@@ -165,55 +165,6 @@ export const CreateEmployeeAccessDialog = ({
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-500">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-                🔐 Page de connexion à utiliser:
-              </p>
-              {createdRole === 'employe_terrain' ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-blue-900 dark:text-blue-200">
-                    Cet employé doit se connecter sur l'<strong>application employé</strong>:
-                  </p>
-                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-xs break-all">
-                    {window.location.origin}/employee/login
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/employee/login`);
-                      toast.success("URL copiée!");
-                    }}
-                    className="w-full"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copier l'URL de connexion
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm text-blue-900 dark:text-blue-200">
-                    Cet employé doit se connecter sur le <strong>CRM</strong> (pas l'app employé):
-                  </p>
-                  <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-xs break-all">
-                    {window.location.origin}/auth/login
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/auth/login`);
-                      toast.success("URL copiée!");
-                    }}
-                    className="w-full"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copier l'URL de connexion
-                  </Button>
-                </div>
-              )}
-            </div>
-
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-500">
               <p className="text-sm text-yellow-900 dark:text-yellow-200">
                 ⚠️ <strong>Important:</strong> Ce mot de passe ne sera plus visible après fermeture.
