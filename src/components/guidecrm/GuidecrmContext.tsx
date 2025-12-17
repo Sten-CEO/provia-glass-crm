@@ -19,9 +19,14 @@ import {
   getCompletedStepsCount,
 } from './guidecrmTypes';
 import { subscribeToOnboardingEvents } from './guidecrmEvents';
+import { toast } from 'sonner';
 
 // Create context with default values
 const GuidecrmContext = createContext<OnboardingContextValue | null>(null);
+
+// Debug flag - set to true to see console logs
+const DEBUG = true;
+const log = (...args: any[]) => DEBUG && console.log('[GuideCRM]', ...args);
 
 // =========================================
 // PROVIDER COMPONENT
@@ -43,6 +48,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   const [highlightedTarget, setHighlightedTarget] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [tableExists, setTableExists] = useState(true);
 
   // =========================================
   // FETCH PROGRESS
@@ -50,13 +56,17 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
 
   const fetchProgress = useCallback(async () => {
     try {
+      log('Fetching progress...');
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        log('No user found');
         setLoading(false);
         return;
       }
       setUserId(user.id);
+      log('User ID:', user.id);
 
       // Get user's company
       const { data: userRole } = await supabase
@@ -66,51 +76,73 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
         .maybeSingle();
 
       if (!userRole?.company_id) {
+        log('No company found for user');
         setLoading(false);
         return;
       }
       setCompanyId(userRole.company_id);
+      log('Company ID:', userRole.company_id);
 
       // Fetch or create onboarding progress
-      let { data: progressData, error: fetchError } = await supabase
-        .from('onboarding_progress')
+      // Use 'as any' to bypass TypeScript since table may not be in types yet
+      let { data: progressData, error: fetchError } = await (supabase
+        .from('onboarding_progress' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('company_id', userRole.company_id)
-        .maybeSingle();
+        .maybeSingle() as any);
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error fetching onboarding progress:', fetchError);
-        setError('Erreur lors du chargement de la progression');
-        setLoading(false);
-        return;
+      if (fetchError) {
+        // Check if table doesn't exist (error code 42P01 or message contains "does not exist")
+        if (fetchError.code === '42P01' || fetchError.message?.includes('does not exist') || fetchError.message?.includes('relation')) {
+          log('Table onboarding_progress does not exist!');
+          console.error('[GuideCRM] ⚠️ La table "onboarding_progress" n\'existe pas dans Supabase.');
+          console.error('[GuideCRM] Veuillez exécuter la migration SQL dans votre dashboard Supabase > SQL Editor');
+          setTableExists(false);
+          setError('Table onboarding_progress non trouvée. Exécutez la migration SQL.');
+          setLoading(false);
+          return;
+        }
+
+        // PGRST116 means no rows found - that's OK
+        if (fetchError.code !== 'PGRST116') {
+          console.error('[GuideCRM] Error fetching progress:', fetchError);
+          setError('Erreur lors du chargement de la progression');
+          setLoading(false);
+          return;
+        }
       }
+
+      log('Progress data:', progressData);
 
       // Create progress record if it doesn't exist
       if (!progressData) {
-        const { data: newProgress, error: insertError } = await supabase
-          .from('onboarding_progress')
+        log('Creating new progress record...');
+        const { data: newProgress, error: insertError } = await (supabase
+          .from('onboarding_progress' as any)
           .insert({
             user_id: user.id,
             company_id: userRole.company_id,
           })
           .select()
-          .single();
+          .single() as any);
 
         if (insertError) {
-          console.error('Error creating onboarding progress:', insertError);
+          console.error('[GuideCRM] Error creating progress:', insertError);
           setError('Erreur lors de l\'initialisation');
           setLoading(false);
           return;
         }
 
+        log('New progress created:', newProgress);
         progressData = newProgress;
       }
 
       setProgress(progressData as OnboardingProgress);
+      setTableExists(true);
       setError(null);
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error('[GuideCRM] Unexpected error:', err);
       setError('Une erreur inattendue s\'est produite');
     } finally {
       setLoading(false);
@@ -130,7 +162,17 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     stepKey: OnboardingStepKey,
     subKey?: 'template_quote' | 'template_invoice'
   ) => {
-    if (!userId || !companyId || !progress) return;
+    if (!userId || !companyId) {
+      log('Cannot mark step complete: missing userId or companyId');
+      return;
+    }
+
+    if (!tableExists) {
+      log('Cannot mark step complete: table does not exist');
+      return;
+    }
+
+    log('Marking step complete:', stepKey, subKey);
 
     const updates: Partial<OnboardingProgress> = {};
 
@@ -162,20 +204,27 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
         break;
     }
 
-    const { error: updateError } = await supabase
-      .from('onboarding_progress')
+    log('Updates to apply:', updates);
+
+    const { error: updateError } = await (supabase
+      .from('onboarding_progress' as any)
       .update(updates)
       .eq('user_id', userId)
-      .eq('company_id', companyId);
+      .eq('company_id', companyId) as any);
 
     if (updateError) {
-      console.error('Error updating onboarding progress:', updateError);
+      console.error('[GuideCRM] Error updating progress:', updateError);
       return;
     }
 
+    log('Step marked complete, refreshing...');
+
     // Refresh progress
     await fetchProgress();
-  }, [userId, companyId, progress, fetchProgress]);
+
+    // Show success feedback
+    toast.success(`Étape "${stepKey}" complétée !`, { duration: 2000 });
+  }, [userId, companyId, tableExists, fetchProgress]);
 
   // =========================================
   // EVENT LISTENERS
@@ -183,6 +232,8 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
 
   useEffect(() => {
     const unsubscribe = subscribeToOnboardingEvents((event) => {
+      log('Event received:', event.type, event.payload);
+
       switch (event.type) {
         case 'guidecrm:company_saved':
           markStepComplete('company');
@@ -245,8 +296,8 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   const resetOnboarding = useCallback(async () => {
     if (!userId || !companyId) return;
 
-    await supabase
-      .from('onboarding_progress')
+    await (supabase
+      .from('onboarding_progress' as any)
       .update({
         company_done: false,
         template_quote_done: false,
@@ -259,9 +310,10 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
         completed_at: null,
       })
       .eq('user_id', userId)
-      .eq('company_id', companyId);
+      .eq('company_id', companyId) as any);
 
     localStorage.removeItem('guidecrm_dismissed');
+    localStorage.removeItem('guidecrm_celebration_shown');
     setShowGuide(true);
     await fetchProgress();
   }, [userId, companyId, fetchProgress]);
