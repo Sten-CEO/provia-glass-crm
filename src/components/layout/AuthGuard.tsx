@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useBillingSubscription, getCompanyOwnerUserId } from "@/hooks/useBillingSubscription";
+import { CreditCard, AlertTriangle } from "lucide-react";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -13,18 +15,20 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { role, loading: roleLoading } = useUserRole();
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const { role, companyId, loading: roleLoading } = useUserRole();
+  const { isActive, loading: subscriptionLoading } = useBillingSubscription(ownerUserId || undefined);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
-        
+
         if (event === 'SIGNED_OUT' || !session) {
           navigate('/auth/login');
         }
-        
+
         setLoading(false);
       }
     );
@@ -32,16 +36,31 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      
+
       if (!session) {
         navigate('/auth/login');
       }
-      
+
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Get owner user ID for subscription check
+  useEffect(() => {
+    if (companyId && !roleLoading) {
+      // If current user is owner, use their ID directly
+      if (role === 'owner') {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user) setOwnerUserId(user.id);
+        });
+      } else {
+        // Otherwise, fetch the owner's user ID
+        getCompanyOwnerUserId(companyId).then(setOwnerUserId);
+      }
+    }
+  }, [companyId, role, roleLoading]);
 
   // Bloquer les employés terrain du CRM
   useEffect(() => {
@@ -51,7 +70,7 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     }
   }, [role, roleLoading, location.pathname, navigate]);
 
-  if (loading || roleLoading) {
+  if (loading || roleLoading || (companyId && subscriptionLoading)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -74,12 +93,48 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
             <br />
             Veuillez utiliser l'application mobile employé.
           </p>
-          <button 
+          <button
             onClick={() => navigate('/employee')}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
           >
             Aller à l'App Employé
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Bloquer l'accès si l'abonnement n'est pas actif (sauf pour les employés terrain)
+  if (ownerUserId && !isActive && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
+    return (
+      <div className="flex items-center justify-center h-screen p-8 bg-background">
+        <div className="glass-modal max-w-lg p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-6">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Abonnement requis</h2>
+          <p className="text-muted-foreground mb-6">
+            Votre abonnement n'est pas actif. Pour continuer à utiliser Provia BASE,
+            veuillez mettre à jour votre abonnement.
+          </p>
+          <div className="space-y-3">
+            <a
+              href="https://proviabase.fr/billing/required"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
+            >
+              <CreditCard className="h-5 w-5" />
+              Gérer mon abonnement
+            </a>
+            <button
+              onClick={() => {
+                supabase.auth.signOut();
+                navigate('/auth/login');
+              }}
+              className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Se déconnecter
+            </button>
+          </div>
         </div>
       </div>
     );
