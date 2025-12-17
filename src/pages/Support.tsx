@@ -5,12 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CheckCircle, Send, Loader2 } from "lucide-react";
-import { useCompany } from "@/hooks/useCompany";
 
 const Support = () => {
   const [formData, setFormData] = useState({ nom: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { company } = useCompany();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,19 +21,15 @@ const Support = () => {
     setIsSubmitting(true);
 
     try {
-      // Call edge function to send support email
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nom: formData.nom,
             email: formData.email,
             message: formData.message,
-            companyId: company?.id || undefined,
           }),
         }
       );
