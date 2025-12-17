@@ -3,9 +3,6 @@ import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { AuthGuard } from "./AuthGuard";
-import { AssistantBubble } from "@/components/assistant/AssistantBubble";
-// GUIDECRM: Import gamified onboarding system
-import { GuidecrmProvider, Guidecrm } from "@/components/guidecrm";
 
 const AdminLayout = () => {
   const { toggleCollapsed } = useSidebarCollapsed();
@@ -31,7 +28,7 @@ const AdminLayout = () => {
           {/* GUIDECRM: Gamified onboarding guide */}
           <Guidecrm />
         </div>
-      </GuidecrmProvider>
+      </div>
     </AuthGuard>
   );
 };
