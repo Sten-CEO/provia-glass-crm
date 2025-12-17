@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { guidecrmClientCreated } from "@/components/guidecrm"; // GUIDECRM
 
 interface Client {
   id: string;
@@ -512,6 +513,7 @@ const Clients = () => {
     }
 
     toast.success("Client créé avec succès");
+    guidecrmClientCreated(); // GUIDECRM: Mark client creation step complete
     setNewClient({ nom: "", email: "", telephone: "", ville: "", adresse: "", tva: "", notes: "", tags: [], statut: "nouveau", demande: "", debut: "", fin: "" });
     setOpen(false);
   };
@@ -905,7 +907,7 @@ const Clients = () => {
           </label>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-foreground font-semibold">
+            <Button size="sm" data-onboarding="btn-new-client" className="bg-primary hover:bg-primary/90 text-foreground font-semibold">
               <Plus className="mr-2 h-4 w-4" />
               Nouveau client
             </Button>
@@ -923,6 +925,7 @@ const Clients = () => {
                     <Label htmlFor="nom">Nom *</Label>
                     <Input
                       id="nom"
+                      data-onboarding="input-client-nom" /* GUIDECRM */
                       value={newClient.nom}
                       onChange={(e) => setNewClient({ ...newClient, nom: e.target.value })}
                       className="glass-card"
@@ -1076,6 +1079,7 @@ const Clients = () => {
 
               <Button
                 onClick={handleAddClient}
+                data-onboarding="btn-create-client" /* GUIDECRM */
                 className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
               >
                 Créer

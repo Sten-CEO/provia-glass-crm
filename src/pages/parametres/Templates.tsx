@@ -21,6 +21,7 @@ import { LivePdfPreview } from "@/components/templates/LivePdfPreview";
 import { LiveEmailPreview } from "@/components/templates/LiveEmailPreview";
 import { useDocumentTemplates, DocumentTemplate } from "@/hooks/useDocumentTemplates";
 import { getAllVariables } from "@/lib/templateVariables";
+import { guidecrmTemplateCreated } from "@/components/guidecrm"; // GUIDECRM
 
 const Templates = () => {
   const {
@@ -114,9 +115,16 @@ const Templates = () => {
     if (!selectedTemplate) return;
 
     const isNew = !selectedTemplate.id;
+    const templateType = selectedTemplate.type;
 
     if (isNew) {
       await createTemplate(selectedTemplate);
+      // GUIDECRM: Mark template creation step
+      if (templateType === 'QUOTE') {
+        guidecrmTemplateCreated('QUOTE');
+      } else if (templateType === 'INVOICE') {
+        guidecrmTemplateCreated('INVOICE');
+      }
     } else {
       await updateTemplate(selectedTemplate.id!, selectedTemplate);
     }
@@ -166,7 +174,7 @@ const Templates = () => {
             Gérez vos templates de devis, factures et emails
           </p>
         </div>
-        <Button onClick={handleNew} className="gap-2">
+        <Button onClick={handleNew} data-onboarding="btn-new-template" className="gap-2">
           <Plus className="h-4 w-4" />
           Nouveau modèle
         </Button>
@@ -309,7 +317,7 @@ const Templates = () => {
                 <Button variant="outline" onClick={() => setIsEditing(false)}>
                   Annuler
                 </Button>
-                <Button onClick={handleSave} className="gap-2">
+                <Button onClick={handleSave} data-onboarding="btn-save-template" className="gap-2">
                   <Save className="h-4 w-4" />
                   Sauvegarder
                 </Button>
@@ -363,7 +371,7 @@ const Templates = () => {
                           setSelectedTemplate({ ...selectedTemplate, type: v })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger data-onboarding="select-template-type">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

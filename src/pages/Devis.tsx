@@ -216,6 +216,7 @@ const Devis = () => {
         <h1 className="text-3xl font-bold uppercase tracking-wide">Devis</h1>
         <Button
           onClick={() => navigate("/devis/new")}
+          data-onboarding="btn-new-devis" /* GUIDECRM */
           className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide"
         >
           <Plus className="mr-2 h-4 w-4" />

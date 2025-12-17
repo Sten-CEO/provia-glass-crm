@@ -32,6 +32,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CreateEmployeeAccessDialog } from "@/components/equipe/CreateEmployeeAccessDialog";
+import { guidecrmMemberInvited } from "@/components/guidecrm"; // GUIDECRM
 
 interface TeamMember {
   id: string;
@@ -258,6 +259,7 @@ const Equipe = () => {
       setTempPasswordDialogOpen(true);
 
       toast.success("Membre créé avec succès");
+      guidecrmMemberInvited(); // GUIDECRM: Mark member invitation step complete
       setNewMember({
         nom: "",
         role: "Employé terrain",
@@ -367,6 +369,7 @@ const Equipe = () => {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button
+              data-onboarding="btn-invite-member" /* GUIDECRM */
               className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide"
               disabled={!company?.id}
               title={!company?.id ? "Chargement de l'entreprise..." : ""}
@@ -390,6 +393,7 @@ const Equipe = () => {
               <div>
                 <Label>Nom *</Label>
                 <Input
+                  data-onboarding="input-member-nom" /* GUIDECRM */
                   placeholder="Jean Dupont"
                   value={newMember.nom}
                   onChange={(e) => setNewMember({ ...newMember, nom: e.target.value })}
@@ -399,6 +403,7 @@ const Equipe = () => {
               <div>
                 <Label>Email *</Label>
                 <Input
+                  data-onboarding="input-member-email" /* GUIDECRM */
                   type="email"
                   placeholder="jean@entreprise.com"
                   value={newMember.email}
@@ -498,6 +503,7 @@ const Equipe = () => {
                 </div>
               )}
               <Button
+                data-onboarding="btn-create-member" /* GUIDECRM */
                 onClick={handleAddMember}
                 className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
                 disabled={!company?.id}

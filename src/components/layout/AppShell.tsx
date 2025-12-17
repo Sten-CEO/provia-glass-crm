@@ -9,15 +9,24 @@ const AdminLayout = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen flex w-full">
-        <Sidebar isOpen={true} data-testid="admin-sidebar" />
-        
-        <div className="flex-1 flex flex-col min-w-0">
-          <Navbar onMenuClick={toggleCollapsed} />
-          
-          <main className="flex-1 p-6 overflow-auto">
-            <Outlet />
-          </main>
+      {/* GUIDECRM: Wrap with provider for onboarding state */}
+      <GuidecrmProvider>
+        <div className="min-h-screen flex w-full">
+          <Sidebar isOpen={true} data-testid="admin-sidebar" />
+
+          <div className="flex-1 flex flex-col min-w-0">
+            <Navbar onMenuClick={toggleCollapsed} />
+
+            <main className="flex-1 p-6 overflow-auto">
+              <Outlet />
+            </main>
+          </div>
+
+          {/* Assistant bulle visible sur toutes les pages CRM */}
+          <AssistantBubble />
+
+          {/* GUIDECRM: Gamified onboarding guide */}
+          <Guidecrm />
         </div>
       </div>
     </AuthGuard>

@@ -298,7 +298,7 @@ const Factures = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold uppercase tracking-wide">Factures</h1>
         <div className="flex gap-2">
-          <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide" onClick={() => navigate("/factures/new")}>
+          <Button data-onboarding="btn-new-facture" className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide" onClick={() => navigate("/factures/new")}>
             <Plus className="mr-2 h-4 w-4" />
             Nouvelle Facture
           </Button>
