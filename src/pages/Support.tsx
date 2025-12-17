@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CheckCircle, Send, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
 const Support = () => {
@@ -24,9 +23,6 @@ const Support = () => {
     setIsSubmitting(true);
 
     try {
-      // Get current user info
-      const { data: { user } } = await supabase.auth.getUser();
-
       // Call edge function to send support email
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`,
@@ -39,8 +35,7 @@ const Support = () => {
             nom: formData.nom,
             email: formData.email,
             message: formData.message,
-            companyName: company?.name || undefined,
-            userId: user?.id || undefined,
+            companyId: company?.id || undefined,
           }),
         }
       );
