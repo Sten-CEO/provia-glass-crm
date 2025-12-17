@@ -354,22 +354,29 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
 
   // Check if dismissed (per user)
   useEffect(() => {
-    // Check per-user dismiss key first, then fall back to old global key
-    const dismissedPerUser = userId ? localStorage.getItem(`guidecrm_dismissed_${userId}`) : null;
+    // Wait for userId to be available
+    if (!userId) return;
+
+    // Check per-user dismiss key
+    const dismissedPerUser = localStorage.getItem(`guidecrm_dismissed_${userId}`);
+
+    // Clean up old global key if it exists (don't migrate - each user starts fresh)
     const dismissedGlobal = localStorage.getItem('guidecrm_dismissed');
-
-    // If old global key exists, migrate it to per-user and remove global
-    if (dismissedGlobal === 'true' && userId) {
+    if (dismissedGlobal) {
       localStorage.removeItem('guidecrm_dismissed');
-      // Don't migrate to per-user - let each user decide fresh
     }
 
-    if (dismissedPerUser === 'true' && !isOnboardingComplete) {
-      log('Guide dismissed for this user');
-      setShowGuide(false);
-    }
+    // Determine if guide should show
     if (isOnboardingComplete) {
+      log('Guide hidden: onboarding complete');
       setShowGuide(false);
+    } else if (dismissedPerUser === 'true') {
+      log('Guide hidden: dismissed by this user');
+      setShowGuide(false);
+    } else {
+      // Explicitly show guide for users who haven't dismissed it
+      log('Guide shown: user has not dismissed');
+      setShowGuide(true);
     }
   }, [isOnboardingComplete, userId]);
 
