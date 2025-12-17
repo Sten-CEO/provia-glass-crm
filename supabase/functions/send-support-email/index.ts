@@ -1,15 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { sendEmailViaSMTP } from '../_shared/smtp-mailer.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface SupportEmailRequest {
   nom: string;
   email: string;
   message: string;
-  companyName?: string;
-  userId?: string;
+  companyId?: string;
 }
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const SUPPORT_EMAIL = 'support@proviabase.fr';
 
 serve(async (req) => {
@@ -21,7 +21,7 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    const { nom, email, message, companyName, userId }: SupportEmailRequest = await req.json();
+    const { nom, email, message, companyId }: SupportEmailRequest = await req.json();
 
     // Validation
     if (!nom || !email || !message) {
@@ -46,13 +46,28 @@ serve(async (req) => {
       );
     }
 
-    // Check if Resend API key is configured
-    if (!RESEND_API_KEY) {
-      console.error('RESEND_API_KEY not configured');
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get company SMTP settings
+    let company = null;
+    if (companyId) {
+      const { data } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+      company = data;
+    }
+
+    // Check if SMTP is configured
+    if (!company?.smtp_enabled || !company?.smtp_host || !company?.smtp_username || !company?.smtp_password) {
       return new Response(
-        JSON.stringify({ error: 'Configuration email manquante' }),
+        JSON.stringify({ error: 'Configuration SMTP non disponible. Contactez le support directement à ' + SUPPORT_EMAIL }),
         {
-          status: 500,
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
@@ -70,8 +85,7 @@ serve(async (req) => {
             <h3 style="margin-top: 0; color: #333;">Informations client</h3>
             <p style="margin: 5px 0;"><strong>Nom:</strong> ${escapeHtml(nom)}</p>
             <p style="margin: 5px 0;"><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>
-            ${companyName ? `<p style="margin: 5px 0;"><strong>Entreprise:</strong> ${escapeHtml(companyName)}</p>` : ''}
-            ${userId ? `<p style="margin: 5px 0; font-size: 12px; color: #999;"><strong>User ID:</strong> ${escapeHtml(userId)}</p>` : ''}
+            ${company?.name ? `<p style="margin: 5px 0;"><strong>Entreprise:</strong> ${escapeHtml(company.name)}</p>` : ''}
           </div>
 
           <div style="padding: 15px; background-color: white; border-radius: 8px;">
@@ -87,27 +101,43 @@ serve(async (req) => {
       </div>
     `;
 
-    // Send email via Resend
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+    const textContent = `
+Nouveau message support
+
+Nom: ${nom}
+Email: ${email}
+${company?.name ? `Entreprise: ${company.name}` : ''}
+
+Message:
+${message}
+
+---
+Envoyé depuis le CRM Provia BASE
+    `.trim();
+
+    // Send email via SMTP
+    const emailResult = await sendEmailViaSMTP(
+      {
+        host: company.smtp_host,
+        port: company.smtp_port || 587,
+        username: company.smtp_username,
+        password: company.smtp_password,
+        secure: company.smtp_secure ?? false,
       },
-      body: JSON.stringify({
-        from: 'Provia BASE Support <noreply@proviabase.fr>',
-        to: [SUPPORT_EMAIL],
-        reply_to: email,
+      {
+        from: company.smtp_username,
+        to: SUPPORT_EMAIL,
+        replyTo: email,
         subject: `[Support CRM] Message de ${nom}`,
         html: htmlContent,
-      }),
-    });
+        text: textContent,
+      }
+    );
 
-    if (!resendResponse.ok) {
-      const errorData = await resendResponse.json();
-      console.error('Resend API error:', errorData);
+    if (!emailResult.success) {
+      console.error('SMTP error:', emailResult.error);
       return new Response(
-        JSON.stringify({ error: 'Erreur lors de l\'envoi de l\'email' }),
+        JSON.stringify({ error: emailResult.error || 'Erreur lors de l\'envoi de l\'email' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -115,13 +145,11 @@ serve(async (req) => {
       );
     }
 
-    const result = await resendResponse.json();
-
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Message envoyé avec succès',
-        id: result.id,
+        messageId: emailResult.messageId,
       }),
       {
         status: 200,
