@@ -119,7 +119,7 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
           </p>
           <div className="space-y-3">
             <a
-              href="https://proviabase.fr/billing/required"
+              href="https://www.proviabase.fr/billing/required"
               className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
             >
               <CreditCard className="h-5 w-5" />
