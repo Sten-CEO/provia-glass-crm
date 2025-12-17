@@ -55,6 +55,7 @@ import { PdfPreviewModal } from "@/components/documents/PdfPreviewModal";
 import { InterventionInfoBlock } from "@/components/devis/InterventionInfoBlock";
 import { MaterialsAvailabilityChecker } from "@/components/interventions/MaterialsAvailabilityChecker";
 import { useCompany } from "@/hooks/useCompany";
+import { guidecrmQuoteCreated } from "@/components/guidecrm"; // GUIDECRM
 
 interface Quote {
   id?: string;
@@ -444,6 +445,10 @@ const DevisEditor = () => {
 
     toast.success("Devis enregistré");
     eventBus.emit(EVENTS.DATA_CHANGED, { scope: "quotes" });
+    // GUIDECRM: Mark quote creation step complete for new quotes
+    if (!quote.id) {
+      guidecrmQuoteCreated();
+    }
     setPreviousStatus(payload.statut);
   };
 
@@ -764,7 +769,7 @@ const DevisEditor = () => {
                 Créer une intervention
               </Button>
             )}
-            <Button onClick={handleSave} variant="outline">
+            <Button onClick={handleSave} data-onboarding="btn-save-devis" variant="outline">
               <Save className="h-4 w-4 mr-2" />
               Enregistrer
             </Button>

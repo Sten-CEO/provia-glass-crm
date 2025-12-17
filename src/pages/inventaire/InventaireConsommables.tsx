@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
+import { guidecrmInventoryCreated } from "@/components/guidecrm"; // GUIDECRM
 
 interface Item {
   id: string;
@@ -131,6 +132,7 @@ const InventaireConsommables = () => {
     }
 
     toast.success("Consommable créé avec succès");
+    guidecrmInventoryCreated(); // GUIDECRM: Mark inventory creation step complete
     setNewItem({
       name: "",
       sku: "",
@@ -180,7 +182,7 @@ const InventaireConsommables = () => {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
+            <Button data-onboarding="btn-new-consommable" className="bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide">
               <Plus className="mr-2 h-4 w-4" />
               Nouveau consommable
             </Button>
@@ -194,6 +196,7 @@ const InventaireConsommables = () => {
                 <div>
                   <Label>Nom *</Label>
                   <Input
+                    data-onboarding="input-item-nom" /* GUIDECRM */
                     placeholder="Vis M6"
                     value={newItem.name}
                     onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
@@ -284,7 +287,7 @@ const InventaireConsommables = () => {
                   className="glass-card"
                 />
               </div>
-              <Button onClick={handleAddItem} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
+              <Button data-onboarding="btn-create-item" onClick={handleAddItem} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Créer
               </Button>
             </div>
