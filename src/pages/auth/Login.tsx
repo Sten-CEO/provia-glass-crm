@@ -34,9 +34,13 @@ const Login = () => {
     addLog(`VITE_SUPABASE_URL: ${supabaseUrl || 'UNDEFINED'}`);
     addLog(`VITE_SUPABASE_PUBLISHABLE_KEY: ${supabaseKey ? supabaseKey.substring(0, 20) + '...' : 'UNDEFINED'}`);
 
-    // Check if we're in Tauri
-    const isTauri = !!(window as any).__TAURI__;
-    addLog(`Environnement Tauri: ${isTauri ? 'OUI' : 'NON'}`);
+    // Check if we're in Tauri - use protocol check since __TAURI__ may not be set
+    const isTauri = window.location.protocol === 'tauri:' || !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
+    addLog(`Environnement Tauri: ${isTauri ? 'OUI' : 'NON'} (protocol: ${window.location.protocol})`);
+    if (isTauri) {
+      addLog(`  __TAURI__: ${!!(window as any).__TAURI__}`);
+      addLog(`  __TAURI_INTERNALS__: ${!!(window as any).__TAURI_INTERNALS__}`);
+    }
 
     // Check user agent
     addLog(`User Agent: ${navigator.userAgent.substring(0, 50)}...`);
@@ -55,7 +59,7 @@ const Login = () => {
   const testNetworkConnectivity = async () => {
     addLog("=== TEST CONNECTIVITÉ ===");
 
-    const isTauri = !!(window as any).__TAURI__;
+    const isTauri = window.location.protocol === 'tauri:' || !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
 
     // Get the appropriate fetch function
     let httpFetch = fetch;
