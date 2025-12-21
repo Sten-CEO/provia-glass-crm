@@ -41,7 +41,6 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 const GITHUB_OWNER = 'Sten-CEO';
 const GITHUB_REPO = 'provia-glass-crm';
-const TARGET_VERSION = 'v1.0.3';
 
 export default async function handler(
   req: VercelRequest,
@@ -83,9 +82,9 @@ export default async function handler(
       headers['Authorization'] = `token ${githubToken}`;
     }
 
-    // Fetch specific release v1.0.3 from GitHub
+    // Fetch latest release from GitHub
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/${TARGET_VERSION}`,
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
       { headers }
     );
 
