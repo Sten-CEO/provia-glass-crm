@@ -93,30 +93,22 @@ const FactureDetail = () => {
 
     setGeneratingPdf(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        toast.error("Session expirée");
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-invoice-pdf`,
+      // Use supabase.functions.invoke for proper CORS handling in Tauri
+      const { data: result, error: functionError } = await supabase.functions.invoke(
+        'generate-invoice-pdf',
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify({ invoiceId: id }),
+          body: { invoiceId: id },
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de la génération du PDF");
+      if (functionError) {
+        console.error("PDF generation error:", functionError);
+        throw new Error(functionError.message || "Erreur lors de la génération du PDF");
       }
 
-      const result = await response.json();
+      if (result?.error) {
+        throw new Error(result.error || "Erreur lors de la génération du PDF");
+      }
 
       if (result.pdf?.data) {
         // Décoder le base64 en bytes
