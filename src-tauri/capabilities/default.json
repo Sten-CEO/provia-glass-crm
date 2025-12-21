@@ -6,9 +6,12 @@
   "permissions": [
     "core:default",
     "shell:allow-open",
-    "http:default"
-  ],
-  "remote": {
-    "urls": ["https://*.supabase.co/*", "wss://*.supabase.co/*"]
-  }
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://*.supabase.co/**" },
+        { "url": "https://httpbin.org/**" }
+      ]
+    }
+  ]
 }
