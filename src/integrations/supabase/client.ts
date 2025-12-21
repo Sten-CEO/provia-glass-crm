@@ -5,8 +5,19 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Check if running in Tauri
-const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+// Check if running in Tauri - use multiple detection methods
+const isTauri = typeof window !== 'undefined' && (
+  window.location.protocol === 'tauri:' ||
+  !!(window as any).__TAURI__ ||
+  !!(window as any).__TAURI_INTERNALS__
+);
+
+console.log('[Supabase Client] Tauri detection:', {
+  protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A',
+  __TAURI__: typeof window !== 'undefined' ? !!(window as any).__TAURI__ : false,
+  __TAURI_INTERNALS__: typeof window !== 'undefined' ? !!(window as any).__TAURI_INTERNALS__ : false,
+  isTauri
+});
 
 // Custom fetch for Tauri that uses the HTTP plugin
 let tauriFetch: typeof fetch | null = null;
@@ -26,14 +37,16 @@ const initTauriFetch = (): Promise<typeof fetch | null> => {
     return tauriFetchPromise;
   }
 
+  console.log('[Supabase] Loading Tauri HTTP plugin...');
+
   tauriFetchPromise = import('@tauri-apps/plugin-http')
     .then(({ fetch: httpFetch }) => {
       tauriFetch = httpFetch;
-      console.log('[Supabase] Tauri HTTP plugin loaded successfully');
+      console.log('[Supabase] ✅ Tauri HTTP plugin loaded successfully');
       return httpFetch;
     })
     .catch((e) => {
-      console.error('[Supabase] Failed to load Tauri HTTP plugin:', e);
+      console.error('[Supabase] ❌ Failed to load Tauri HTTP plugin:', e);
       return null;
     });
 
@@ -50,13 +63,15 @@ const customFetch: typeof fetch = async (input, init) => {
   // Wait for Tauri fetch to be loaded
   const httpFetch = await initTauriFetch();
 
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+
   if (httpFetch) {
-    console.log('[Supabase] Making request via Tauri HTTP plugin:', typeof input === 'string' ? input : input.url);
+    console.log('[Supabase] 🌐 Request via Tauri HTTP:', url.substring(0, 80));
     return httpFetch(input, init);
   }
 
-  // Fallback to native fetch (will likely fail in Tauri WKWebView)
-  console.warn('[Supabase] Falling back to native fetch');
+  // Fallback to native fetch (will likely fail for Supabase in Tauri)
+  console.warn('[Supabase] ⚠️ Falling back to native fetch for:', url.substring(0, 80));
   return fetch(input, init);
 };
 
@@ -86,6 +101,8 @@ const createSupabaseClient = () => {
     // The app will display an error page instead of crashing
     return null as any;
   }
+
+  console.log('[Supabase] Creating client with custom fetch:', isTauri);
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
