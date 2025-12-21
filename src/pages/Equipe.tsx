@@ -270,25 +270,23 @@ const Equipe = () => {
         role: mappedRole,
       };
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-employee-account`,
+      // Use supabase.functions.invoke for proper CORS handling in Tauri
+      const { data: result, error: functionError } = await supabase.functions.invoke(
+        'create-employee-account',
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-          body: JSON.stringify(requestBody),
+          body: requestBody,
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("❌ Edge function error:", errorData);
-        throw new Error(errorData.error || "Erreur lors de la création du compte");
+      if (functionError) {
+        console.error("❌ Edge function error:", functionError);
+        throw new Error(functionError.message || "Erreur lors de la création du compte");
       }
 
-      const result = await response.json();
+      if (result?.error) {
+        console.error("❌ Edge function returned error:", result.error);
+        throw new Error(result.error || "Erreur lors de la création du compte");
+      }
 
       // BILLING: Update seats after successful member creation
       if (ownerUserId) {
