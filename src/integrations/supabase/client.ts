@@ -5,6 +5,40 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Check if running in Tauri
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+
+// Custom fetch for Tauri that uses the HTTP plugin
+let tauriFetch: typeof fetch | null = null;
+
+// Initialize Tauri fetch if in Tauri environment
+const initTauriFetch = async () => {
+  if (isTauri && !tauriFetch) {
+    try {
+      const { fetch: httpFetch } = await import('@tauri-apps/plugin-http');
+      tauriFetch = httpFetch;
+      console.log('[Supabase] Using Tauri HTTP plugin for fetch');
+    } catch (e) {
+      console.warn('[Supabase] Failed to load Tauri HTTP plugin, using native fetch:', e);
+    }
+  }
+};
+
+// Initialize immediately if in Tauri
+if (isTauri) {
+  initTauriFetch();
+}
+
+// Custom fetch wrapper that uses Tauri HTTP when available
+const customFetch: typeof fetch = async (input, init) => {
+  // If we have Tauri fetch available, use it
+  if (tauriFetch) {
+    return tauriFetch(input, init);
+  }
+  // Otherwise use native fetch
+  return fetch(input, init);
+};
+
 // Validate environment variables
 export const validateEnvVars = (): { valid: boolean; missing: string[] } => {
   const missing: string[] = [];
@@ -37,6 +71,9 @@ const createSupabaseClient = () => {
       storage: localStorage,
       persistSession: true,
       autoRefreshToken: true,
+    },
+    global: {
+      fetch: isTauri ? customFetch : undefined,
     }
   });
 };
