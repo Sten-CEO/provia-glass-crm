@@ -24,7 +24,18 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousRemoteDomainIpcAccess": [
+        {
+          "domain": "supabase.co",
+          "enableTauriAPI": false,
+          "windows": ["main"],
+          "plugins": []
+        }
+      ],
+      "pattern": {
+        "use": "brownfield"
+      }
     }
   },
   "bundle": {
