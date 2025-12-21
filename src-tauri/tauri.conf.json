@@ -24,8 +24,7 @@
       }
     ],
     "security": {
-      "csp": null,
-      "dangerousDisableAssetCspModification": true
+      "csp": null
     }
   },
   "bundle": {
@@ -45,14 +44,7 @@
     },
     "macOS": {
       "minimumSystemVersion": "10.13",
-      "entitlements": "./entitlements.plist",
-      "infoPlist": {
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
-          "NSAllowsArbitraryLoadsInWebContent": true,
-          "NSAllowsLocalNetworking": true
-        }
-      }
+      "entitlements": "./entitlements.plist"
     },
     "category": "Business",
     "shortDescription": "CRM Premium pour la gestion d'entreprise",
