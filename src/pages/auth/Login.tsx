@@ -15,26 +15,44 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [debugInfo, setDebugInfo] = useState<string>("");
+
+  // Debug: Check Supabase configuration on mount
+  useEffect(() => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const hasKey = !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    setDebugInfo(`URL: ${supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING'} | Key: ${hasKey ? 'OK' : 'MISSING'}`);
+  }, []);
 
   useEffect(() => {
     // Check if already logged in and redirect based on role
     const checkSessionAndRedirect = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: userRole } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .single();
-        
-        if (userRole?.role === 'employe_terrain') {
-          navigate("/employee");
-        } else {
-          navigate("/tableau-de-bord");
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error("Session check error:", sessionError);
+          setDebugInfo(prev => prev + ` | Session Error: ${sessionError.message}`);
+          return;
         }
+        if (session) {
+          const { data: userRole } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .single();
+
+          if (userRole?.role === 'employe_terrain') {
+            navigate("/employee");
+          } else {
+            navigate("/tableau-de-bord");
+          }
+        }
+      } catch (err: any) {
+        console.error("Session check failed:", err);
+        setDebugInfo(prev => prev + ` | Error: ${err.message || 'Unknown'}`);
       }
     };
-    
+
     checkSessionAndRedirect();
   }, [navigate]);
 
@@ -48,6 +66,9 @@ const Login = () => {
 
     setLoading(true);
     try {
+      // Debug: Log attempt
+      console.log("Attempting login to:", import.meta.env.VITE_SUPABASE_URL);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -55,8 +76,13 @@ const Login = () => {
 
       if (error) {
         console.error("Sign in error:", error);
+        // Show detailed error for debugging
+        setDebugInfo(prev => `${prev} | Login Error: ${error.message} (${error.status || 'no status'})`);
+
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Email ou mot de passe incorrect");
+        } else if (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Load failed")) {
+          toast.error(`Erreur réseau: ${error.message}`);
         } else {
           toast.error(error.message);
         }
@@ -164,6 +190,13 @@ const Login = () => {
         <p className="text-center text-muted-foreground mb-8">
           {isSignUp ? "Créez votre compte CRM" : "Connectez-vous à votre CRM"}
         </p>
+
+        {/* Debug info - remove after fixing */}
+        {debugInfo && (
+          <div className="mb-4 p-2 bg-gray-100 rounded text-xs text-gray-600 break-all">
+            {debugInfo}
+          </div>
+        )}
 
         <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-6">
           <div className="space-y-2">
