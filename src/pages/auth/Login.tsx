@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,9 +55,23 @@ const Login = () => {
   const testNetworkConnectivity = async () => {
     addLog("=== TEST CONNECTIVITÉ ===");
 
-    // Test 1: Simple fetch to a known URL
+    const isTauri = !!(window as any).__TAURI__;
+
+    // Get the appropriate fetch function
+    let httpFetch = fetch;
+    if (isTauri) {
+      try {
+        const httpPlugin = await import('@tauri-apps/plugin-http');
+        httpFetch = httpPlugin.fetch;
+        addLog("Tauri HTTP plugin chargé avec succès!");
+      } catch (e: any) {
+        addLog(`ERREUR chargement plugin HTTP: ${e.message}`);
+      }
+    }
+
+    // Test 1: Simple fetch to a known URL using native fetch
     try {
-      addLog("Test 1: Fetch vers httpbin.org...");
+      addLog("Test 1a: Native fetch vers httpbin.org...");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -66,27 +80,35 @@ const Login = () => {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
-      addLog(`Test 1 RÉUSSI: Status ${response.status}`);
+      addLog(`Test 1a RÉUSSI: Status ${response.status}`);
     } catch (err: any) {
-      addLog(`Test 1 ÉCHOUÉ: ${err.name} - ${err.message}`);
+      addLog(`Test 1a ÉCHOUÉ: ${err.name} - ${err.message}`);
+    }
+
+    // Test 1b: Using Tauri HTTP plugin if available
+    if (isTauri) {
+      try {
+        addLog("Test 1b: Tauri HTTP fetch vers httpbin.org...");
+        const response = await httpFetch('https://httpbin.org/get', {
+          method: 'GET',
+        });
+        addLog(`Test 1b RÉUSSI: Status ${response.status}`);
+      } catch (err: any) {
+        addLog(`Test 1b ÉCHOUÉ: ${err.name} - ${err.message}`);
+      }
     }
 
     // Test 2: Fetch to Supabase health endpoint
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (supabaseUrl) {
       try {
-        addLog(`Test 2: Fetch vers ${supabaseUrl}...`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+        addLog(`Test 2: HTTP fetch vers Supabase...`);
+        const response = await httpFetch(`${supabaseUrl}/rest/v1/`, {
           method: 'GET',
           headers: {
             'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
           },
-          signal: controller.signal
         });
-        clearTimeout(timeoutId);
         addLog(`Test 2 RÉUSSI: Status ${response.status}`);
       } catch (err: any) {
         addLog(`Test 2 ÉCHOUÉ: ${err.name} - ${err.message}`);
