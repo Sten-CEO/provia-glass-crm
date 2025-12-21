@@ -10,32 +10,53 @@ const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
 
 // Custom fetch for Tauri that uses the HTTP plugin
 let tauriFetch: typeof fetch | null = null;
+let tauriFetchPromise: Promise<typeof fetch | null> | null = null;
 
-// Initialize Tauri fetch if in Tauri environment
-const initTauriFetch = async () => {
-  if (isTauri && !tauriFetch) {
-    try {
-      const { fetch: httpFetch } = await import('@tauri-apps/plugin-http');
-      tauriFetch = httpFetch;
-      console.log('[Supabase] Using Tauri HTTP plugin for fetch');
-    } catch (e) {
-      console.warn('[Supabase] Failed to load Tauri HTTP plugin, using native fetch:', e);
-    }
+// Initialize Tauri fetch - returns a promise that resolves to the fetch function
+const initTauriFetch = (): Promise<typeof fetch | null> => {
+  if (!isTauri) {
+    return Promise.resolve(null);
   }
+
+  if (tauriFetch) {
+    return Promise.resolve(tauriFetch);
+  }
+
+  if (tauriFetchPromise) {
+    return tauriFetchPromise;
+  }
+
+  tauriFetchPromise = import('@tauri-apps/plugin-http')
+    .then(({ fetch: httpFetch }) => {
+      tauriFetch = httpFetch;
+      console.log('[Supabase] Tauri HTTP plugin loaded successfully');
+      return httpFetch;
+    })
+    .catch((e) => {
+      console.error('[Supabase] Failed to load Tauri HTTP plugin:', e);
+      return null;
+    });
+
+  return tauriFetchPromise;
 };
 
-// Initialize immediately if in Tauri
+// Start loading immediately if in Tauri
 if (isTauri) {
   initTauriFetch();
 }
 
-// Custom fetch wrapper that uses Tauri HTTP when available
+// Custom fetch wrapper that WAITS for Tauri HTTP plugin to load
 const customFetch: typeof fetch = async (input, init) => {
-  // If we have Tauri fetch available, use it
-  if (tauriFetch) {
-    return tauriFetch(input, init);
+  // Wait for Tauri fetch to be loaded
+  const httpFetch = await initTauriFetch();
+
+  if (httpFetch) {
+    console.log('[Supabase] Making request via Tauri HTTP plugin:', typeof input === 'string' ? input : input.url);
+    return httpFetch(input, init);
   }
-  // Otherwise use native fetch
+
+  // Fallback to native fetch (will likely fail in Tauri WKWebView)
+  console.warn('[Supabase] Falling back to native fetch');
   return fetch(input, init);
 };
 
@@ -73,6 +94,7 @@ const createSupabaseClient = () => {
       autoRefreshToken: true,
     },
     global: {
+      // Always use customFetch in Tauri - it will wait for the plugin to load
       fetch: isTauri ? customFetch : undefined,
     }
   });
