@@ -15,6 +15,27 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [networkTest, setNetworkTest] = useState<string | null>(null);
+
+  const isTauri = typeof window !== 'undefined' && (
+    window.location.protocol === 'tauri:' ||
+    !!(window as any).__TAURI__ ||
+    !!(window as any).__TAURI_INTERNALS__
+  );
+
+  const runNetworkTest = async () => {
+    if (!isTauri) {
+      setNetworkTest("Not in Tauri environment");
+      return;
+    }
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const result = await invoke<string>('test_network');
+      setNetworkTest(result);
+    } catch (e: any) {
+      setNetworkTest(`Error: ${e}`);
+    }
+  };
 
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
@@ -244,6 +265,21 @@ const Login = () => {
               : "Pas encore de compte ? S'inscrire"}
           </button>
         </div>
+
+        {isTauri && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+            <button
+              type="button"
+              onClick={runNetworkTest}
+              className="text-blue-600 underline mb-2"
+            >
+              Test Network (Rust)
+            </button>
+            {networkTest && (
+              <pre className="whitespace-pre-wrap text-gray-700 mt-2">{networkTest}</pre>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
