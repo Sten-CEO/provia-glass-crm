@@ -115,7 +115,25 @@ const Login = () => {
         });
         addLog(`Test 2 RÉUSSI: Status ${response.status}`);
       } catch (err: any) {
-        addLog(`Test 2 ÉCHOUÉ: ${err.name} - ${err.message}`);
+        addLog(`Test 2 ÉCHOUÉ: ${err?.name || 'Unknown'} - ${err?.message || String(err)}`);
+        if (err?.cause) addLog(`  cause: ${JSON.stringify(err.cause)}`);
+        addLog(`  Full error: ${JSON.stringify(err, Object.getOwnPropertyNames(err || {}))}`);
+      }
+
+      // Test 2b: POST request like auth would do
+      try {
+        addLog(`Test 2b: POST request vers Supabase auth...`);
+        const response = await httpFetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+          },
+          body: JSON.stringify({ email: 'test@test.com', password: 'test' }),
+        });
+        addLog(`Test 2b: Status ${response.status} (même si 400, la connexion fonctionne!)`);
+      } catch (err: any) {
+        addLog(`Test 2b ÉCHOUÉ: ${err?.message || String(err)}`);
       }
     }
 
