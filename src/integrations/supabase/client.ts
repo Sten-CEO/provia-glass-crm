@@ -12,67 +12,71 @@ const isTauri = typeof window !== 'undefined' && (
   !!(window as any).__TAURI_INTERNALS__
 );
 
-console.log('[Supabase Client] Tauri detection:', {
-  protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A',
-  __TAURI__: typeof window !== 'undefined' ? !!(window as any).__TAURI__ : false,
-  __TAURI_INTERNALS__: typeof window !== 'undefined' ? !!(window as any).__TAURI_INTERNALS__ : false,
-  isTauri
-});
+console.log('[Supabase Client] Environment:', { isTauri, protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A' });
 
-// Custom fetch for Tauri that uses the HTTP plugin
-let tauriFetch: typeof fetch | null = null;
-let tauriFetchPromise: Promise<typeof fetch | null> | null = null;
+// Custom fetch that uses Tauri command for HTTP requests
+const tauriFetch: typeof fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  const method = init?.method || 'GET';
 
-// Initialize Tauri fetch - returns a promise that resolves to the fetch function
-const initTauriFetch = (): Promise<typeof fetch | null> => {
-  if (!isTauri) {
-    return Promise.resolve(null);
+  // Build headers object
+  const headers: Record<string, string> = {};
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([key, value]) => {
+        headers[key] = value;
+      });
+    } else {
+      Object.assign(headers, init.headers);
+    }
   }
 
-  if (tauriFetch) {
-    return Promise.resolve(tauriFetch);
+  // Get body as string
+  let body: string | undefined;
+  if (init?.body) {
+    if (typeof init.body === 'string') {
+      body = init.body;
+    } else if (init.body instanceof ArrayBuffer) {
+      body = new TextDecoder().decode(init.body);
+    } else {
+      body = String(init.body);
+    }
   }
 
-  if (tauriFetchPromise) {
-    return tauriFetchPromise;
-  }
+  console.log('[Supabase] Tauri HTTP request:', method, url.substring(0, 60) + '...');
 
-  console.log('[Supabase] Loading Tauri HTTP plugin...');
+  try {
+    // Use Tauri invoke to call our custom Rust command
+    const { invoke } = await import('@tauri-apps/api/core');
 
-  tauriFetchPromise = import('@tauri-apps/plugin-http')
-    .then(({ fetch: httpFetch }) => {
-      tauriFetch = httpFetch;
-      console.log('[Supabase] ✅ Tauri HTTP plugin loaded successfully');
-      return httpFetch;
-    })
-    .catch((e) => {
-      console.error('[Supabase] ❌ Failed to load Tauri HTTP plugin:', e);
-      return null;
+    const response = await invoke<{
+      status: number;
+      body: string;
+      headers: Record<string, string>;
+    }>('http_request', {
+      request: {
+        url,
+        method,
+        headers,
+        body,
+      }
     });
 
-  return tauriFetchPromise;
-};
+    console.log('[Supabase] Tauri HTTP response:', response.status);
 
-// Start loading immediately if in Tauri
-if (isTauri) {
-  initTauriFetch();
-}
-
-// Custom fetch wrapper that WAITS for Tauri HTTP plugin to load
-const customFetch: typeof fetch = async (input, init) => {
-  // Wait for Tauri fetch to be loaded
-  const httpFetch = await initTauriFetch();
-
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-
-  if (httpFetch) {
-    console.log('[Supabase] 🌐 Request via Tauri HTTP:', url.substring(0, 80));
-    return httpFetch(input, init);
+    // Create a Response object from the Tauri response
+    return new Response(response.body, {
+      status: response.status,
+      headers: new Headers(response.headers),
+    });
+  } catch (error: any) {
+    console.error('[Supabase] Tauri HTTP error:', error);
+    throw new TypeError(`Network request failed: ${error}`);
   }
-
-  // Fallback to native fetch (will likely fail for Supabase in Tauri)
-  console.warn('[Supabase] ⚠️ Falling back to native fetch for:', url.substring(0, 80));
-  return fetch(input, init);
 };
 
 // Validate environment variables
@@ -97,12 +101,10 @@ const createSupabaseClient = () => {
   const { valid } = validateEnvVars();
 
   if (!valid) {
-    // Return a mock client that will show errors gracefully
-    // The app will display an error page instead of crashing
     return null as any;
   }
 
-  console.log('[Supabase] Creating client with custom fetch:', isTauri);
+  console.log('[Supabase] Creating client, using Tauri fetch:', isTauri);
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
@@ -111,13 +113,9 @@ const createSupabaseClient = () => {
       autoRefreshToken: true,
     },
     global: {
-      // Always use customFetch in Tauri - it will wait for the plugin to load
-      fetch: isTauri ? customFetch : undefined,
+      fetch: isTauri ? tauriFetch : undefined,
     }
   });
 };
-
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createSupabaseClient();
