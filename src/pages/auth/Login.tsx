@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,150 +15,13 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setDebugLogs(prev => [...prev, `[${timestamp}] ${message}`]);
-    console.log(`[DEBUG] ${message}`);
-  };
-
-  // Debug: Check environment and configuration on mount
-  useEffect(() => {
-    addLog("=== INITIALISATION ===");
-
-    // Check environment variables
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-    addLog(`VITE_SUPABASE_URL: ${supabaseUrl || 'UNDEFINED'}`);
-    addLog(`VITE_SUPABASE_PUBLISHABLE_KEY: ${supabaseKey ? supabaseKey.substring(0, 20) + '...' : 'UNDEFINED'}`);
-
-    // Check if we're in Tauri - use protocol check since __TAURI__ may not be set
-    const isTauri = window.location.protocol === 'tauri:' || !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-    addLog(`Environnement Tauri: ${isTauri ? 'OUI' : 'NON'} (protocol: ${window.location.protocol})`);
-    if (isTauri) {
-      addLog(`  __TAURI__: ${!!(window as any).__TAURI__}`);
-      addLog(`  __TAURI_INTERNALS__: ${!!(window as any).__TAURI_INTERNALS__}`);
-    }
-
-    // Check user agent
-    addLog(`User Agent: ${navigator.userAgent.substring(0, 50)}...`);
-
-    // Check if online
-    addLog(`Navigator online: ${navigator.onLine}`);
-
-    // Check protocol
-    addLog(`Protocol: ${window.location.protocol}`);
-    addLog(`Origin: ${window.location.origin}`);
-
-    // Test basic fetch capability
-    testNetworkConnectivity();
-  }, []);
-
-  const testNetworkConnectivity = async () => {
-    addLog("=== TEST CONNECTIVITÉ ===");
-
-    const isTauri = window.location.protocol === 'tauri:' || !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-
-    // Get the appropriate fetch function
-    let httpFetch = fetch;
-    if (isTauri) {
-      try {
-        const httpPlugin = await import('@tauri-apps/plugin-http');
-        httpFetch = httpPlugin.fetch;
-        addLog("Tauri HTTP plugin chargé avec succès!");
-      } catch (e: any) {
-        addLog(`ERREUR chargement plugin HTTP: ${e.message}`);
-      }
-    }
-
-    // Test 1: Simple fetch to a known URL using native fetch
-    try {
-      addLog("Test 1a: Native fetch vers httpbin.org...");
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const response = await fetch('https://httpbin.org/get', {
-        method: 'GET',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      addLog(`Test 1a RÉUSSI: Status ${response.status}`);
-    } catch (err: any) {
-      addLog(`Test 1a ÉCHOUÉ: ${err.name} - ${err.message}`);
-    }
-
-    // Test 1b: Using Tauri HTTP plugin if available
-    if (isTauri) {
-      try {
-        addLog("Test 1b: Tauri HTTP fetch vers httpbin.org...");
-        const response = await httpFetch('https://httpbin.org/get', {
-          method: 'GET',
-        });
-        addLog(`Test 1b RÉUSSI: Status ${response.status}`);
-      } catch (err: any) {
-        addLog(`Test 1b ÉCHOUÉ: ${err.name} - ${err.message}`);
-      }
-    }
-
-    // Test 2: Fetch to Supabase health endpoint
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (supabaseUrl) {
-      try {
-        addLog(`Test 2: HTTP fetch vers Supabase...`);
-        const response = await httpFetch(`${supabaseUrl}/rest/v1/`, {
-          method: 'GET',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
-          },
-        });
-        addLog(`Test 2 RÉUSSI: Status ${response.status}`);
-      } catch (err: any) {
-        addLog(`Test 2 ÉCHOUÉ: ${err?.name || 'Unknown'} - ${err?.message || String(err)}`);
-        if (err?.cause) addLog(`  cause: ${JSON.stringify(err.cause)}`);
-        addLog(`  Full error: ${JSON.stringify(err, Object.getOwnPropertyNames(err || {}))}`);
-      }
-
-      // Test 2b: POST request like auth would do
-      try {
-        addLog(`Test 2b: POST request vers Supabase auth...`);
-        const response = await httpFetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
-          },
-          body: JSON.stringify({ email: 'test@test.com', password: 'test' }),
-        });
-        addLog(`Test 2b: Status ${response.status} (même si 400, la connexion fonctionne!)`);
-      } catch (err: any) {
-        addLog(`Test 2b ÉCHOUÉ: ${err?.message || String(err)}`);
-      }
-    }
-
-    // Test 3: Check Supabase client
-    try {
-      addLog("Test 3: Supabase getSession()...");
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        addLog(`Test 3 ERREUR: ${error.message}`);
-      } else {
-        addLog(`Test 3 RÉUSSI: Session = ${data.session ? 'ACTIVE' : 'NULL'}`);
-      }
-    } catch (err: any) {
-      addLog(`Test 3 EXCEPTION: ${err.name} - ${err.message}`);
-    }
-
-    addLog("=== FIN TESTS ===");
-  };
 
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
-          addLog(`Session check error: ${sessionError.message}`);
+          console.error('Session check error:', sessionError.message);
           return;
         }
         if (session) {
@@ -175,12 +38,11 @@ const Login = () => {
           }
         }
       } catch (err: any) {
-        addLog(`Session check failed: ${err.message}`);
+        console.error('Session check failed:', err.message);
       }
     };
 
-    // Small delay to let debug logs show first
-    setTimeout(checkSessionAndRedirect, 100);
+    checkSessionAndRedirect();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -191,30 +53,14 @@ const Login = () => {
       return;
     }
 
-    addLog("=== TENTATIVE DE CONNEXION ===");
-    addLog(`Email: ${email}`);
-    addLog(`Password length: ${password.length}`);
-
     setLoading(true);
     try {
-      addLog("Appel supabase.auth.signInWithPassword()...");
-      const startTime = Date.now();
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      const duration = Date.now() - startTime;
-      addLog(`Durée de l'appel: ${duration}ms`);
-
       if (error) {
-        addLog(`ERREUR LOGIN:`);
-        addLog(`  - message: ${error.message}`);
-        addLog(`  - status: ${error.status || 'undefined'}`);
-        addLog(`  - name: ${error.name || 'undefined'}`);
-        addLog(`  - cause: ${JSON.stringify(error.cause) || 'undefined'}`);
-
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Email ou mot de passe incorrect");
         } else if (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Load failed")) {
@@ -226,11 +72,7 @@ const Login = () => {
         return;
       }
 
-      addLog("LOGIN RÉUSSI!");
-
       if (data.session) {
-        addLog(`User ID: ${data.session.user.id}`);
-
         const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
@@ -238,14 +80,11 @@ const Login = () => {
           .single();
 
         if (roleError) {
-          addLog(`Role fetch error: ${roleError.message}`);
           toast.error("Erreur lors de la récupération du rôle");
           await supabase.auth.signOut();
           setLoading(false);
           return;
         }
-
-        addLog(`Role: ${userRole?.role}`);
 
         if (userRole?.role === 'employe_terrain') {
           toast.error("Ce compte est réservé à l'application employé.");
@@ -258,10 +97,7 @@ const Login = () => {
         navigate("/tableau-de-bord");
       }
     } catch (error: any) {
-      addLog(`EXCEPTION CATCH:`);
-      addLog(`  - name: ${error.name}`);
-      addLog(`  - message: ${error.message}`);
-      addLog(`  - stack: ${error.stack?.substring(0, 200)}`);
+      console.error('Login error:', error);
       toast.error("Erreur de connexion");
       setLoading(false);
     }
@@ -318,122 +154,95 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col p-4 bg-background">
-      {/* Debug Panel - Full width at top */}
-      <div className="w-full max-w-4xl mx-auto mb-4 p-3 bg-black text-green-400 font-mono text-xs rounded overflow-auto max-h-64">
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-bold text-white">🔧 DEBUG CONSOLE</span>
-          <button
-            onClick={() => setDebugLogs([])}
-            className="text-red-400 hover:text-red-300"
-          >
-            Clear
-          </button>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="glass-modal w-full max-w-md p-8 animate-scale-in">
+        <div className="flex justify-center mb-8">
+          <img src={logo} alt="Provia Base" className="w-24 h-24 object-contain" />
         </div>
-        <div className="space-y-0.5">
-          {debugLogs.length === 0 ? (
-            <div className="text-gray-500">Chargement des logs...</div>
-          ) : (
-            debugLogs.map((log, i) => (
-              <div key={i} className={log.includes('ÉCHOUÉ') || log.includes('ERREUR') || log.includes('EXCEPTION') ? 'text-red-400' : log.includes('RÉUSSI') ? 'text-green-400' : ''}>
-                {log}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
 
-      {/* Login Form */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="glass-modal w-full max-w-md p-8 animate-scale-in">
-          <div className="flex justify-center mb-8">
-            <img src={logo} alt="Provia Base" className="w-24 h-24 object-contain" />
+        <h1 className="text-2xl font-bold text-center mb-2 uppercase tracking-wide">
+          Provia Base
+        </h1>
+        <p className="text-center text-muted-foreground mb-8">
+          {isSignUp ? "Créez votre compte CRM" : "Connectez-vous à votre CRM"}
+        </p>
+
+        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="votre@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="glass-card"
+              disabled={loading}
+              required
+            />
           </div>
 
-          <h1 className="text-2xl font-bold text-center mb-2 uppercase tracking-wide">
-            Provia Base
-          </h1>
-          <p className="text-center text-muted-foreground mb-8">
-            {isSignUp ? "Créez votre compte CRM" : "Connectez-vous à votre CRM"}
-          </p>
+          <div className="space-y-2">
+            <Label htmlFor="password">Mot de passe</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="glass-card"
+              disabled={loading}
+              required
+            />
+          </div>
 
-          <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-6">
+          {isSignUp && (
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="votre@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="glass-card"
-                disabled={loading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
+                id="confirmPassword"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="glass-card"
                 disabled={loading}
                 required
               />
             </div>
+          )}
 
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="glass-card"
-                  disabled={loading}
-                  required
-                />
-              </div>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide transition-all hover:scale-[1.02] hover:shadow-lg"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Chargement...
+              </>
+            ) : (
+              isSignUp ? "Créer un compte" : "Se connecter"
             )}
+          </Button>
+        </form>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold uppercase tracking-wide transition-all hover:scale-[1.02] hover:shadow-lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Chargement...
-                </>
-              ) : (
-                isSignUp ? "Créer un compte" : "Se connecter"
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setPassword("");
-                setConfirmPassword("");
-              }}
-              className="text-sm text-primary hover:underline"
-              disabled={loading}
-            >
-              {isSignUp
-                ? "Déjà un compte ? Se connecter"
-                : "Pas encore de compte ? S'inscrire"}
-            </button>
-          </div>
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setPassword("");
+              setConfirmPassword("");
+            }}
+            className="text-sm text-primary hover:underline"
+            disabled={loading}
+          >
+            {isSignUp
+              ? "Déjà un compte ? Se connecter"
+              : "Pas encore de compte ? S'inscrire"}
+          </button>
         </div>
       </div>
     </div>
