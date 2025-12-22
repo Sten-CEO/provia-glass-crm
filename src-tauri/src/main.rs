@@ -23,7 +23,6 @@ pub struct HttpRequest {
 #[tauri::command]
 async fn http_request(request: HttpRequest) -> Result<HttpResponse, String> {
     let client = reqwest::Client::builder()
-        .use_rustls_tls()
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
