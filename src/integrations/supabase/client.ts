@@ -5,6 +5,41 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// ==================== DEBUG LOGGING ====================
+const DEBUG = true;
+
+function debugLog(category: string, message: string, data?: unknown) {
+  if (!DEBUG) return;
+  const timestamp = new Date().toISOString();
+  const prefix = `[SUPABASE-DEBUG ${timestamp}] [${category}]`;
+  if (data !== undefined) {
+    console.log(prefix, message, data);
+  } else {
+    console.log(prefix, message);
+  }
+}
+
+// Log environment on load
+debugLog('ENV', '=== SUPABASE CLIENT INITIALIZATION ===');
+debugLog('ENV', 'SUPABASE_URL:', SUPABASE_URL ? `${SUPABASE_URL.substring(0, 30)}...` : 'MISSING!');
+debugLog('ENV', 'SUPABASE_KEY:', SUPABASE_PUBLISHABLE_KEY ? `${SUPABASE_PUBLISHABLE_KEY.substring(0, 20)}...` : 'MISSING!');
+debugLog('ENV', 'window.location.href:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+debugLog('ENV', 'window.location.protocol:', typeof window !== 'undefined' ? window.location.protocol : 'N/A');
+debugLog('ENV', 'window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
+debugLog('ENV', 'navigator.userAgent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A');
+debugLog('ENV', 'navigator.onLine:', typeof navigator !== 'undefined' ? navigator.onLine : 'N/A');
+
+// Check if we're in Tauri
+const isTauri = typeof window !== 'undefined' && (
+  '__TAURI__' in window ||
+  '__TAURI_INTERNALS__' in window ||
+  window.location.protocol === 'tauri:' ||
+  window.location.protocol === 'https:' && window.location.hostname === 'tauri.localhost'
+);
+debugLog('ENV', 'Is Tauri app:', isTauri);
+
+// ==================== END DEBUG LOGGING ====================
+
 // Validate environment variables
 export function validateEnvVars(): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
@@ -16,14 +51,161 @@ export function validateEnvVars(): { valid: boolean; missing: string[] } {
     missing.push('VITE_SUPABASE_PUBLISHABLE_KEY');
   }
 
+  debugLog('VALIDATE', 'Environment validation result:', { valid: missing.length === 0, missing });
+
   return {
     valid: missing.length === 0,
     missing
   };
 }
 
+// Network connectivity test
+export async function testNetworkConnectivity(): Promise<{
+  success: boolean;
+  supabaseReachable: boolean;
+  googleReachable: boolean;
+  errors: string[];
+  details: Record<string, unknown>;
+}> {
+  debugLog('NETWORK', '=== STARTING NETWORK CONNECTIVITY TEST ===');
+  const errors: string[] = [];
+  const details: Record<string, unknown> = {};
+  let supabaseReachable = false;
+  let googleReachable = false;
+
+  // Test 1: Basic fetch to Google (simple connectivity test)
+  debugLog('NETWORK', 'Test 1: Testing basic internet connectivity (google.com)...');
+  try {
+    const startTime = Date.now();
+    const response = await fetch('https://www.google.com/favicon.ico', {
+      method: 'HEAD',
+      mode: 'no-cors',
+      cache: 'no-store'
+    });
+    const elapsed = Date.now() - startTime;
+    googleReachable = true;
+    details.googleTest = { success: true, elapsed, type: response.type };
+    debugLog('NETWORK', `Test 1 PASSED: Google reachable in ${elapsed}ms`, { type: response.type });
+  } catch (err) {
+    const error = err as Error;
+    errors.push(`Google fetch failed: ${error.message}`);
+    details.googleTest = { success: false, error: error.message, stack: error.stack };
+    debugLog('NETWORK', 'Test 1 FAILED: Google not reachable', { error: error.message, stack: error.stack });
+  }
+
+  // Test 2: Fetch Supabase health endpoint
+  if (SUPABASE_URL) {
+    debugLog('NETWORK', 'Test 2: Testing Supabase connectivity...');
+    const healthUrl = `${SUPABASE_URL}/rest/v1/`;
+    debugLog('NETWORK', 'Health URL:', healthUrl);
+
+    try {
+      const startTime = Date.now();
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        },
+        cache: 'no-store'
+      });
+      const elapsed = Date.now() - startTime;
+      const status = response.status;
+      const statusText = response.statusText;
+
+      // Try to get response body
+      let responseBody = '';
+      try {
+        responseBody = await response.text();
+      } catch {
+        responseBody = '[Could not read response body]';
+      }
+
+      supabaseReachable = response.ok || status === 401 || status === 400; // 401/400 means server responded
+      details.supabaseTest = {
+        success: supabaseReachable,
+        elapsed,
+        status,
+        statusText,
+        responseBody: responseBody.substring(0, 500),
+        headers: Object.fromEntries(response.headers.entries())
+      };
+      debugLog('NETWORK', `Test 2 ${supabaseReachable ? 'PASSED' : 'FAILED'}: Supabase response`, details.supabaseTest);
+    } catch (err) {
+      const error = err as Error;
+      errors.push(`Supabase fetch failed: ${error.message}`);
+      details.supabaseTest = {
+        success: false,
+        error: error.message,
+        name: error.name,
+        stack: error.stack
+      };
+      debugLog('NETWORK', 'Test 2 FAILED: Supabase not reachable', details.supabaseTest);
+    }
+
+    // Test 3: Try Supabase Auth endpoint specifically
+    debugLog('NETWORK', 'Test 3: Testing Supabase Auth endpoint...');
+    const authUrl = `${SUPABASE_URL}/auth/v1/settings`;
+    debugLog('NETWORK', 'Auth URL:', authUrl);
+
+    try {
+      const startTime = Date.now();
+      const response = await fetch(authUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+        },
+        cache: 'no-store'
+      });
+      const elapsed = Date.now() - startTime;
+      const status = response.status;
+
+      let responseBody = '';
+      try {
+        responseBody = await response.text();
+      } catch {
+        responseBody = '[Could not read response body]';
+      }
+
+      details.supabaseAuthTest = {
+        success: response.ok,
+        elapsed,
+        status,
+        responseBody: responseBody.substring(0, 500)
+      };
+      debugLog('NETWORK', `Test 3 ${response.ok ? 'PASSED' : 'WARNING'}: Auth endpoint response`, details.supabaseAuthTest);
+    } catch (err) {
+      const error = err as Error;
+      errors.push(`Supabase Auth fetch failed: ${error.message}`);
+      details.supabaseAuthTest = {
+        success: false,
+        error: error.message,
+        name: error.name,
+        stack: error.stack
+      };
+      debugLog('NETWORK', 'Test 3 FAILED: Auth endpoint not reachable', details.supabaseAuthTest);
+    }
+  } else {
+    errors.push('SUPABASE_URL is not configured');
+    debugLog('NETWORK', 'SKIPPING Supabase tests - URL not configured');
+  }
+
+  const result = {
+    success: googleReachable && supabaseReachable,
+    supabaseReachable,
+    googleReachable,
+    errors,
+    details
+  };
+
+  debugLog('NETWORK', '=== NETWORK TEST COMPLETE ===', result);
+  return result;
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
+
+debugLog('CLIENT', 'Creating Supabase client...');
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -31,4 +213,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
   }
+});
+
+debugLog('CLIENT', 'Supabase client created successfully');
+
+// Log auth state changes
+supabase.auth.onAuthStateChange((event, session) => {
+  debugLog('AUTH-STATE', `Auth state changed: ${event}`, {
+    event,
+    hasSession: !!session,
+    userId: session?.user?.id,
+    email: session?.user?.email
+  });
 });
