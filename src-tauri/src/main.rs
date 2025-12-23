@@ -30,7 +30,6 @@ async fn http_request(
     println!("[RUST] http_request called: {} {}", method, url);
 
     let client = reqwest::Client::builder()
-        .use_rustls_tls()
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -94,7 +93,6 @@ async fn supabase_sign_in(
     let url = format!("{}/auth/v1/token?grant_type=password", supabase_url);
 
     let client = reqwest::Client::builder()
-        .use_rustls_tls()
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -164,7 +162,6 @@ async fn supabase_sign_up(
     let url = format!("{}/auth/v1/signup", supabase_url);
 
     let client = reqwest::Client::builder()
-        .use_rustls_tls()
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -227,7 +224,6 @@ async fn test_network() -> Result<HttpResponse, String> {
     println!("[RUST] test_network called");
 
     let client = reqwest::Client::builder()
-        .use_rustls_tls()
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
