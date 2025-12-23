@@ -43,8 +43,7 @@
       "timestampUrl": ""
     },
     "macOS": {
-      "minimumSystemVersion": "10.13",
-      "entitlements": "./entitlements.plist"
+      "minimumSystemVersion": "10.13"
     },
     "category": "Business",
     "shortDescription": "CRM Premium pour la gestion d'entreprise",

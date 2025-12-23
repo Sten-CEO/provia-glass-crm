@@ -5,117 +5,13 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Check if running in Tauri - use multiple detection methods
-const isTauri = typeof window !== 'undefined' && (
-  window.location.protocol === 'tauri:' ||
-  !!(window as any).__TAURI__ ||
-  !!(window as any).__TAURI_INTERNALS__
-);
+// Import the supabase client like this:
+// import { supabase } from "@/integrations/supabase/client";
 
-console.log('[Supabase Client] Environment:', { isTauri, protocol: typeof window !== 'undefined' ? window.location.protocol : 'N/A' });
-
-// Custom fetch that uses Tauri command for HTTP requests
-const tauriFetch: typeof fetch = async (input, init) => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  const method = init?.method || 'GET';
-
-  // Build headers object
-  const headers: Record<string, string> = {};
-  if (init?.headers) {
-    if (init.headers instanceof Headers) {
-      init.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
-    } else if (Array.isArray(init.headers)) {
-      init.headers.forEach(([key, value]) => {
-        headers[key] = value;
-      });
-    } else {
-      Object.assign(headers, init.headers);
-    }
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
   }
-
-  // Get body as string
-  let body: string | undefined;
-  if (init?.body) {
-    if (typeof init.body === 'string') {
-      body = init.body;
-    } else if (init.body instanceof ArrayBuffer) {
-      body = new TextDecoder().decode(init.body);
-    } else {
-      body = String(init.body);
-    }
-  }
-
-  console.log('[Supabase] Tauri HTTP request:', method, url.substring(0, 60) + '...');
-
-  try {
-    // Use Tauri invoke to call our custom Rust command
-    const { invoke } = await import('@tauri-apps/api/core');
-
-    const response = await invoke<{
-      status: number;
-      body: string;
-      headers: Record<string, string>;
-    }>('http_request', {
-      request: {
-        url,
-        method,
-        headers,
-        body,
-      }
-    });
-
-    console.log('[Supabase] Tauri HTTP response:', response.status);
-
-    // Create a Response object from the Tauri response
-    return new Response(response.body, {
-      status: response.status,
-      headers: new Headers(response.headers),
-    });
-  } catch (error: any) {
-    console.error('[Supabase] Tauri HTTP error:', error);
-    throw new TypeError(`Network request failed: ${error}`);
-  }
-};
-
-// Validate environment variables
-export const validateEnvVars = (): { valid: boolean; missing: string[] } => {
-  const missing: string[] = [];
-
-  if (!SUPABASE_URL) {
-    missing.push('VITE_SUPABASE_URL');
-  }
-  if (!SUPABASE_PUBLISHABLE_KEY) {
-    missing.push('VITE_SUPABASE_PUBLISHABLE_KEY');
-  }
-
-  return {
-    valid: missing.length === 0,
-    missing
-  };
-};
-
-// Create client only if env vars are valid
-const createSupabaseClient = () => {
-  const { valid } = validateEnvVars();
-
-  if (!valid) {
-    return null as any;
-  }
-
-  console.log('[Supabase] Creating client, using Tauri fetch:', isTauri);
-
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      storage: localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-    global: {
-      fetch: isTauri ? tauriFetch : undefined,
-    }
-  });
-};
-
-export const supabase = createSupabaseClient();
+});
