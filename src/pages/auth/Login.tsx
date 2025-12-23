@@ -118,6 +118,10 @@ const Login = () => {
       if (isTauri) {
         // Use Tauri command for login
         console.log('[LOGIN] Using Tauri command for sign in...');
+        console.log('[LOGIN] SUPABASE_URL:', SUPABASE_URL);
+        console.log('[LOGIN] SUPABASE_KEY:', SUPABASE_KEY ? SUPABASE_KEY.substring(0, 20) + '...' : 'MISSING');
+        console.log('[LOGIN] Email:', email);
+
         const result = await tauriInvoke<AuthResponse>('supabase_sign_in', {
           supabaseUrl: SUPABASE_URL,
           supabaseKey: SUPABASE_KEY,
@@ -125,7 +129,7 @@ const Login = () => {
           password,
         });
 
-        console.log('[LOGIN] Tauri sign in result:', result);
+        console.log('[LOGIN] Tauri sign in result:', JSON.stringify(result, null, 2));
 
         if (!result.success) {
           toast.error(result.error || "Erreur de connexion");
@@ -216,9 +220,21 @@ const Login = () => {
         }
       }
     } catch (err) {
-      const error = err as Error;
-      console.error('Login error:', error);
-      toast.error(`Erreur de connexion: ${error.message}`);
+      console.error('[LOGIN] Login error:', err);
+      console.error('[LOGIN] Error type:', typeof err);
+      console.error('[LOGIN] Error stringified:', JSON.stringify(err));
+
+      // Tauri errors can be strings or objects
+      let errorMessage = 'Erreur inconnue';
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String((err as { message: unknown }).message);
+      }
+
+      toast.error(`Erreur de connexion: ${errorMessage}`);
       setLoading(false);
     }
   };
