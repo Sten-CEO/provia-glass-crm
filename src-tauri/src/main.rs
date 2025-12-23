@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuthResponse {
@@ -107,13 +108,29 @@ async fn supabase_sign_in(
         .post(&url)
         .header("apikey", &supabase_key)
         .header("Authorization", format!("Bearer {}", supabase_key))
-        .header("Content-Type", "application/json")
         .json(&body)
         .send()
         .await
         .map_err(|e| {
-            println!("[RUST] Sign in request failed: {}", e);
-            format!("Sign in request failed: {}", e)
+            // Get detailed error information
+            let mut error_details = format!("Request error: {}", e);
+            if e.is_connect() {
+                error_details.push_str(" [CONNECTION ERROR]");
+            }
+            if e.is_timeout() {
+                error_details.push_str(" [TIMEOUT]");
+            }
+            if e.is_request() {
+                error_details.push_str(" [REQUEST BUILD ERROR]");
+            }
+            if let Some(source) = e.source() {
+                error_details.push_str(&format!(" | Source: {}", source));
+                if let Some(source2) = source.source() {
+                    error_details.push_str(&format!(" | Inner: {}", source2));
+                }
+            }
+            println!("[RUST] DETAILED ERROR: {}", error_details);
+            error_details
         })?;
 
     let status = response.status();
