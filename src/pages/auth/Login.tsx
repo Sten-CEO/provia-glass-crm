@@ -15,36 +15,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [networkTest, setNetworkTest] = useState<string | null>(null);
-
-  const isTauri = typeof window !== 'undefined' && (
-    window.location.protocol === 'tauri:' ||
-    !!(window as any).__TAURI__ ||
-    !!(window as any).__TAURI_INTERNALS__
-  );
-
-  const runNetworkTest = async () => {
-    if (!isTauri) {
-      setNetworkTest("Not in Tauri environment");
-      return;
-    }
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const result = await invoke<string>('test_network');
-      setNetworkTest(result);
-    } catch (e: any) {
-      setNetworkTest(`Error: ${e}`);
-    }
-  };
 
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('Session check error:', sessionError.message);
-          return;
-        }
+        const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           const { data: userRole } = await supabase
             .from("user_roles")
@@ -58,8 +33,8 @@ const Login = () => {
             navigate("/tableau-de-bord");
           }
         }
-      } catch (err: any) {
-        console.error('Session check failed:', err.message);
+      } catch (err) {
+        console.error('Session check failed:', err);
       }
     };
 
@@ -84,8 +59,6 @@ const Login = () => {
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Email ou mot de passe incorrect");
-        } else if (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Load failed")) {
-          toast.error(`Erreur réseau: ${error.message}`);
         } else {
           toast.error(error.message);
         }
@@ -117,7 +90,7 @@ const Login = () => {
         toast.success("Connexion réussie");
         navigate("/tableau-de-bord");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
       toast.error("Erreur de connexion");
       setLoading(false);
@@ -145,7 +118,7 @@ const Login = () => {
     try {
       const redirectUrl = `${window.location.origin}/tableau-de-bord`;
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -166,7 +139,7 @@ const Login = () => {
       setIsSignUp(false);
       setPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Erreur lors de la création du compte");
       console.error(error);
     } finally {
@@ -265,21 +238,6 @@ const Login = () => {
               : "Pas encore de compte ? S'inscrire"}
           </button>
         </div>
-
-        {isTauri && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-            <button
-              type="button"
-              onClick={runNetworkTest}
-              className="text-blue-600 underline mb-2"
-            >
-              Test Network (Rust)
-            </button>
-            {networkTest && (
-              <pre className="whitespace-pre-wrap text-gray-700 mt-2">{networkTest}</pre>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
