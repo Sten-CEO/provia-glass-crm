@@ -34,7 +34,7 @@ const isTauri = typeof window !== 'undefined' && (
   '__TAURI__' in window ||
   '__TAURI_INTERNALS__' in window ||
   window.location.protocol === 'tauri:' ||
-  window.location.protocol === 'https:' && window.location.hostname === 'tauri.localhost'
+  (window.location.protocol === 'https:' && window.location.hostname === 'tauri.localhost')
 );
 debugLog('ENV', 'Is Tauri app:', isTauri);
 
@@ -59,6 +59,45 @@ export function validateEnvVars(): { valid: boolean; missing: string[] } {
   };
 }
 
+// Create a custom fetch that uses Tauri HTTP plugin when in Tauri
+async function createTauriFetch(): Promise<typeof fetch> {
+  if (!isTauri) {
+    debugLog('FETCH', 'Using native fetch (not in Tauri)');
+    return fetch;
+  }
+
+  debugLog('FETCH', 'Loading Tauri HTTP plugin...');
+
+  try {
+    // Dynamically import the Tauri HTTP plugin
+    const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+    debugLog('FETCH', 'Tauri HTTP plugin loaded successfully');
+
+    // Create a wrapper that logs requests
+    const wrappedFetch: typeof fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      debugLog('FETCH', `Tauri fetch: ${init?.method || 'GET'} ${url}`);
+
+      try {
+        const response = await tauriFetch(input, init);
+        debugLog('FETCH', `Tauri fetch response: ${response.status} ${response.statusText}`);
+        return response;
+      } catch (err) {
+        const error = err as Error;
+        debugLog('FETCH', `Tauri fetch error: ${error.message}`, { stack: error.stack });
+        throw err;
+      }
+    };
+
+    return wrappedFetch;
+  } catch (err) {
+    const error = err as Error;
+    debugLog('FETCH', `Failed to load Tauri HTTP plugin: ${error.message}`, { stack: error.stack });
+    debugLog('FETCH', 'Falling back to native fetch');
+    return fetch;
+  }
+}
+
 // Network connectivity test
 export async function testNetworkConnectivity(): Promise<{
   success: boolean;
@@ -73,19 +112,21 @@ export async function testNetworkConnectivity(): Promise<{
   let supabaseReachable = false;
   let googleReachable = false;
 
+  // Get the appropriate fetch function
+  const customFetch = await createTauriFetch();
+
   // Test 1: Basic fetch to Google (simple connectivity test)
   debugLog('NETWORK', 'Test 1: Testing basic internet connectivity (google.com)...');
   try {
     const startTime = Date.now();
-    const response = await fetch('https://www.google.com/favicon.ico', {
+    const response = await customFetch('https://www.google.com/favicon.ico', {
       method: 'HEAD',
-      mode: 'no-cors',
       cache: 'no-store'
     });
     const elapsed = Date.now() - startTime;
     googleReachable = true;
-    details.googleTest = { success: true, elapsed, type: response.type };
-    debugLog('NETWORK', `Test 1 PASSED: Google reachable in ${elapsed}ms`, { type: response.type });
+    details.googleTest = { success: true, elapsed, status: response.status };
+    debugLog('NETWORK', `Test 1 PASSED: Google reachable in ${elapsed}ms`, { status: response.status });
   } catch (err) {
     const error = err as Error;
     errors.push(`Google fetch failed: ${error.message}`);
@@ -101,7 +142,7 @@ export async function testNetworkConnectivity(): Promise<{
 
     try {
       const startTime = Date.now();
-      const response = await fetch(healthUrl, {
+      const response = await customFetch(healthUrl, {
         method: 'GET',
         headers: {
           'apikey': SUPABASE_PUBLISHABLE_KEY,
@@ -127,8 +168,7 @@ export async function testNetworkConnectivity(): Promise<{
         elapsed,
         status,
         statusText,
-        responseBody: responseBody.substring(0, 500),
-        headers: Object.fromEntries(response.headers.entries())
+        responseBody: responseBody.substring(0, 500)
       };
       debugLog('NETWORK', `Test 2 ${supabaseReachable ? 'PASSED' : 'FAILED'}: Supabase response`, details.supabaseTest);
     } catch (err) {
@@ -150,7 +190,7 @@ export async function testNetworkConnectivity(): Promise<{
 
     try {
       const startTime = Date.now();
-      const response = await fetch(authUrl, {
+      const response = await customFetch(authUrl, {
         method: 'GET',
         headers: {
           'apikey': SUPABASE_PUBLISHABLE_KEY,
@@ -207,6 +247,45 @@ export async function testNetworkConnectivity(): Promise<{
 
 debugLog('CLIENT', 'Creating Supabase client...');
 
+// Create a promise that will resolve with the configured Supabase client
+let supabaseClient: ReturnType<typeof createClient<Database>> | null = null;
+let supabaseClientPromise: Promise<ReturnType<typeof createClient<Database>>> | null = null;
+
+async function initializeSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+
+  const customFetch = await createTauriFetch();
+
+  debugLog('CLIENT', 'Creating Supabase client with custom fetch...');
+
+  supabaseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+    global: {
+      fetch: customFetch
+    }
+  });
+
+  debugLog('CLIENT', 'Supabase client created successfully');
+
+  // Log auth state changes
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    debugLog('AUTH-STATE', `Auth state changed: ${event}`, {
+      event,
+      hasSession: !!session,
+      userId: session?.user?.id,
+      email: session?.user?.email
+    });
+  });
+
+  return supabaseClient;
+}
+
+// For synchronous access, create a basic client immediately
+// This will be replaced once the async initialization completes
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
@@ -215,14 +294,46 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-debugLog('CLIENT', 'Supabase client created successfully');
+// Initialize with Tauri fetch in the background
+if (isTauri) {
+  debugLog('CLIENT', 'Tauri detected, initializing with HTTP plugin...');
 
-// Log auth state changes
-supabase.auth.onAuthStateChange((event, session) => {
-  debugLog('AUTH-STATE', `Auth state changed: ${event}`, {
-    event,
-    hasSession: !!session,
-    userId: session?.user?.id,
-    email: session?.user?.email
-  });
-});
+  // Replace the global fetch for Supabase
+  (async () => {
+    try {
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+      debugLog('CLIENT', 'Replacing Supabase global fetch with Tauri fetch...');
+
+      // Monkey-patch the supabase client's fetch
+      // @ts-expect-error - accessing internal property
+      if (supabase.rest && supabase.rest.fetch) {
+        // @ts-expect-error - accessing internal property
+        supabase.rest.fetch = tauriFetch;
+      }
+
+      // For auth, we need to set it globally
+      // The supabase-js library uses the global fetch by default
+      // We'll override window.fetch for Tauri
+      const originalFetch = window.fetch;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+        // Only use Tauri fetch for Supabase URLs
+        if (url.includes('supabase.co') || url.includes('supabase.in')) {
+          debugLog('FETCH-INTERCEPT', `Using Tauri fetch for: ${url}`);
+          return tauriFetch(input, init);
+        }
+
+        // Use original fetch for other URLs
+        return originalFetch(input, init);
+      };
+
+      debugLog('CLIENT', 'Fetch override installed successfully');
+    } catch (err) {
+      const error = err as Error;
+      debugLog('CLIENT', `Failed to setup Tauri fetch: ${error.message}`);
+    }
+  })();
+}
+
+debugLog('CLIENT', 'Supabase client exported');
