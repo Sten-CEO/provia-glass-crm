@@ -318,7 +318,12 @@ const Factures = () => {
             <div className="space-y-4">
               <div>
                 <Label>Numéro</Label>
-                <Input value={newInvoice.numero} disabled className="glass-card" />
+                <Input
+                  value={newInvoice.numero}
+                  onChange={(e) => setNewInvoice({ ...newInvoice, numero: e.target.value })}
+                  placeholder="Numéro de facture"
+                  className="glass-card"
+                />
               </div>
               <div>
                 <Label>Client *</Label>
