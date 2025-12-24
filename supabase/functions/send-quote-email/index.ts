@@ -160,7 +160,7 @@ serve(async (req) => {
       DateEnvoi: formatDate(new Date().toISOString()),
       DateCreation: formatDate(quote.issued_at || new Date().toISOString()),
       DateExpiration: quote.expiry_date ? formatDate(quote.expiry_date) : '',
-      NomEntreprise: company.name || 'Provia Glass',
+      NomEntreprise: company.name || '',
       EmailEntreprise: company.email || '',
       TelephoneEntreprise: company.telephone || '',
       AdresseEntreprise: company.adresse || '',
