@@ -40,6 +40,7 @@ import ServiceCatalog from "./pages/parametres/ServiceCatalog";
 import Taxes from "./pages/parametres/Taxes";
 import Support from "./pages/Support";
 import PublicQuoteView from "./pages/PublicQuoteView";
+import PublicInvoiceView from "./pages/PublicInvoiceView";
 import SignedQuoteView from "./pages/SignedQuoteView";
 import Download from "./pages/Download";
 import NotFound from "./pages/NotFound";
@@ -79,7 +80,8 @@ const App = () => {
           <Route path="/auth/login" element={<Login />} />
           <Route path="/download" element={<Download />} />
           <Route path="/quote/:token" element={<PublicQuoteView />} />
-          
+          <Route path="/invoice/:token" element={<PublicInvoiceView />} />
+
           {/* Employee PWA Routes */}
           <Route path="/employee/login" element={<EmployeeLogin />} />
           <Route element={<EmployeeLayout />}>

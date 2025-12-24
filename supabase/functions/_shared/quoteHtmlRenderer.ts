@@ -686,10 +686,12 @@ export function convertQuoteToRenderData(quote: any): QuoteRenderData {
   return {
     numero: quote.numero || "",
     title: quote.title || "",
-    issued_at: quote.issued_at || new Date().toISOString(),
-    expiry_date: quote.expiry_date || "",
+    // Support both quote (issued_at) and invoice (issue_date) date fields
+    issued_at: quote.issued_at || quote.issue_date || new Date().toISOString(),
+    // Support both quote (expiry_date) and invoice (echeance) fields
+    expiry_date: quote.expiry_date || quote.echeance || "",
 
-    client_nom: quote.client_nom || "",
+    client_nom: quote.client_nom || client.nom || "",
     client_email: quote.contact_email || client.email || "",
     client_telephone: quote.contact_phone || client.telephone || "",
     client_adresse: quote.property_address || client.adresse || "",

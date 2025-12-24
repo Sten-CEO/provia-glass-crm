@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Menu } from "lucide-react";
+import { Plus, Edit, Trash2, Menu, FileCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkDeleteToolbar } from "@/components/common/BulkDeleteToolbar";
@@ -51,6 +51,8 @@ interface Invoice {
   lignes?: any[];
   remise?: number;
   date_paiement?: string;
+  signed_at?: string;
+  token?: string;
 }
 
 interface Client {
@@ -429,7 +431,14 @@ const Factures = () => {
                   </td>
                   <td className="p-4 text-muted-foreground">{formatDate(invoice.echeance)}</td>
                   <td className="p-4">
-                    <Badge className={getStatusColor(invoice.statut)}>{invoice.statut}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(invoice.statut)}>{invoice.statut}</Badge>
+                      {invoice.signed_at && (
+                        <span title="Validée électroniquement">
+                          <FileCheck className="h-4 w-4 text-green-500" />
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
@@ -440,6 +449,17 @@ const Factures = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      {invoice.signed_at && invoice.token && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`/invoice/${invoice.token}`, '_blank')}
+                          title="Voir la facture signée"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <FileCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

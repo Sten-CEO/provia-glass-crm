@@ -185,8 +185,33 @@ serve(async (req) => {
       finalMessage = replaceVariables(finalMessage, variables);
     }
 
+    // Attacher les données de la société à la facture pour le PDF generator
+    invoice.companies = company;
+
+    // Générer un token unique si pas déjà fait
+    let token = invoice.token;
+    if (!token) {
+      token = crypto.randomUUID();
+
+      // Mettre à jour la facture avec le token et la date d'envoi
+      const { error: updateError } = await supabase
+        .from('factures')
+        .update({
+          token,
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
+
+      if (updateError) {
+        console.error('Token update error:', updateError);
+      }
+    }
+
     // Générer le PDF de la facture
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateInvoicePDF(invoice, supabase);
+
+    // Préparer l'URL frontend
+    const frontendUrl = (Deno.env.get('FRONTEND_URL') || 'https://app.proviabase.fr').replace(/\/$/, '');
 
     // Préparer le contenu HTML de l'email (with XSS protection)
     // Le nom d'entreprise vient de la base de données (table companies)
@@ -213,6 +238,13 @@ serve(async (req) => {
             ${invoice.statut === 'Payée' ? '<p style="color: #27AE60; font-weight: bold; margin: 10px 0;">✓ Payée</p>' : '<p style="color: #B45309; font-weight: bold; margin: 10px 0;">⚠ En attente de paiement</p>'}
           </div>
 
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${frontendUrl}/invoice/${token}"
+               style="display: inline-block; background-color: #FBBF24; color: #1f2937; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              Consulter et valider la facture en ligne
+            </a>
+          </div>
+
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
             <p>${safeCompanyName}</p>
             ${safeCompanyAdresse ? `<p>${safeCompanyAdresse}</p>` : ''}
@@ -225,7 +257,7 @@ serve(async (req) => {
     `;
 
     // Préparer le texte brut (fallback)
-    const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}`;
+    const textContent = finalMessage + `\n\nFacture ${invoice.numero} - Montant: ${formatCurrency(invoice.total_ttc || 0)}\n\nConsulter la facture: ${frontendUrl}/invoice/${token}`;
 
     // Envoyer l'email via SMTP
     const emailResult = await sendEmailViaSMTP(
@@ -261,6 +293,8 @@ serve(async (req) => {
         success: true,
         message: 'Email envoyé avec succès',
         messageId: emailResult.messageId,
+        token,
+        publicUrl: `/invoice/${token}`
       }),
       {
         status: 200,
