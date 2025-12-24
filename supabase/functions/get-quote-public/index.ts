@@ -26,13 +26,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Récupérer le devis par token (accès public)
+    // Récupérer le devis par token (accès public) - sans la jointure companies (pas de FK)
     const { data: quote, error: quoteError } = await supabase
       .from('devis')
       .select(`
         *,
         clients(*),
-        companies(*),
         quote_signatures(*)
       `)
       .eq('token', token)
@@ -41,6 +40,17 @@ serve(async (req) => {
     if (quoteError || !quote) {
       console.error('Quote error:', quoteError);
       throw new Error('Devis introuvable ou lien invalide');
+    }
+
+    // Récupérer les informations de la société séparément (pas de FK entre devis et companies)
+    let company = null;
+    if (quote.company_id) {
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', quote.company_id)
+        .single();
+      company = companyData;
     }
 
     // Vérifier si le devis a expiré
@@ -85,10 +95,10 @@ serve(async (req) => {
           expiry_date: quote.expiry_date,
           statut: quote.statut,
           company: {
-            name: quote.companies?.name,
-            email: quote.companies?.email,
-            telephone: quote.companies?.telephone,
-            adresse: quote.companies?.adresse,
+            name: company?.name || '',
+            email: company?.email || '',
+            telephone: company?.telephone || '',
+            adresse: company?.adresse || '',
           },
           signature: quote.quote_signatures?.[0] || null,
         },

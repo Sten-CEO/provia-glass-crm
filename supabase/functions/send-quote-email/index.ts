@@ -231,14 +231,14 @@ serve(async (req) => {
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #4A90E2; color: white; padding: 20px; text-align: center;">
+        <div style="background-color: #F59E0B; color: white; padding: 20px; text-align: center;">
           <h1 style="margin: 0;">${safeCompanyName}</h1>
         </div>
 
         <div style="padding: 30px; background-color: #f9f9f9;">
           ${finalMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
 
-          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #4A90E2;">
+          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #F59E0B;">
             <h2 style="margin-top: 0; color: #333;">Devis ${safeQuoteNumero}</h2>
             <p style="color: #666; margin: 5px 0;"><strong>Montant TTC:</strong> ${formatCurrency(quote.total_ttc || 0)}</p>
             <p style="color: #666; margin: 5px 0;"><strong>Valable jusqu'au:</strong> ${quote.expiry_date ? formatDate(quote.expiry_date) : 'N/A'}</p>
@@ -246,7 +246,7 @@ serve(async (req) => {
 
           <div style="text-align: center; margin-top: 30px;">
             <a href="${frontendUrl}/quote/${token}"
-               style="display: inline-block; background-color: #4A90E2; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+               style="display: inline-block; background-color: #F59E0B; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
               Consulter et signer le devis en ligne
             </a>
           </div>
