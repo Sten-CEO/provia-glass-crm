@@ -5,10 +5,10 @@
  * during the onboarding process.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGuidecrm } from './GuidecrmContext';
 import { cn } from '@/lib/utils';
-import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowRight, ArrowLeft, ArrowUp, ArrowDown, MousePointer2 } from 'lucide-react';
 
 interface TooltipPosition {
   top: number;
@@ -29,9 +29,8 @@ export function GuidecrmTooltip() {
   const [position, setPosition] = useState<TooltipPosition | null>(null);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
   const [targetDescription, setTargetDescription] = useState<string>('');
-  const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Find and position tooltip relative to target
+  // Find target and scroll to it
   useEffect(() => {
     if (!highlightedTarget || !showGuide || loading || isOnboardingComplete) {
       setPosition(null);
@@ -48,34 +47,68 @@ export function GuidecrmTooltip() {
       return;
     }
 
-    setTargetElement(element);
-
     // Find the target configuration
     const target = currentStep?.targets.find(t => t.selector === highlightedTarget);
     if (target) {
       setTargetDescription(target.description);
     }
 
-    // Calculate position
+    // Scroll element into view if not visible
+    const rect = element.getBoundingClientRect();
+    const isInViewport = (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= window.innerHeight &&
+      rect.right <= window.innerWidth
+    );
+
+    if (!isInViewport) {
+      // Find the scrollable parent (sidebar)
+      const scrollableParent = element.closest('.overflow-y-auto') || element.closest('[style*="overflow"]');
+      if (scrollableParent) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // Small delay to let scroll complete
+    const scrollDelay = isInViewport ? 0 : 400;
+
+    const timer = setTimeout(() => {
+      setTargetElement(element);
+    }, scrollDelay);
+
+    return () => clearTimeout(timer);
+  }, [highlightedTarget, showGuide, loading, isOnboardingComplete, currentStep]);
+
+  // Calculate position after target is set
+  useEffect(() => {
+    if (!targetElement) {
+      setPosition(null);
+      return;
+    }
+
+    const target = currentStep?.targets.find(t => t.selector === highlightedTarget);
+    const preferredPosition = target?.position || 'right';
+
     const calculatePosition = () => {
-      const rect = element.getBoundingClientRect();
-      const tooltipWidth = 280;
-      const tooltipHeight = 80;
-      const offset = 12;
-      const arrowSize = 8;
+      const rect = targetElement.getBoundingClientRect();
+      const tooltipWidth = 260;
+      const tooltipHeight = 90;
+      const offset = 16;
+
+      // Progress bar is at bottom, keep tooltip above it (at least 180px from bottom)
+      const minDistanceFromBottom = 180;
+      const maxTop = window.innerHeight - minDistanceFromBottom;
 
       let top = 0;
       let left = 0;
       let arrowPosition: 'top' | 'bottom' | 'left' | 'right' = 'left';
-
-      const preferredPosition = target?.position || 'right';
 
       switch (preferredPosition) {
         case 'right':
           top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
           left = rect.right + offset;
           arrowPosition = 'left';
-          // Check if fits on screen
           if (left + tooltipWidth > window.innerWidth - 20) {
             left = rect.left - tooltipWidth - offset;
             arrowPosition = 'right';
@@ -94,25 +127,19 @@ export function GuidecrmTooltip() {
           top = rect.bottom + offset;
           left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
           arrowPosition = 'top';
-          if (top + tooltipHeight > window.innerHeight - 20) {
-            top = rect.top - tooltipHeight - offset;
-            arrowPosition = 'bottom';
-          }
           break;
         case 'top':
           top = rect.top - tooltipHeight - offset;
           left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
           arrowPosition = 'bottom';
-          if (top < 20) {
-            top = rect.bottom + offset;
-            arrowPosition = 'top';
-          }
           break;
       }
 
-      // Ensure tooltip stays on screen
+      // Ensure tooltip stays on screen horizontally
       left = Math.max(20, Math.min(left, window.innerWidth - tooltipWidth - 20));
-      top = Math.max(20, Math.min(top, window.innerHeight - tooltipHeight - 20));
+
+      // Ensure tooltip doesn't overlap with progress bar (keep above it)
+      top = Math.max(20, Math.min(top, maxTop));
 
       setPosition({ top, left, arrowPosition });
     };
@@ -127,13 +154,12 @@ export function GuidecrmTooltip() {
       window.removeEventListener('scroll', calculatePosition, true);
       window.removeEventListener('resize', calculatePosition);
     };
-  }, [highlightedTarget, showGuide, loading, isOnboardingComplete, currentStep]);
+  }, [targetElement, currentStep, highlightedTarget]);
 
   // Add highlight ring to target element
   useEffect(() => {
     if (!targetElement) return;
 
-    // Add highlight classes
     targetElement.classList.add('guidecrm-highlight');
 
     return () => {
@@ -154,51 +180,42 @@ export function GuidecrmTooltip() {
 
   return (
     <>
-      {/* Backdrop with hole for highlighted element */}
-      <div
-        className="fixed inset-0 z-[100] pointer-events-none"
-        style={{
-          background: 'transparent',
-        }}
-      />
-
       {/* Tooltip */}
       <div
-        ref={tooltipRef}
         className={cn(
-          'fixed z-[101] w-[280px] p-4 rounded-xl shadow-2xl',
+          'fixed z-[60] w-[260px] p-3 rounded-xl shadow-2xl',
           'bg-primary text-primary-foreground',
           'animate-in fade-in zoom-in-95 duration-300',
-          'pointer-events-auto'
+          'pointer-events-auto border-2 border-primary-foreground/20'
         )}
         style={{
           top: position.top,
           left: position.left,
         }}
       >
-        {/* Arrow */}
+        {/* Arrow pointing to element */}
         <div
           className={cn(
-            'absolute w-3 h-3 bg-primary rotate-45',
-            position.arrowPosition === 'left' && '-left-1.5 top-1/2 -translate-y-1/2',
-            position.arrowPosition === 'right' && '-right-1.5 top-1/2 -translate-y-1/2',
-            position.arrowPosition === 'top' && '-top-1.5 left-1/2 -translate-x-1/2',
-            position.arrowPosition === 'bottom' && '-bottom-1.5 left-1/2 -translate-x-1/2'
+            'absolute w-3 h-3 bg-primary rotate-45 border-primary-foreground/20',
+            position.arrowPosition === 'left' && '-left-1.5 top-1/2 -translate-y-1/2 border-l-2 border-b-2',
+            position.arrowPosition === 'right' && '-right-1.5 top-1/2 -translate-y-1/2 border-r-2 border-t-2',
+            position.arrowPosition === 'top' && '-top-1.5 left-1/2 -translate-x-1/2 border-l-2 border-t-2',
+            position.arrowPosition === 'bottom' && '-bottom-1.5 left-1/2 -translate-x-1/2 border-r-2 border-b-2'
           )}
         />
 
         {/* Content */}
-        <div className="flex items-start gap-3">
-          <div className="shrink-0 mt-0.5">
-            <ArrowIcon className="h-5 w-5" />
+        <div className="flex items-start gap-2">
+          <div className="shrink-0 mt-0.5 p-1.5 bg-primary-foreground/20 rounded-lg">
+            <MousePointer2 className="h-4 w-4" />
           </div>
-          <div>
-            <p className="text-sm font-medium">{targetDescription}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-tight">{targetDescription}</p>
             <button
               onClick={() => setHighlightedTarget(null)}
-              className="text-xs opacity-80 hover:opacity-100 mt-2 underline"
+              className="text-xs opacity-70 hover:opacity-100 mt-1.5 underline"
             >
-              Compris
+              OK, compris
             </button>
           </div>
         </div>
@@ -206,30 +223,3 @@ export function GuidecrmTooltip() {
     </>
   );
 }
-
-// =========================================
-// GLOBAL STYLES (add to your CSS)
-// =========================================
-
-// CSS to add in index.css or global styles:
-/*
-.guidecrm-highlight {
-  position: relative;
-  z-index: 50;
-  outline: 3px solid hsl(var(--primary));
-  outline-offset: 4px;
-  border-radius: 8px;
-  animation: guidecrm-pulse 2s ease-in-out infinite;
-}
-
-@keyframes guidecrm-pulse {
-  0%, 100% {
-    outline-offset: 4px;
-    outline-color: hsl(var(--primary));
-  }
-  50% {
-    outline-offset: 8px;
-    outline-color: hsl(var(--primary) / 0.5);
-  }
-}
-*/
