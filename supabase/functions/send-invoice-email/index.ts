@@ -158,7 +158,7 @@ serve(async (req) => {
       DateEnvoi: formatDate(new Date().toISOString()),
       DateCreation: formatDate(invoice.issue_date || new Date().toISOString()),
       DateEcheance: invoice.echeance ? formatDate(invoice.echeance) : '',
-      NomEntreprise: company.name || 'Provia Glass',
+      NomEntreprise: company.name || '',
       EmailEntreprise: company.email || '',
       TelephoneEntreprise: company.telephone || '',
       AdresseEntreprise: company.adresse || '',
