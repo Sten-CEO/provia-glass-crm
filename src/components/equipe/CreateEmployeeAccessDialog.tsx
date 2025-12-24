@@ -165,6 +165,31 @@ export const CreateEmployeeAccessDialog = ({
               </div>
             </div>
 
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-500">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                📱 Installer l'application mobile
+              </p>
+              <p className="text-xs text-blue-800 dark:text-blue-300 mb-2">
+                L'employé peut installer l'app sur son téléphone via ce lien :
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-2 bg-white dark:bg-gray-800 rounded font-mono text-xs break-all">
+                  {window.location.origin}/download
+                </code>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/download`);
+                    toast.success("Lien copié!");
+                  }}
+                  title="Copier le lien"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-500">
               <p className="text-sm text-yellow-900 dark:text-yellow-200">
                 ⚠️ <strong>Important:</strong> Ce mot de passe ne sera plus visible après fermeture.
