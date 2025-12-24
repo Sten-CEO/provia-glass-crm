@@ -169,31 +169,34 @@ const Parametres = () => {
         throw error;
       }
 
-      // Also update the company name and SMTP settings in companies table
-      // (Edge Functions read SMTP config from companies table)
+      // Update SMTP settings in companies table (Edge Functions read from here)
+      // Only update SMTP columns to avoid schema issues
+      const smtpUpdateData: Record<string, any> = {
+        smtp_enabled: smtpEnabled,
+        smtp_host: smtpHost || null,
+        smtp_port: smtpPort || 587,
+        smtp_username: smtpUsername || null,
+        smtp_password: smtpPassword || null,
+        smtp_secure: smtpSecure ?? false,
+      };
+
       const { error: companyError } = await supabase
         .from("companies")
-        .update({
-          name: companyName,
-          email: email,
-          telephone: telephone,
-          adresse: adresse,
-          siret: siret,
-          smtp_enabled: smtpEnabled,
-          smtp_host: smtpHost,
-          smtp_port: smtpPort,
-          smtp_username: smtpUsername,
-          smtp_password: smtpPassword,
-          smtp_secure: smtpSecure,
-        })
+        .update(smtpUpdateData)
         .eq("id", companyId);
 
       if (companyError) {
-        console.error("Error updating companies:", companyError);
-        throw companyError;
+        console.error("Error updating SMTP in companies:", companyError);
+        // Check if it's a missing column error
+        if (companyError.message?.includes("column") || companyError.code === "PGRST204") {
+          toast.error("Colonnes SMTP manquantes. Exécutez la migration SQL dans Supabase Dashboard.");
+          // Don't throw - basic settings were saved
+        } else {
+          throw companyError;
+        }
+      } else {
+        toast.success("Paramètres enregistrés avec succès");
       }
-
-      toast.success("Paramètres enregistrés avec succès");
 
       // GUIDECRM: Mark company step as complete
       guidecrmCompanySaved();
