@@ -226,7 +226,7 @@ const PublicQuoteView = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
           <p className="text-slate-600">Chargement du devis...</p>
         </div>
       </div>
@@ -315,7 +315,7 @@ const PublicQuoteView = () => {
             </div>
             <div className="text-right">
               <p className="text-slate-500 mb-1">Montant TTC</p>
-              <p className="text-2xl font-bold text-amber-600">
+              <p className="text-2xl font-bold text-yellow-500">
                 {formatCurrency(quote.total_ttc)}
               </p>
             </div>
@@ -443,13 +443,13 @@ const PublicQuoteView = () => {
         <div className="mt-8 text-center text-sm text-slate-500">
           <p>
             Pour toute question, contactez{' '}
-            <a href={`mailto:${quote.company.email}`} className="text-amber-600 hover:underline">
+            <a href={`mailto:${quote.company.email}`} className="text-yellow-600 hover:underline">
               {quote.company.email}
             </a>
             {quote.company.telephone && (
               <>
                 {' '}ou appelez le{' '}
-                <a href={`tel:${quote.company.telephone}`} className="text-amber-600 hover:underline">
+                <a href={`tel:${quote.company.telephone}`} className="text-yellow-600 hover:underline">
                   {quote.company.telephone}
                 </a>
               </>
