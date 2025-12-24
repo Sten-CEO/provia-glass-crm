@@ -33,18 +33,19 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
       setLoading(true);
       setError(null);
 
-      // If ownerUserId is provided, use it. Otherwise, get the current user.
-      let userId = ownerUserId;
-
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setSubscription(null);
-          setLoading(false);
-          return;
-        }
-        userId = user.id;
+      // IMPORTANT: Only check subscription if ownerUserId is explicitly provided
+      // This prevents the bug where members are blocked because the hook
+      // falls back to checking their own subscription (which doesn't exist)
+      // Members should only be checked via their company owner's subscription
+      if (!ownerUserId) {
+        // No ownerUserId provided - don't block access
+        // The AuthGuard handles this case with its own logic
+        setSubscription(null);
+        setLoading(false);
+        return;
       }
+
+      const userId = ownerUserId;
 
       // Fetch subscription from billing_subscriptions table
       const { data, error: fetchError } = await supabase
@@ -99,22 +100,35 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
 /**
  * Get the owner user ID for a company
  * This is needed because billing is tied to the owner, not individual users
+ * Uses companies.owner_id as the source of truth
  */
 export async function getCompanyOwnerUserId(companyId: string): Promise<string | null> {
   try {
+    // Use companies.owner_id as the source of truth for the owner
     const { data, error } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('company_id', companyId)
-      .eq('role', 'owner')
+      .from('companies')
+      .select('owner_id')
+      .eq('id', companyId)
       .maybeSingle();
 
     if (error || !data) {
-      console.error('[Billing] Error getting company owner:', error);
-      return null;
+      console.error('[Billing] Error getting company owner from companies table:', error);
+      // Fallback to user_roles if companies.owner_id is not available
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('company_id', companyId)
+        .eq('role', 'owner')
+        .maybeSingle();
+
+      if (roleError || !roleData) {
+        console.error('[Billing] Error getting company owner from user_roles:', roleError);
+        return null;
+      }
+      return roleData.user_id;
     }
 
-    return data.user_id;
+    return data.owner_id;
   } catch (err) {
     console.error('[Billing] Unexpected error getting company owner:', err);
     return null;
