@@ -31,7 +31,7 @@ serve(async (req) => {
       .from('factures')
       .select(`
         *,
-        clients:client_id (nom, email, telephone, adresse),
+        clients:client_id (nom, email, telephone, adresse, company_id),
         invoice_signatures(*)
       `)
       .eq('token', token)
@@ -42,29 +42,39 @@ serve(async (req) => {
       throw new Error('Facture introuvable ou lien invalide');
     }
 
-    // Récupérer les informations de la société séparément (pas de FK entre factures et companies)
+    // Récupérer les informations de la société
+    // Stratégie: 1) invoice.company_id, 2) client.company_id comme fallback
     let company = null;
+    let companyId = invoice.company_id;
+
     console.log('=== GET-INVOICE-PUBLIC DEBUG ===');
     console.log('Invoice numero:', invoice.numero);
     console.log('Invoice company_id:', invoice.company_id);
+    console.log('Client company_id:', invoice.clients?.company_id);
 
-    if (invoice.company_id) {
+    // Fallback: si la facture n'a pas de company_id, utiliser celui du client
+    if (!companyId && invoice.clients?.company_id) {
+      companyId = invoice.clients.company_id;
+      console.log('Using client company_id as fallback:', companyId);
+    }
+
+    if (companyId) {
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('*')
-        .eq('id', invoice.company_id)
+        .eq('id', companyId)
         .single();
 
       if (companyError) {
         console.error('Error fetching company:', companyError);
       } else if (!companyData) {
-        console.error('Company not found for id:', invoice.company_id);
+        console.error('Company not found for id:', companyId);
       } else {
         company = companyData;
         console.log('Company loaded successfully:', { name: company.name, email: company.email });
       }
     } else {
-      console.warn('Invoice has no company_id!');
+      console.warn('No company_id found on invoice or client!');
     }
 
     // IMPORTANT: Attacher les données de la société à la facture pour le PDF generator
