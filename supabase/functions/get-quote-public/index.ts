@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     // Récupérer les informations de la société
-    // Stratégie: 1) quote.company_id, 2) client.company_id comme fallback
+    // Stratégie: 1) company_settings (priorité), 2) companies table comme fallback
     let company = null;
     let companyId = quote.company_id;
 
@@ -59,19 +59,41 @@ serve(async (req) => {
     }
 
     if (companyId) {
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
+      // D'abord essayer company_settings (comme le fait le frontend)
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('company_settings')
         .select('*')
-        .eq('id', companyId)
-        .single();
+        .eq('company_id', companyId)
+        .maybeSingle();
 
-      if (companyError) {
-        console.error('Error fetching company:', companyError);
-      } else if (!companyData) {
-        console.error('Company not found for id:', companyId);
+      if (settingsData && settingsData.company_name) {
+        console.log('Company loaded from company_settings:', { name: settingsData.company_name });
+        // Mapper les données de company_settings vers le format attendu
+        company = {
+          name: settingsData.company_name,
+          email: settingsData.email || '',
+          telephone: settingsData.phone || '',
+          adresse: settingsData.address || '',
+          siret: settingsData.siret || '',
+          website: settingsData.website || '',
+        };
       } else {
-        company = companyData;
-        console.log('Company loaded successfully:', { name: company.name, email: company.email });
+        // Fallback vers la table companies
+        console.log('No company_settings found, trying companies table...');
+        const { data: companyData, error: companyError } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', companyId)
+          .single();
+
+        if (companyError) {
+          console.error('Error fetching company:', companyError);
+        } else if (!companyData) {
+          console.error('Company not found for id:', companyId);
+        } else {
+          company = companyData;
+          console.log('Company loaded from companies table:', { name: company.name, email: company.email });
+        }
       }
     } else {
       console.warn('No company_id found on quote or client!');
