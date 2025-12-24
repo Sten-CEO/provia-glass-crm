@@ -33,20 +33,34 @@ export function QuoteConversionDialog({
       if (conversionType === "invoice") {
         // Convertir en facture
         const { data: invoiceNumber } = await supabase.rpc('generate_invoice_number');
-        
+
+        // Convertir les lignes du devis au format facture
+        // Devis: { name, qty, unit_price_ht, tva_rate, total }
+        // Facture: { description, quantite, prix_unitaire, total }
+        const convertedLignes = (quoteData.lignes || []).map((line: any) => ({
+          description: line.name || line.description || '',
+          quantite: line.qty || line.quantite || 1,
+          prix_unitaire: line.unit_price_ht || line.prix_unitaire || 0,
+          total: line.total || ((line.qty || line.quantite || 1) * (line.unit_price_ht || line.prix_unitaire || 0)),
+        }));
+
         const { data: invoice, error: invoiceError } = await supabase
           .from('factures')
           .insert({
             numero: invoiceNumber,
+            company_id: quoteData.company_id, // Important pour RLS
             client_id: quoteData.client_id,
             client_nom: quoteData.client_nom,
-            montant: quoteData.montant,
-            lignes: quoteData.lignes,
-            total_ht: quoteData.total_ht,
-            total_ttc: quoteData.total_ttc,
+            montant: String(quoteData.total_ttc || quoteData.montant || 0),
+            lignes: convertedLignes,
+            total_ht: quoteData.total_ht || 0,
+            total_ttc: quoteData.total_ttc || 0,
+            remise: quoteData.remise || 0,
             statut: 'En attente',
+            issue_date: new Date().toISOString().split('T')[0],
             echeance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             converted_from_quote_id: quoteId,
+            template_id: quoteData.template_id || null,
           })
           .select()
           .single();

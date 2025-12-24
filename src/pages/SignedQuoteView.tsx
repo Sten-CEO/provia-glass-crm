@@ -14,6 +14,7 @@ export default function SignedQuoteView() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [quoteNumber, setQuoteNumber] = useState<string>("");
+  const [isHtmlContent, setIsHtmlContent] = useState(false);
 
   useEffect(() => {
     if (!companyLoading && companyId) {
@@ -99,6 +100,7 @@ export default function SignedQuoteView() {
       }
 
       const isHTML = decodedContent.trim().startsWith('<!DOCTYPE') || decodedContent.trim().startsWith('<html');
+      setIsHtmlContent(isHTML);
 
       if (isHTML) {
         // C'est du HTML, créer un Blob HTML avec le contenu UTF-8 décodé
@@ -123,9 +125,15 @@ export default function SignedQuoteView() {
   const handleDownload = () => {
     if (!pdfUrl || !pdfFilename) return;
 
+    // Ajuster le nom de fichier si c'est du HTML
+    let downloadFilename = pdfFilename;
+    if (isHtmlContent) {
+      downloadFilename = pdfFilename.replace(/\.pdf$/i, '.html');
+    }
+
     const a = document.createElement('a');
     a.href = pdfUrl;
-    a.download = pdfFilename;
+    a.download = downloadFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

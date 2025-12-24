@@ -53,6 +53,10 @@ serve(async (req) => {
       company = companyData;
     }
 
+    // IMPORTANT: Attacher les données de la société au quote pour le PDF generator
+    // Le renderer attend quote.companies pour générer le PDF avec les bonnes infos
+    quote.companies = company;
+
     // Vérifier si le devis a expiré
     if (quote.expiry_date) {
       const expiryDate = new Date(quote.expiry_date);
