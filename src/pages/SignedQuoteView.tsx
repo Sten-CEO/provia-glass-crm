@@ -35,12 +35,12 @@ export default function SignedQuoteView() {
       }
 
       // Récupérer le devis avec sa signature - SECURITY: filter by company_id
+      // Note: pas de jointure companies(*) car pas de FK entre devis et companies
       const { data: quote, error: quoteError } = await supabase
         .from('devis')
         .select(`
           *,
           clients(*),
-          companies(*),
           quote_signatures(*)
         `)
         .eq('id', id)
@@ -48,6 +48,7 @@ export default function SignedQuoteView() {
         .single();
 
       if (quoteError || !quote) {
+        console.error('Quote error:', quoteError);
         toast.error('Devis introuvable ou accès non autorisé');
         navigate('/devis');
         return;
@@ -134,9 +135,9 @@ export default function SignedQuoteView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
           <p className="text-slate-600">Chargement du devis signé...</p>
         </div>
       </div>
@@ -144,7 +145,7 @@ export default function SignedQuoteView() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-slate-100 py-8 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-t-lg shadow-xl p-6 border-b">
@@ -165,7 +166,7 @@ export default function SignedQuoteView() {
                 </h1>
               </div>
             </div>
-            <Button onClick={handleDownload} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleDownload} className="bg-yellow-500 hover:bg-yellow-600 text-gray-900">
               <Download className="h-4 w-4 mr-2" />
               Télécharger
             </Button>
