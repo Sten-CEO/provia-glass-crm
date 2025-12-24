@@ -40,11 +40,13 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
       if (!ownerUserId) {
         // No ownerUserId provided - don't block access
         // The AuthGuard handles this case with its own logic
+        console.log('[Billing] No ownerUserId provided, skipping subscription check');
         setSubscription(null);
         setLoading(false);
         return;
       }
 
+      console.log('[Billing] Checking subscription for owner:', ownerUserId);
       const userId = ownerUserId;
 
       // Fetch subscription from billing_subscriptions table
@@ -68,6 +70,7 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
         return;
       }
 
+      console.log('[Billing] Subscription data for owner', ownerUserId, ':', data);
       setSubscription(data as BillingSubscription | null);
     } catch (err) {
       console.error('[Billing] Unexpected error:', err);
@@ -104,6 +107,8 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
  */
 export async function getCompanyOwnerUserId(companyId: string): Promise<string | null> {
   try {
+    console.log('[Billing] Getting owner for company:', companyId);
+
     // Use companies.owner_id as the source of truth for the owner
     const { data, error } = await supabase
       .from('companies')
@@ -111,8 +116,10 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
       .eq('id', companyId)
       .maybeSingle();
 
-    if (error || !data) {
-      console.error('[Billing] Error getting company owner from companies table:', error);
+    console.log('[Billing] companies.owner_id result:', { data, error });
+
+    if (error || !data || !data.owner_id) {
+      console.warn('[Billing] No owner_id in companies table, falling back to user_roles');
       // Fallback to user_roles if companies.owner_id is not available
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
@@ -121,6 +128,8 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
         .eq('role', 'owner')
         .maybeSingle();
 
+      console.log('[Billing] user_roles owner result:', { roleData, roleError });
+
       if (roleError || !roleData) {
         console.error('[Billing] Error getting company owner from user_roles:', roleError);
         return null;
@@ -128,6 +137,7 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
       return roleData.user_id;
     }
 
+    console.log('[Billing] Found owner_id from companies:', data.owner_id);
     return data.owner_id;
   } catch (err) {
     console.error('[Billing] Unexpected error getting company owner:', err);

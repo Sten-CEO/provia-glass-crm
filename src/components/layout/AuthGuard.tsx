@@ -58,17 +58,26 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   // Get owner user ID for subscription check
   useEffect(() => {
     if (companyId && !roleLoading) {
+      console.log('[AuthGuard] Getting owner for subscription check:', { companyId, role, currentUserId: user?.id });
+
       // If current user is owner, use their ID directly
       if (role === 'owner') {
         supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user) setOwnerUserId(user.id);
+          if (user) {
+            console.log('[AuthGuard] User is owner, using their ID:', user.id);
+            setOwnerUserId(user.id);
+          }
         });
       } else {
-        // Otherwise, fetch the owner's user ID
-        getCompanyOwnerUserId(companyId).then(setOwnerUserId);
+        // Otherwise, fetch the owner's user ID from company
+        console.log('[AuthGuard] User is member (role:', role, '), fetching company owner...');
+        getCompanyOwnerUserId(companyId).then((ownerId) => {
+          console.log('[AuthGuard] Company owner ID:', ownerId);
+          setOwnerUserId(ownerId);
+        });
       }
     }
-  }, [companyId, role, roleLoading]);
+  }, [companyId, role, roleLoading, user?.id]);
 
   // Bloquer les employés terrain du CRM
   useEffect(() => {
@@ -116,6 +125,14 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   if (ownerUserId && !isActive && !isBillingExempt && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
     // Check if current user is the owner or a member
     const isOwner = role === 'owner';
+    console.log('[AuthGuard] BLOCKING ACCESS - subscription not active:', {
+      ownerUserId,
+      isActive,
+      isBillingExempt,
+      role,
+      isOwner,
+      currentUserId: user?.id,
+    });
 
     return (
       <div className="flex items-center justify-center h-screen p-8 bg-background">
