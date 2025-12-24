@@ -108,13 +108,12 @@ serve(async (req) => {
       finalCompanyId = employee.company_id;
     }
 
-    // Récupérer le devis avec les infos client, entreprise et signatures
+    // Récupérer le devis avec les infos client et signatures (sans la jointure companies)
     const { data: quote, error: quoteError } = await supabase
       .from('devis')
       .select(`
         *,
         clients(*),
-        companies(*),
         quote_signatures(*)
       `)
       .eq('id', quoteId)
@@ -126,9 +125,15 @@ serve(async (req) => {
       throw new Error('Devis introuvable ou accès non autorisé');
     }
 
-    // Récupérer les informations de la société
-    const company = quote.companies;
-    if (!company) {
+    // Récupérer les informations de la société séparément (pas de FK entre devis et companies)
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', finalCompanyId)
+      .single();
+
+    if (companyError || !company) {
+      console.error('Company error:', companyError);
       throw new Error('Informations de société manquantes');
     }
 
