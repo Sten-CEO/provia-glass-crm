@@ -85,10 +85,12 @@ export default function FactureEditor() {
   });
 
   useEffect(() => {
-    loadClients();
+    if (company?.id) {
+      loadClients();
+    }
     if (!isNew && id) loadInvoice(id);
     else if (isNew && interventionId) loadInterventionData(interventionId);
-  }, [id, interventionId]);
+  }, [id, interventionId, company?.id]);
 
   // Charger les infos entreprise quand company.id est disponible
   useEffect(() => {
