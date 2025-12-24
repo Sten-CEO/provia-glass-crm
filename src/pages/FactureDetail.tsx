@@ -165,9 +165,20 @@ const FactureDetail = () => {
       lignes,
     });
 
+    // Extract only the valid columns for update (exclude joined relations like 'clients')
+    const { clients, ...invoiceWithoutRelations } = updatedInvoice;
+
     const updateData: any = {
-      ...updatedInvoice,
+      numero: invoiceWithoutRelations.numero,
+      client_id: invoiceWithoutRelations.client_id,
+      client_nom: invoiceWithoutRelations.client_nom,
       lignes,
+      total_ht: invoiceWithoutRelations.total_ht,
+      total_ttc: invoiceWithoutRelations.total_ttc,
+      remise: invoiceWithoutRelations.remise || 0,
+      statut: invoiceWithoutRelations.statut,
+      echeance: invoiceWithoutRelations.echeance,
+      montant: String(invoiceWithoutRelations.total_ttc || 0),
     };
 
     // Set date_paiement when marking as paid
@@ -178,6 +189,7 @@ const FactureDetail = () => {
     const { error } = await supabase.from("factures").update(updateData).eq("id", id);
 
     if (error) {
+      console.error("Save error:", error);
       toast.error("Erreur lors de la sauvegarde");
     } else {
       toast.success("Facture mise à jour");

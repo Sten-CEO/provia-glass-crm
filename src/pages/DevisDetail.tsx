@@ -602,14 +602,43 @@ const DevisDetail = () => {
         open={convertDialogOpen}
         onOpenChange={setConvertDialogOpen}
         quoteId={devis.id}
-        quoteData={devis}
+        quoteData={{
+          ...devis,
+          // IMPORTANT: Use current lignes state instead of database snapshot
+          // The user may have modified lines without saving first
+          lignes: lignes.map(l => ({
+            name: l.description,
+            description: l.description,
+            qty: l.quantite,
+            quantite: l.quantite,
+            unit_price_ht: l.prix_unitaire,
+            prix_unitaire: l.prix_unitaire,
+            total: l.total,
+          })),
+          total_ht: totalHT,
+          total_ttc: totalTTC,
+        }}
       />
 
       <PdfPreviewModal
         open={pdfPreviewOpen}
         onOpenChange={setPdfPreviewOpen}
         documentType="QUOTE"
-        documentData={devis}
+        documentData={{
+          ...devis,
+          // Use current lignes state for accurate preview
+          lignes: lignes.map(l => ({
+            name: l.description,
+            description: l.description,
+            qty: l.quantite,
+            quantite: l.quantite,
+            unit_price_ht: l.prix_unitaire,
+            prix_unitaire: l.prix_unitaire,
+            total: l.total,
+          })),
+          total_ht: totalHT,
+          total_ttc: totalTTC,
+        }}
         templateId={devis.template_id}
       />
     </div>
