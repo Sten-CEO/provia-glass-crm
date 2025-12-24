@@ -93,15 +93,33 @@ const Parametres = () => {
         setAdresse(data.address || "");
         setVille(data.city || "");
         setCodePostal(data.postal_code || "");
+      }
 
-        // SMTP Configuration - check if columns exist
-        setSmtpEnabled((data as any).smtp_enabled || false);
-        setSmtpHost((data as any).smtp_host || "");
-        setSmtpPort((data as any).smtp_port || 587);
-        setSmtpUsername((data as any).smtp_username || "");
-        setSmtpPassword((data as any).smtp_password || "");
-        setSmtpSecure((data as any).smtp_secure ?? false);
-      } else {
+      // Load SMTP settings from companies table (where Edge Functions read from)
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("smtp_enabled, smtp_host, smtp_port, smtp_username, smtp_password, smtp_secure, name, email, telephone, adresse, siret")
+        .eq("id", userRole.company_id)
+        .single();
+
+      if (companyData) {
+        // Use company data for fields that might be more up-to-date
+        if (companyData.name && !data?.company_name) setCompanyName(companyData.name);
+        if (companyData.email) setEmail(companyData.email);
+        if (companyData.telephone) setTelephone(companyData.telephone);
+        if (companyData.adresse) setAdresse(companyData.adresse);
+        if (companyData.siret && !data?.siret) setSiret(companyData.siret);
+
+        // SMTP Configuration from companies table
+        setSmtpEnabled(companyData.smtp_enabled || false);
+        setSmtpHost(companyData.smtp_host || "");
+        setSmtpPort(companyData.smtp_port || 587);
+        setSmtpUsername(companyData.smtp_username || "");
+        setSmtpPassword(companyData.smtp_password || "");
+        setSmtpSecure(companyData.smtp_secure ?? false);
+      }
+
+      if (!data) {
         // Create default settings if none exist
         const { error: insertError } = await supabase
           .from("company_settings")
@@ -151,11 +169,29 @@ const Parametres = () => {
         throw error;
       }
 
-      // Also update the company name in companies table
-      await supabase
+      // Also update the company name and SMTP settings in companies table
+      // (Edge Functions read SMTP config from companies table)
+      const { error: companyError } = await supabase
         .from("companies")
-        .update({ name: companyName })
+        .update({
+          name: companyName,
+          email: email,
+          telephone: telephone,
+          adresse: adresse,
+          siret: siret,
+          smtp_enabled: smtpEnabled,
+          smtp_host: smtpHost,
+          smtp_port: smtpPort,
+          smtp_username: smtpUsername,
+          smtp_password: smtpPassword,
+          smtp_secure: smtpSecure,
+        })
         .eq("id", companyId);
+
+      if (companyError) {
+        console.error("Error updating companies:", companyError);
+        throw companyError;
+      }
 
       toast.success("Paramètres enregistrés avec succès");
 
