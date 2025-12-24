@@ -438,7 +438,12 @@ export default function FactureEditor() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>N° Facture</Label>
-                  <Input value={facture.numero} disabled className="mt-1" />
+                  <Input
+                    value={facture.numero}
+                    onChange={(e) => setFacture((f) => ({ ...f, numero: e.target.value }))}
+                    placeholder="Numéro de facture"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>Date d'émission</Label>
