@@ -188,29 +188,36 @@ serve(async (req) => {
     // Générer le PDF de la facture
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateInvoicePDF(invoice, supabase);
 
-    // Préparer le contenu HTML de l'email
+    // Préparer le contenu HTML de l'email (with XSS protection)
+    const safeCompanyName = escapeHtml(company.name || '');
+    const safeInvoiceNumero = escapeHtml(invoice.numero || '');
+    const safeCompanyAdresse = company.adresse ? escapeHtml(company.adresse) : '';
+    const safeCompanyTelephone = company.telephone ? escapeHtml(company.telephone) : '';
+    const safeCompanyEmail = company.email ? escapeHtml(company.email) : '';
+    const safeCompanySiret = company.siret ? escapeHtml(company.siret) : '';
+
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #E74C3C; color: white; padding: 20px; text-align: center;">
-          <h1 style="margin: 0;">${company.name || 'Provia Glass'}</h1>
+        <div style="background-color: #F59E0B; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${safeCompanyName}</h1>
         </div>
 
         <div style="padding: 30px; background-color: #f9f9f9;">
           ${finalMessage.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join('')}
 
-          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #E74C3C;">
-            <h2 style="margin-top: 0; color: #333;">Facture ${invoice.numero}</h2>
+          <div style="margin: 30px 0; padding: 20px; background-color: white; border-left: 4px solid #F59E0B;">
+            <h2 style="margin-top: 0; color: #333;">Facture ${safeInvoiceNumero}</h2>
             <p style="color: #666; margin: 5px 0;"><strong>Montant TTC:</strong> ${formatCurrency(invoice.total_ttc || 0)}</p>
             <p style="color: #666; margin: 5px 0;"><strong>Date d'échéance:</strong> ${invoice.echeance ? formatDate(invoice.echeance) : 'N/A'}</p>
-            ${invoice.statut === 'Payée' ? '<p style="color: #27AE60; font-weight: bold; margin: 10px 0;">✓ Payée</p>' : '<p style="color: #E74C3C; font-weight: bold; margin: 10px 0;">⚠ En attente de paiement</p>'}
+            ${invoice.statut === 'Payée' ? '<p style="color: #27AE60; font-weight: bold; margin: 10px 0;">✓ Payée</p>' : '<p style="color: #D97706; font-weight: bold; margin: 10px 0;">⚠ En attente de paiement</p>'}
           </div>
 
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
-            <p>${company.name || 'Provia Glass'}</p>
-            ${company.adresse ? `<p>${company.adresse}</p>` : ''}
-            ${company.telephone ? `<p>Tél: ${company.telephone}</p>` : ''}
-            ${company.email ? `<p>Email: ${company.email}</p>` : ''}
-            ${company.siret ? `<p>SIRET: ${company.siret}</p>` : ''}
+            <p>${safeCompanyName}</p>
+            ${safeCompanyAdresse ? `<p>${safeCompanyAdresse}</p>` : ''}
+            ${safeCompanyTelephone ? `<p>Tél: ${safeCompanyTelephone}</p>` : ''}
+            ${safeCompanyEmail ? `<p>Email: ${safeCompanyEmail}</p>` : ''}
+            ${safeCompanySiret ? `<p>SIRET: ${safeCompanySiret}</p>` : ''}
           </div>
         </div>
       </div>
