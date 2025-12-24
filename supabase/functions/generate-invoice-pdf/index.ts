@@ -32,13 +32,12 @@ serve(async (req) => {
       throw new Error(authError);
     }
 
-    // Récupérer la facture avec les infos client
+    // Récupérer la facture avec les infos client (sans jointure companies - pas de FK)
     const { data: invoice, error: invoiceError } = await supabase
       .from('factures')
       .select(`
         *,
-        clients:client_id (nom, email, telephone, adresse, ville, code_postal),
-        companies:company_id (*)
+        clients:client_id (nom, email, telephone, adresse, ville, code_postal)
       `)
       .eq('id', invoiceId)
       .eq('company_id', companyId)
@@ -48,6 +47,26 @@ serve(async (req) => {
       console.error('Invoice error:', invoiceError);
       throw new Error('Facture introuvable ou accès non autorisé');
     }
+
+    // Récupérer les informations de la société séparément (pas de FK entre factures et companies)
+    let company = null;
+    if (companyId) {
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+      company = companyData;
+    }
+
+    // Attacher les données de la société à la facture pour le PDF generator
+    invoice.companies = company;
+
+    // Debug logging
+    console.log('=== GENERATE-INVOICE-PDF DEBUG ===');
+    console.log('Invoice numero:', invoice.numero);
+    console.log('Company:', company ? { name: company.name } : 'NULL');
+    console.log('Invoice lignes count:', (invoice.lignes || []).length);
 
     // Générer le PDF
     const { buffer, filename } = await generateInvoicePDF(invoice, supabase);

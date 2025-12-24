@@ -113,11 +113,20 @@ export async function generateInvoicePDF(
   // Convertir les données de la facture au format attendu par le renderer
   const renderData = convertQuoteToRenderData(invoice);
 
+  // Debug logging
+  console.log('=== INVOICE PDF-GENERATOR DEBUG ===');
+  console.log('RenderData lignes count:', renderData.lignes.length);
+  console.log('RenderData company_name:', renderData.company_name);
+  console.log('RenderData client_nom:', renderData.client_nom);
+
   // Générer le HTML avec le renderer unifié
   const html = renderQuoteToHtml(renderData, template, {
     documentType: 'INVOICE',
     mode: 'pdf',
   });
+
+  console.log('Invoice HTML length:', html.length);
+  console.log('Invoice HTML contains table:', html.includes('<table'));
 
   const buffer = new TextEncoder().encode(html);
   const filename = `Facture_${invoice.numero}.pdf`;
