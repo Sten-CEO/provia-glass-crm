@@ -17,6 +17,7 @@ const ALLOWED_ORIGINS = [
   'https://app.provia-glass.com',
   'https://proviabase.fr',
   'https://www.proviabase.fr',
+  'https://app.proviabase.fr',
   'https://download.proviabase.fr',
 ];
 

@@ -658,22 +658,6 @@ const Equipe = () => {
                 />
               </div>
               <div>
-                <Label>Rôle</Label>
-                <Select
-                  value={selectedMember.role}
-                  onValueChange={(v: any) => setSelectedMember({ ...selectedMember, role: v })}
-                >
-                  <SelectTrigger className="glass-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Employé terrain">Employé terrain</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
-                    <SelectItem value="Owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label>Compétences</Label>
                 <Input
                   value={selectedMember.competences?.join(", ") || ""}
@@ -709,27 +693,6 @@ const Equipe = () => {
                   </Select>
                 </div>
               )}
-              <div>
-                <Label className="mb-2 block">Accès UI</Label>
-                <div className="space-y-2 glass-card p-4 rounded-lg">
-                  {Object.entries(selectedMember.access_controls || {}).map(([key, value]) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={value as boolean}
-                        onChange={(e) =>
-                          setSelectedMember({
-                            ...selectedMember,
-                            access_controls: { ...selectedMember.access_controls, [key]: e.target.checked },
-                          })
-                        }
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm">{getAccessControlLabel(key)}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
               <Button onClick={handleEditMember} className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
                 Enregistrer
               </Button>
@@ -812,7 +775,7 @@ const Equipe = () => {
                 🔐 Page de connexion à utiliser:
               </p>
               {createdMemberRole === "Employé terrain" ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <p className="text-sm text-blue-900 dark:text-blue-200">
                     Ce membre doit se connecter sur l'<strong>application employé</strong>:
                   </p>
@@ -830,6 +793,28 @@ const Equipe = () => {
                   >
                     📋 Copier l'URL de connexion
                   </Button>
+                  <div className="pt-2 border-t border-blue-300 dark:border-blue-700">
+                    <p className="text-sm text-blue-900 dark:text-blue-200 mb-2">
+                      📱 <strong>Installer l'application mobile :</strong>
+                    </p>
+                    <div className="p-2 bg-white dark:bg-gray-800 rounded font-mono text-sm break-all">
+                      {window.location.origin}/download
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/download`);
+                        toast.success("URL copiée!");
+                      }}
+                      className="w-full mt-2"
+                    >
+                      📋 Copier le lien de téléchargement
+                    </Button>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                      Envoyez ce lien à l'employé pour qu'il installe l'app sur son téléphone.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
