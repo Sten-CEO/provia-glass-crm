@@ -114,6 +114,9 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
 
   // Bloquer l'accès si l'abonnement n'est pas actif (sauf pour les employés terrain et comptes exemptés)
   if (ownerUserId && !isActive && !isBillingExempt && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
+    // Check if current user is the owner or a member
+    const isOwner = role === 'owner';
+
     return (
       <div className="flex items-center justify-center h-screen p-8 bg-background">
         <div className="glass-modal max-w-lg p-8 text-center">
@@ -122,23 +125,37 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
           </div>
           <h2 className="text-2xl font-bold mb-4">Abonnement requis</h2>
           <p className="text-muted-foreground mb-6">
-            Votre abonnement n'est pas actif. Pour continuer à utiliser Provia BASE,
-            veuillez mettre à jour votre abonnement.
+            {isOwner ? (
+              <>
+                Votre abonnement n'est pas actif. Pour continuer à utiliser Provia BASE,
+                veuillez mettre à jour votre abonnement.
+              </>
+            ) : (
+              <>
+                L'abonnement de votre entreprise n'est pas actif.
+                Veuillez contacter le propriétaire de votre entreprise pour renouveler l'abonnement.
+              </>
+            )}
           </p>
           <div className="space-y-3">
-            <a
-              href="https://www.proviabase.fr/billing/required"
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
-            >
-              <CreditCard className="h-5 w-5" />
-              Gérer mon abonnement
-            </a>
+            {isOwner && (
+              <a
+                href="https://www.proviabase.fr/billing/required"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
+              >
+                <CreditCard className="h-5 w-5" />
+                Gérer mon abonnement
+              </a>
+            )}
             <button
               onClick={() => {
                 supabase.auth.signOut();
                 navigate('/auth/login');
               }}
-              className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              className={isOwner
+                ? "w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                : "flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
+              }
             >
               Se déconnecter
             </button>
