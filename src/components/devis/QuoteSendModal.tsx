@@ -136,9 +136,28 @@ export function QuoteSendModal({
 
     } catch (error: any) {
       console.error('Error sending quote:', error);
+
+      // Extract detailed error message from Edge Function response
+      let errorMessage = "Impossible d'envoyer le devis";
+
+      if (error.context?.body) {
+        // Edge Function returned error in body
+        try {
+          const bodyText = await error.context.body.text?.() || error.context.body;
+          const parsed = typeof bodyText === 'string' ? JSON.parse(bodyText) : bodyText;
+          errorMessage = parsed.error || parsed.message || errorMessage;
+        } catch {
+          errorMessage = error.message || errorMessage;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.error('Detailed error:', errorMessage);
+
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'envoyer le devis",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
