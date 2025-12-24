@@ -46,6 +46,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false); // User manually dismissed
   const [highlightedTarget, setHighlightedTarget] = useState<string | null>(null);
+  const [tooltipDismissedForRoute, setTooltipDismissedForRoute] = useState(false); // User clicked "OK, compris"
   const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [tableExists, setTableExists] = useState(true);
@@ -154,9 +155,10 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     fetchProgress();
   }, [fetchProgress]);
 
-  // Reset highlighted target when route changes to allow re-selection
+  // Reset highlighted target and tooltip dismissed state when route changes
   useEffect(() => {
     setHighlightedTarget(null);
+    setTooltipDismissedForRoute(false);
   }, [location.pathname]);
 
   // =========================================
@@ -399,6 +401,15 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     }
   }, []);
 
+  // Wrapper for setHighlightedTarget that tracks when user dismisses tooltip
+  const handleSetHighlightedTarget = useCallback((target: string | null) => {
+    setHighlightedTarget(target);
+    // If user is dismissing the tooltip (setting to null), mark it as dismissed for this route
+    if (target === null) {
+      setTooltipDismissedForRoute(true);
+    }
+  }, []);
+
   // =========================================
   // AUTO-HIGHLIGHT CURRENT STEP
   // =========================================
@@ -432,6 +443,11 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
       return;
     }
 
+    // Don't re-highlight if user already dismissed the tooltip for this route
+    if (tooltipDismissedForRoute) {
+      return;
+    }
+
     if (currentStep.targets.length > 0 && !highlightedTarget) {
       const bestTarget = getBestTarget(currentStep);
 
@@ -443,7 +459,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
         return () => clearTimeout(timer);
       }
     }
-  }, [showGuide, loading, isOnboardingComplete, currentStep, highlightedTarget, getBestTarget]);
+  }, [showGuide, loading, isOnboardingComplete, currentStep, highlightedTarget, tooltipDismissedForRoute, getBestTarget]);
 
   // =========================================
   // CONTEXT VALUE
@@ -468,7 +484,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     showGuide,
     setShowGuide,
     highlightedTarget,
-    setHighlightedTarget,
+    setHighlightedTarget: handleSetHighlightedTarget,
   };
 
   return (
