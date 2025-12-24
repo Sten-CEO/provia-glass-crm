@@ -218,9 +218,8 @@ serve(async (req) => {
     const { buffer: pdfBuffer, filename: pdfFilename } = await generateQuotePDF(quote, supabase);
 
     // Préparer l'URL frontend (sans slash final)
-    // Priority: 1. FRONTEND_URL env var, 2. Origin header, 3. Referer header
-    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '').split('/').slice(0, 3).join('/');
-    const frontendUrl = (Deno.env.get('FRONTEND_URL') || origin || 'https://provia-glass.app').replace(/\/$/, '');
+    // Utilise FRONTEND_URL env var ou fallback vers l'URL de production
+    const frontendUrl = (Deno.env.get('FRONTEND_URL') || 'https://app.proviabase.fr').replace(/\/$/, '');
 
     // Préparer le contenu HTML de l'email (with XSS protection)
     // Le nom d'entreprise vient de la base de données (table companies)
