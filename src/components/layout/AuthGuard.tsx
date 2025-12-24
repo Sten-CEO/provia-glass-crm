@@ -121,16 +121,16 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
     );
   }
 
-  // Bloquer l'accès si l'abonnement n'est pas actif (sauf pour les employés terrain et comptes exemptés)
-  if (ownerUserId && !isActive && !isBillingExempt && role !== 'employe_terrain' && !location.pathname.startsWith('/employee')) {
-    // Check if current user is the owner or a member
-    const isOwner = role === 'owner';
-    console.log('[AuthGuard] BLOCKING ACCESS - subscription not active:', {
+  // Bloquer l'accès UNIQUEMENT pour les OWNERS si leur abonnement n'est pas actif
+  // Les membres ne sont JAMAIS bloqués - ils accèdent via l'abonnement du propriétaire
+  const isOwner = role === 'owner';
+
+  if (isOwner && !isActive && !isBillingExempt && !location.pathname.startsWith('/employee')) {
+    console.log('[AuthGuard] BLOCKING OWNER - subscription not active:', {
       ownerUserId,
       isActive,
       isBillingExempt,
       role,
-      isOwner,
       currentUserId: user?.id,
     });
 
@@ -142,37 +142,23 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
           </div>
           <h2 className="text-2xl font-bold mb-4">Abonnement requis</h2>
           <p className="text-muted-foreground mb-6">
-            {isOwner ? (
-              <>
-                Votre abonnement n'est pas actif. Pour continuer à utiliser Provia BASE,
-                veuillez mettre à jour votre abonnement.
-              </>
-            ) : (
-              <>
-                L'abonnement de votre entreprise n'est pas actif.
-                Veuillez contacter le propriétaire de votre entreprise pour renouveler l'abonnement.
-              </>
-            )}
+            Votre abonnement n'est pas actif. Pour continuer à utiliser Provia BASE,
+            veuillez mettre à jour votre abonnement.
           </p>
           <div className="space-y-3">
-            {isOwner && (
-              <a
-                href="https://www.proviabase.fr/billing/required"
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
-              >
-                <CreditCard className="h-5 w-5" />
-                Gérer mon abonnement
-              </a>
-            )}
+            <a
+              href="https://www.proviabase.fr/billing/required"
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
+            >
+              <CreditCard className="h-5 w-5" />
+              Gérer mon abonnement
+            </a>
             <button
               onClick={() => {
                 supabase.auth.signOut();
                 navigate('/auth/login');
               }}
-              className={isOwner
-                ? "w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-                : "flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-semibold transition-colors"
-              }
+              className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               Se déconnecter
             </button>
