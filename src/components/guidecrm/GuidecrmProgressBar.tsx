@@ -10,7 +10,7 @@ import { useGuidecrm } from './GuidecrmContext';
 import { ONBOARDING_STEPS } from './guidecrmTypes';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, X, Check, Sparkles } from 'lucide-react';
+import { ChevronRight, X, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function GuidecrmProgressBar() {
@@ -29,34 +29,10 @@ export function GuidecrmProgressBar() {
     setShowGuide,
   } = useGuidecrm();
 
-  // Debug log
-  console.log('[GuideCRM ProgressBar] State:', {
-    loading,
-    isOnboardingComplete,
-    showGuide,
-    hasProgress: !!progress,
-    currentStep: currentStep?.key,
-  });
-
   // Don't show if loading, complete, or hidden
-  if (loading) {
-    console.log('[GuideCRM ProgressBar] Hidden: still loading');
+  if (loading || isOnboardingComplete || !showGuide || !progress) {
     return null;
   }
-  if (isOnboardingComplete) {
-    console.log('[GuideCRM ProgressBar] Hidden: onboarding complete');
-    return null;
-  }
-  if (!showGuide) {
-    console.log('[GuideCRM ProgressBar] Hidden: showGuide is false');
-    return null;
-  }
-  if (!progress) {
-    console.log('[GuideCRM ProgressBar] Hidden: no progress data');
-    return null;
-  }
-
-  console.log('[GuideCRM ProgressBar] ✅ Showing progress bar!');
 
   return (
     <div
