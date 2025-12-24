@@ -44,13 +44,27 @@ serve(async (req) => {
 
     // Récupérer les informations de la société séparément (pas de FK entre devis et companies)
     let company = null;
+    console.log('=== GET-QUOTE-PUBLIC DEBUG ===');
+    console.log('Quote numero:', quote.numero);
+    console.log('Quote company_id:', quote.company_id);
+
     if (quote.company_id) {
-      const { data: companyData } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('*')
         .eq('id', quote.company_id)
         .single();
-      company = companyData;
+
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+      } else if (!companyData) {
+        console.error('Company not found for id:', quote.company_id);
+      } else {
+        company = companyData;
+        console.log('Company loaded successfully:', { name: company.name, email: company.email });
+      }
+    } else {
+      console.warn('Quote has no company_id!');
     }
 
     // IMPORTANT: Attacher les données de la société au quote pour le PDF generator
@@ -58,9 +72,7 @@ serve(async (req) => {
     quote.companies = company;
 
     // Debug logging pour vérifier les données
-    console.log('=== GET-QUOTE-PUBLIC DEBUG ===');
-    console.log('Quote numero:', quote.numero);
-    console.log('Company data:', company ? { name: company.name, email: company.email } : 'NULL');
+    console.log('Company attached to quote:', company ? { name: company.name, email: company.email } : 'NULL - WILL USE FALLBACK');
     console.log('Quote lignes count:', (quote.lignes || []).length);
     console.log('Quote lignes sample:', JSON.stringify((quote.lignes || []).slice(0, 2)));
     console.log('Quote template_id:', quote.template_id);

@@ -320,7 +320,7 @@ export function renderQuoteToHtml(
         <div style="background: ${mainColor}08; padding: 16px; border-radius: 8px; border-left: 4px solid ${mainColor};">
           <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 12px 0; color: ${mainColor};">Émetteur</h3>
           <div style="font-size: 13px; line-height: 1.6;">
-            <div style="font-weight: 500; margin-bottom: 4px;">${data.company_name || "Votre entreprise"}</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">${data.company_name || "[Entreprise non configurée]"}</div>
             ${data.company_adresse ? `<div style="color: #6b7280;">${data.company_adresse}</div>` : ""}
             ${data.company_telephone ? `<div style="color: #6b7280;">Tél: ${data.company_telephone}</div>` : ""}
             ${data.company_email ? `<div style="color: #6b7280;">${data.company_email}</div>` : ""}

@@ -44,22 +44,34 @@ serve(async (req) => {
 
     // Récupérer les informations de la société séparément (pas de FK entre factures et companies)
     let company = null;
+    console.log('=== GET-INVOICE-PUBLIC DEBUG ===');
+    console.log('Invoice numero:', invoice.numero);
+    console.log('Invoice company_id:', invoice.company_id);
+
     if (invoice.company_id) {
-      const { data: companyData } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('*')
         .eq('id', invoice.company_id)
         .single();
-      company = companyData;
+
+      if (companyError) {
+        console.error('Error fetching company:', companyError);
+      } else if (!companyData) {
+        console.error('Company not found for id:', invoice.company_id);
+      } else {
+        company = companyData;
+        console.log('Company loaded successfully:', { name: company.name, email: company.email });
+      }
+    } else {
+      console.warn('Invoice has no company_id!');
     }
 
     // IMPORTANT: Attacher les données de la société à la facture pour le PDF generator
     invoice.companies = company;
 
     // Debug logging
-    console.log('=== GET-INVOICE-PUBLIC DEBUG ===');
-    console.log('Invoice numero:', invoice.numero);
-    console.log('Company data:', company ? { name: company.name, email: company.email } : 'NULL');
+    console.log('Company attached to invoice:', company ? { name: company.name, email: company.email } : 'NULL - WILL USE FALLBACK');
     console.log('Invoice lignes count:', (invoice.lignes || []).length);
 
     // Générer le PDF
