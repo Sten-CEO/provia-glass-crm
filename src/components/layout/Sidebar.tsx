@@ -74,12 +74,13 @@ const navSections = [
         icon: Users,
         path: "/clients",
         accessKey: "clients",
+        onboardingKey: "nav-clients",
         subFunctions: [
           { label: "Contrats", path: "/contracts" },
         ]
       },
-      { title: "Devis", icon: FileText, path: "/devis", accessKey: "devis" },
-      { title: "Factures", icon: Receipt, path: "/factures", accessKey: "factures" },
+      { title: "Devis", icon: FileText, path: "/devis", accessKey: "devis", onboardingKey: "nav-devis" },
+      { title: "Factures", icon: Receipt, path: "/factures", accessKey: "factures", onboardingKey: "nav-factures" },
       { title: "Paiements", icon: Receipt, path: "/paiements", accessKey: "paiements" },
     ],
   },
@@ -91,6 +92,7 @@ const navSections = [
         icon: Package,
         path: "/inventaire",
         accessKey: "inventaire",
+        onboardingKey: "nav-inventaire",
         subFunctions: [
           { label: "Consommables", path: "/inventaire/consommables" },
           { label: "Matériels", path: "/inventaire/materiels" },
@@ -103,8 +105,8 @@ const navSections = [
   {
     label: "CONFIGURATION",
     items: [
-      { title: "Équipe", icon: UserCog, path: "/equipe", accessKey: "equipe" },
-      { title: "Paramètres", icon: Settings, path: "/parametres", accessKey: "parametres" },
+      { title: "Équipe", icon: UserCog, path: "/equipe", accessKey: "equipe", onboardingKey: "nav-equipe" },
+      { title: "Paramètres", icon: Settings, path: "/parametres", accessKey: "parametres", onboardingKey: "nav-parametres" },
       { title: "Support", icon: HelpCircle, path: "/support" },
     ],
   },
@@ -212,6 +214,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                           <TooltipTrigger asChild>
                             <NavLink
                               to={item.path}
+                              data-onboarding={item.onboardingKey}
                               className={({ isActive }) =>
                                 cn(
                                   "flex items-center justify-center p-3 rounded-xl transition-all flex-1",
@@ -233,6 +236,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                         <>
                           <NavLink
                             to={item.path}
+                            data-onboarding={item.onboardingKey}
                             className={({ isActive }) =>
                               cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all flex-1",

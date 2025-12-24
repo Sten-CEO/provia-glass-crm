@@ -24,8 +24,8 @@ import { toast } from 'sonner';
 // Create context with default values
 const GuidecrmContext = createContext<OnboardingContextValue | null>(null);
 
-// Debug flag - set to true to see console logs
-const DEBUG = true;
+// Debug flag - set to false in production
+const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log('[GuideCRM]', ...args);
 
 // =========================================
@@ -397,6 +397,34 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
       setDismissed(false);
     }
   }, []);
+
+  // =========================================
+  // AUTO-HIGHLIGHT CURRENT STEP
+  // =========================================
+
+  // Automatically highlight the first target of the current step when guide is shown
+  useEffect(() => {
+    if (!showGuide || loading || isOnboardingComplete) {
+      return;
+    }
+
+    if (currentStep && currentStep.targets.length > 0 && !highlightedTarget) {
+      const firstTarget = currentStep.targets[0];
+      const isNavTarget = firstTarget.selector.startsWith('nav-');
+      const isOnCorrectRoute = location.pathname === currentStep.route ||
+                               location.pathname.startsWith(currentStep.route);
+
+      // Nav targets (sidebar links) are visible on all pages
+      // Other targets require being on the correct route
+      if (isNavTarget || isOnCorrectRoute) {
+        const timer = setTimeout(() => {
+          log('Auto-highlighting first target:', firstTarget.selector);
+          setHighlightedTarget(firstTarget.selector);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [showGuide, loading, isOnboardingComplete, currentStep, highlightedTarget, location.pathname]);
 
   // =========================================
   // CONTEXT VALUE
