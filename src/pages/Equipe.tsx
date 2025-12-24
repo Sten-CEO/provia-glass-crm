@@ -98,14 +98,8 @@ const Equipe = () => {
     },
   });
 
-  const loadTeam = async (forceLog = false) => {
-    if (!company?.id) {
-      if (forceLog) {
-        console.error('❌ [Equipe] FORCE RELOAD: Still no company ID available!');
-        console.error('❌ [Equipe] Company state:', company);
-      }
-      return;
-    }
+  const loadTeam = async () => {
+    if (!company?.id) return;
 
     const { data, error } = await supabase
       .from("equipe")
@@ -114,7 +108,6 @@ const Equipe = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('❌ [Equipe] Error loading team:', error);
       toast.error("Erreur de chargement");
       return;
     }
@@ -151,7 +144,6 @@ const Equipe = () => {
   };
 
   const mapRoleToDbRole = (role: string): string => {
-    // Map UI role names to database role names
     const roleMapping: Record<string, string> = {
       "Employé terrain": "employe_terrain",
       "Owner": "owner",
@@ -169,13 +161,11 @@ const Equipe = () => {
     }
 
     if (!company?.id) {
-      console.error("❌ [Equipe] Cannot create member: company is undefined", company);
       toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
       return;
     }
 
     try {
-      // Step 1: Create entry in equipe table
       const { data: newEmployeeData, error: insertError } = await supabase
         .from("equipe")
         .insert([
@@ -193,15 +183,11 @@ const Equipe = () => {
         .single();
 
       if (insertError || !newEmployeeData) {
-        console.error("❌ Insert error:", insertError);
         toast.error("Échec de création");
         return;
       }
 
-      // Step 2: Generate temporary password
       const tempPassword = generateTemporaryPassword();
-
-      // Step 3: Call edge function to create auth account
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         toast.error("Session expirée");
@@ -221,36 +207,23 @@ const Equipe = () => {
         role: mappedRole,
       };
 
-      // Use supabase.functions.invoke for proper CORS handling in Tauri
       const { data: result, error: functionError } = await supabase.functions.invoke(
         'create-employee-account',
-        {
-          body: requestBody,
-        }
+        { body: requestBody }
       );
 
       if (functionError) {
-        console.error("❌ Edge function error:", functionError);
         throw new Error(functionError.message || "Erreur lors de la création du compte");
       }
 
       if (result?.error) {
-        console.error("❌ Edge function returned error:", result.error);
         throw new Error(result.error || "Erreur lors de la création du compte");
       }
 
-      // Reload team list to show the new member
       await loadTeam();
-
-      // Force company to reload and then reload team list again after a delay
       window.dispatchEvent(new Event('company-updated'));
+      setTimeout(() => loadTeam(), 1000);
 
-      // Wait a bit and force reload again to ensure we catch the new member
-      setTimeout(async () => {
-        await loadTeam(true);
-      }, 1000);
-
-      // Step 4: Show temporary password to user
       setCreatedMemberEmail(newMember.email);
       setTemporaryPassword(tempPassword);
       setCreatedMemberRole(newMember.role);
@@ -282,7 +255,6 @@ const Equipe = () => {
       });
       setOpen(false);
     } catch (error: any) {
-      console.error("Error creating member:", error);
       toast.error(error.message || "Erreur lors de la création du membre");
     }
   };

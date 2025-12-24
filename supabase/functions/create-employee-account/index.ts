@@ -66,7 +66,6 @@ serve(async (req) => {
       throw new Error('Password is required and must be at least 6 characters');
     }
 
-    // Récupérer le rôle depuis la table equipe
     const { data: employeeData, error: employeeError } = await supabaseAdmin
       .from('equipe')
       .select('role, company_id')
@@ -74,11 +73,9 @@ serve(async (req) => {
       .single();
 
     if (employeeError || !employeeData) {
-      console.error('Error fetching employee:', employeeError);
       throw new Error('Employee not found');
     }
 
-    // Mapper le rôle UI vers le rôle DB
     const roleMapping: Record<string, string> = {
       'Owner': 'owner',
       'Admin': 'admin',
@@ -90,20 +87,18 @@ serve(async (req) => {
     const employeeRole = employeeData.role || 'Employé terrain';
     const dbRole = roleMapping[employeeRole] || 'employe_terrain';
 
-    // Vérifier que l'employé appartient à la même company
     if (employeeData.company_id !== companyId) {
       throw new Error('Employee belongs to a different company');
     }
 
-    // Créer l'utilisateur Supabase (ne déclenche PAS handle_new_user car c'est admin.createUser)
-    const { data: newUser, error: createError} = await supabaseAdmin.auth.admin.createUser({
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: password || undefined,
       email_confirm: true,
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
-        is_employee: true, // Flag pour éviter création company
+        is_employee: true,
         role: dbRole,
       },
       app_metadata: {
@@ -113,11 +108,9 @@ serve(async (req) => {
     });
 
     if (createError) {
-      console.error('Error creating user:', createError);
       throw createError;
     }
 
-    // Lier l'utilisateur à l'équipe avec le même company_id
     const { error: updateError } = await supabaseAdmin
       .from('equipe')
       .update({
@@ -130,13 +123,10 @@ serve(async (req) => {
       .eq('id', employeeId);
 
     if (updateError) {
-      console.error('❌ Error updating equipe:', updateError);
-      // Supprimer l'utilisateur créé si la liaison échoue
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
       throw updateError;
     }
 
-    // Créer le rôle dans user_roles avec le rôle déterminé depuis la table equipe
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
@@ -146,14 +136,9 @@ serve(async (req) => {
       });
 
     if (roleError) {
-      console.error('❌ Error creating role:', roleError);
-      // Supprimer l'utilisateur créé si la création du rôle échoue
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
       throw new Error('Failed to create user role: ' + roleError.message);
     }
-
-    // TODO: Envoyer l'email d'invitation si sendEmail === true
-    // Nécessite l'intégration Resend
 
     return new Response(
       JSON.stringify({

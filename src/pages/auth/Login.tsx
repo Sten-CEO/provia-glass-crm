@@ -33,8 +33,8 @@ const Login = () => {
             navigate("/tableau-de-bord");
           }
         }
-      } catch (err) {
-        console.error('Session check failed:', err);
+      } catch {
+        // Session check failed silently
       }
     };
 
@@ -92,9 +92,7 @@ const Login = () => {
         navigate("/tableau-de-bord");
       }
     } catch (err) {
-      console.error('Login error:', err);
-      const error = err as Error;
-      toast.error(`Erreur de connexion: ${error.message}`);
+      toast.error(`Erreur de connexion: ${(err as Error).message}`);
       setLoading(false);
     }
   };
@@ -145,9 +143,7 @@ const Login = () => {
       setPassword("");
       setConfirmPassword("");
     } catch (err) {
-      const error = err as Error;
-      toast.error(`Erreur: ${error.message}`);
-      console.error(error);
+      toast.error(`Erreur: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
