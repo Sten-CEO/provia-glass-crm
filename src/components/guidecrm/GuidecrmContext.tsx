@@ -154,6 +154,11 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     fetchProgress();
   }, [fetchProgress]);
 
+  // Reset highlighted target when route changes to allow re-selection
+  useEffect(() => {
+    setHighlightedTarget(null);
+  }, [location.pathname]);
+
   // =========================================
   // MARK STEP COMPLETE
   // =========================================
@@ -272,13 +277,9 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   // =========================================
 
   const goToStep = useCallback((step: OnboardingStep) => {
+    // Clear current highlight before navigation
+    setHighlightedTarget(null);
     navigate(step.route);
-    // Highlight first target after navigation
-    setTimeout(() => {
-      if (step.targets.length > 0) {
-        setHighlightedTarget(step.targets[0].selector);
-      }
-    }, 300);
   }, [navigate]);
 
   const goToNextStep = useCallback(() => {
@@ -402,29 +403,47 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   // AUTO-HIGHLIGHT CURRENT STEP
   // =========================================
 
-  // Automatically highlight the first target of the current step when guide is shown
+  // Get the best target to highlight based on current route
+  const getBestTarget = useCallback((step: OnboardingStep) => {
+    const isOnCorrectRoute = location.pathname === step.route ||
+                             location.pathname.startsWith(step.route);
+
+    // If we're on the correct route, skip nav targets and find a page-specific target
+    if (isOnCorrectRoute) {
+      const pageTarget = step.targets.find(t => !t.selector.startsWith('nav-'));
+      if (pageTarget) {
+        return pageTarget;
+      }
+    }
+
+    // If not on the correct route, return the nav target to guide user there
+    const navTarget = step.targets.find(t => t.selector.startsWith('nav-'));
+    if (navTarget) {
+      return navTarget;
+    }
+
+    // Fallback to first target
+    return step.targets[0] || null;
+  }, [location.pathname]);
+
+  // Automatically highlight the best target of the current step when guide is shown
   useEffect(() => {
-    if (!showGuide || loading || isOnboardingComplete) {
+    if (!showGuide || loading || isOnboardingComplete || !currentStep) {
       return;
     }
 
-    if (currentStep && currentStep.targets.length > 0 && !highlightedTarget) {
-      const firstTarget = currentStep.targets[0];
-      const isNavTarget = firstTarget.selector.startsWith('nav-');
-      const isOnCorrectRoute = location.pathname === currentStep.route ||
-                               location.pathname.startsWith(currentStep.route);
+    if (currentStep.targets.length > 0 && !highlightedTarget) {
+      const bestTarget = getBestTarget(currentStep);
 
-      // Nav targets (sidebar links) are visible on all pages
-      // Other targets require being on the correct route
-      if (isNavTarget || isOnCorrectRoute) {
+      if (bestTarget) {
         const timer = setTimeout(() => {
-          log('Auto-highlighting first target:', firstTarget.selector);
-          setHighlightedTarget(firstTarget.selector);
+          log('Auto-highlighting best target:', bestTarget.selector);
+          setHighlightedTarget(bestTarget.selector);
         }, 500);
         return () => clearTimeout(timer);
       }
     }
-  }, [showGuide, loading, isOnboardingComplete, currentStep, highlightedTarget, location.pathname]);
+  }, [showGuide, loading, isOnboardingComplete, currentStep, highlightedTarget, getBestTarget]);
 
   // =========================================
   // CONTEXT VALUE
