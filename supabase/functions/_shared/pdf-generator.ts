@@ -64,11 +64,21 @@ export async function generateQuotePDF(
   // Convertir les données du devis au format attendu par le renderer
   const renderData = convertQuoteToRenderData(quote);
 
+  // Debug logging
+  console.log('=== PDF-GENERATOR DEBUG ===');
+  console.log('RenderData lignes count:', renderData.lignes.length);
+  console.log('RenderData company_name:', renderData.company_name);
+  console.log('RenderData client_nom:', renderData.client_nom);
+  console.log('Template type:', template.type, 'name:', template.name);
+
   // Générer le HTML avec le renderer unifié
   const html = renderQuoteToHtml(renderData, template, {
     documentType: 'QUOTE',
     mode: 'pdf',
   });
+
+  console.log('Generated HTML length:', html.length);
+  console.log('HTML contains table:', html.includes('<table'));
 
   // Convertir le HTML en buffer (UTF-8)
   const buffer = new TextEncoder().encode(html);

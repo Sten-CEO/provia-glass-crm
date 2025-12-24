@@ -57,6 +57,14 @@ serve(async (req) => {
     // Le renderer attend quote.companies pour générer le PDF avec les bonnes infos
     quote.companies = company;
 
+    // Debug logging pour vérifier les données
+    console.log('=== GET-QUOTE-PUBLIC DEBUG ===');
+    console.log('Quote numero:', quote.numero);
+    console.log('Company data:', company ? { name: company.name, email: company.email } : 'NULL');
+    console.log('Quote lignes count:', (quote.lignes || []).length);
+    console.log('Quote lignes sample:', JSON.stringify((quote.lignes || []).slice(0, 2)));
+    console.log('Quote template_id:', quote.template_id);
+
     // Vérifier si le devis a expiré
     if (quote.expiry_date) {
       const expiryDate = new Date(quote.expiry_date);
