@@ -134,10 +134,10 @@ export const CreateEmployeeAccessDialog = ({
           <div className="space-y-4">
             <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
               <p className="text-sm font-semibold text-green-900 dark:text-green-200 mb-2">
-                ✅ Compte créé avec succès dans Supabase Auth!
+                ✅ Félicitations ! L'accès a bien été créé pour votre employé.
               </p>
               <p className="text-xs text-green-800 dark:text-green-300">
-                L'utilisateur peut maintenant se connecter.
+                L'employé peut maintenant se connecter avec les identifiants ci-dessous.
               </p>
             </div>
 
