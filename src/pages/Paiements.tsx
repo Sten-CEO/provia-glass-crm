@@ -34,8 +34,10 @@ import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCompany } from "@/hooks/useCompany";
 
 export default function Paiements() {
+  const { company } = useCompany();
   const [paiements, setPaiements] = useState<any[]>([]);
   const [factures, setFactures] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -49,31 +51,39 @@ export default function Paiements() {
   });
 
   useEffect(() => {
-    loadPaiements();
-    loadFactures();
+    if (company?.id) {
+      loadPaiements();
+      loadFactures();
+    }
 
     const channel = supabase
       .channel("paiements-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "paiements" }, loadPaiements)
+      .on("postgres_changes", { event: "*", schema: "public", table: "paiements" }, () => {
+        if (company?.id) loadPaiements();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [company?.id]);
 
   const loadPaiements = async () => {
+    if (!company?.id) return;
     const { data } = await supabase
       .from("paiements")
       .select("*")
+      .eq("company_id", company.id)
       .order("date_paiement", { ascending: false });
     if (data) setPaiements(data);
   };
 
   const loadFactures = async () => {
+    if (!company?.id) return;
     const { data } = await supabase
       .from("factures")
       .select("*")
+      .eq("company_id", company.id)
       .neq("statut", "Payée")
       .order("created_at", { ascending: false });
     if (data) setFactures(data);
@@ -85,11 +95,17 @@ export default function Paiements() {
       return;
     }
 
+    if (!company?.id) {
+      toast.error("Erreur: Aucune entreprise sélectionnée");
+      return;
+    }
+
     const { error } = await supabase.from("paiements").insert([
       {
         ...formData,
         montant: parseFloat(formData.montant),
         date_paiement: format(formData.date_paiement, "yyyy-MM-dd"),
+        company_id: company.id,
       },
     ]);
 

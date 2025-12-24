@@ -147,6 +147,7 @@ const Factures = () => {
         montant: newInvoice.montant,
         statut: newInvoice.statut,
         echeance: newInvoice.echeance,
+        company_id: companyId,
       },
     ]);
 

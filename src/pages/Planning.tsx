@@ -221,6 +221,7 @@ const Planning = () => {
         date: newJob.date,
         heure_debut: newJob.heure_debut,
         heure_fin: newJob.heure_fin,
+        company_id: companyId,
       },
     ]);
 

@@ -114,7 +114,8 @@ export default function FactureEditor() {
   }, [defaultTemplate]);
 
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("id, nom, email");
+    if (!company?.id) return;
+    const { data } = await supabase.from("clients").select("id, nom, email").eq("company_id", company.id);
     setClients(data || []);
   };
 

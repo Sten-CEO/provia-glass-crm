@@ -35,6 +35,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { eventBus, EVENTS } from "@/lib/eventBus";
+import { useCompany } from "@/hooks/useCompany";
+
 interface Intervention {
   id: string;
   titre: string;
@@ -55,6 +57,7 @@ interface Intervention {
 }
 
 const Interventions = () => {
+  const { company } = useCompany();
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [employes, setEmployes] = useState<any[]>([]);
@@ -65,12 +68,14 @@ const Interventions = () => {
   const navigate = useNavigate();
 
   const loadInterventions = async () => {
+    if (!company?.id) return;
     const { data, error } = await supabase
       .from("jobs")
       .select(`
         *,
         factures!factures_intervention_id_fkey(id, sent_at, paid_at)
       `)
+      .eq("company_id", company.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -82,26 +87,29 @@ const Interventions = () => {
   };
 
   const loadData = async () => {
-    const { data: clientsData } = await supabase.from("clients").select("id, nom");
-    const { data: employesData } = await supabase.from("equipe").select("id, nom");
+    if (!company?.id) return;
+    const { data: clientsData } = await supabase.from("clients").select("id, nom").eq("company_id", company.id);
+    const { data: employesData } = await supabase.from("equipe").select("id, nom").eq("company_id", company.id);
     setClients(clientsData || []);
     setEmployes(employesData || []);
   };
 
   useEffect(() => {
-    loadInterventions();
-    loadData();
+    if (company?.id) {
+      loadInterventions();
+      loadData();
+    }
 
     const channel = supabase
       .channel("jobs-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => {
-        loadInterventions();
+        if (company?.id) loadInterventions();
       })
       .subscribe();
 
     const handleDataChanged = (data: any) => {
       if (data?.scope === 'jobs' || data?.scope === 'planning' || data?.scope === 'interventions') {
-        loadInterventions();
+        if (company?.id) loadInterventions();
       }
     };
 
@@ -111,7 +119,7 @@ const Interventions = () => {
       supabase.removeChannel(channel);
       eventBus.off(EVENTS.DATA_CHANGED, handleDataChanged);
     };
-  }, []);
+  }, [company?.id]);
 
   const handleDeleteIntervention = async () => {
     if (!selectedIntervention) return;

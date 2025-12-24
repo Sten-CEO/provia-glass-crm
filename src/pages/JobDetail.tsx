@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { eventBus, EVENTS } from "@/lib/eventBus";
+import { useCompany } from "@/hooks/useCompany";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +72,7 @@ interface Job {
 const JobDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [job, setJob] = useState<Job | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -93,19 +95,23 @@ const JobDetail = () => {
   };
 
   const loadEmployees = async () => {
-    const { data } = await supabase.from("equipe").select("*");
+    if (!company?.id) return;
+    const { data } = await supabase.from("equipe").select("*").eq("company_id", company.id);
     setEmployees(data || []);
   };
 
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("*");
+    if (!company?.id) return;
+    const { data } = await supabase.from("clients").select("*").eq("company_id", company.id);
     setClients(data || []);
   };
 
   useEffect(() => {
     loadJob();
-    loadEmployees();
-    loadClients();
+    if (company?.id) {
+      loadEmployees();
+      loadClients();
+    }
 
     const channel = supabase
       .channel(`job-${id}`)
@@ -115,7 +121,7 @@ const JobDetail = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, company?.id]);
 
   const addHistoryEvent = async (type: string, meta?: any) => {
     if (!job) return;
