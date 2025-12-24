@@ -109,8 +109,23 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
   try {
     console.log('[Billing] Getting owner for company:', companyId);
 
-    // First try user_roles (members have RLS access to their company's user_roles)
-    // This is more reliable than companies.owner_id which may have RLS restrictions
+    // Use RPC function that bypasses RLS to get the owner
+    // This is necessary because members can't see other users' roles due to RLS
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_company_owner_user_id', { p_company_id: companyId });
+
+    console.log('[Billing] RPC get_company_owner_user_id result:', { rpcData, rpcError });
+
+    if (rpcData) {
+      console.log('[Billing] Found owner from RPC:', rpcData);
+      return rpcData;
+    }
+
+    if (rpcError) {
+      console.warn('[Billing] RPC failed, falling back to direct queries:', rpcError.message);
+    }
+
+    // Fallback: try user_roles directly (may work depending on RLS)
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('user_id')
@@ -125,8 +140,7 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
       return roleData.user_id;
     }
 
-    // Fallback to companies.owner_id if user_roles didn't work
-    console.warn('[Billing] No owner in user_roles, trying companies.owner_id');
+    // Last fallback: try companies.owner_id
     const { data, error } = await supabase
       .from('companies')
       .select('owner_id')
@@ -140,7 +154,7 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
       return data.owner_id;
     }
 
-    console.error('[Billing] Could not find company owner from either source');
+    console.error('[Billing] Could not find company owner from any source');
     return null;
   } catch (err) {
     console.error('[Billing] Unexpected error getting company owner:', err);
