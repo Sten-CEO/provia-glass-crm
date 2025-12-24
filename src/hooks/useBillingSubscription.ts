@@ -109,7 +109,24 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
   try {
     console.log('[Billing] Getting owner for company:', companyId);
 
-    // Use companies.owner_id as the source of truth for the owner
+    // First try user_roles (members have RLS access to their company's user_roles)
+    // This is more reliable than companies.owner_id which may have RLS restrictions
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .eq('role', 'owner')
+      .maybeSingle();
+
+    console.log('[Billing] user_roles owner result:', { roleData, roleError });
+
+    if (roleData?.user_id) {
+      console.log('[Billing] Found owner from user_roles:', roleData.user_id);
+      return roleData.user_id;
+    }
+
+    // Fallback to companies.owner_id if user_roles didn't work
+    console.warn('[Billing] No owner in user_roles, trying companies.owner_id');
     const { data, error } = await supabase
       .from('companies')
       .select('owner_id')
@@ -118,27 +135,13 @@ export async function getCompanyOwnerUserId(companyId: string): Promise<string |
 
     console.log('[Billing] companies.owner_id result:', { data, error });
 
-    if (error || !data || !data.owner_id) {
-      console.warn('[Billing] No owner_id in companies table, falling back to user_roles');
-      // Fallback to user_roles if companies.owner_id is not available
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('company_id', companyId)
-        .eq('role', 'owner')
-        .maybeSingle();
-
-      console.log('[Billing] user_roles owner result:', { roleData, roleError });
-
-      if (roleError || !roleData) {
-        console.error('[Billing] Error getting company owner from user_roles:', roleError);
-        return null;
-      }
-      return roleData.user_id;
+    if (data?.owner_id) {
+      console.log('[Billing] Found owner_id from companies:', data.owner_id);
+      return data.owner_id;
     }
 
-    console.log('[Billing] Found owner_id from companies:', data.owner_id);
-    return data.owner_id;
+    console.error('[Billing] Could not find company owner from either source');
+    return null;
   } catch (err) {
     console.error('[Billing] Unexpected error getting company owner:', err);
     return null;
