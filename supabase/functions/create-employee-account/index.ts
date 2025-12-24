@@ -155,11 +155,26 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in create-employee-account:', error);
+
+    // Provide more specific error messages
+    let errorMessage = error?.message || 'Unknown error';
+    let statusCode = 400;
+
+    if (errorMessage.includes('Unauthorized') || errorMessage.includes('authorization')) {
+      statusCode = 401;
+    } else if (errorMessage.includes('permission') || errorMessage.includes('Permission')) {
+      statusCode = 403;
+    }
+
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unknown error' }),
-      { 
+      JSON.stringify({
+        error: errorMessage,
+        details: error?.details || null,
+        hint: error?.hint || null,
+      }),
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: statusCode,
       }
     );
   }

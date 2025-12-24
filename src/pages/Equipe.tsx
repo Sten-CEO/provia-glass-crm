@@ -262,11 +262,16 @@ const Equipe = () => {
       );
 
       if (functionError) {
+        // Delete the equipe record if the auth creation failed
+        await supabase.from("equipe").delete().eq("id", newEmployeeData.id);
         throw new Error(functionError.message || "Erreur lors de la création du compte");
       }
 
       if (result?.error) {
-        throw new Error(result.error || "Erreur lors de la création du compte");
+        // Delete the equipe record if the auth creation failed
+        await supabase.from("equipe").delete().eq("id", newEmployeeData.id);
+        const errorDetail = result.hint ? ` (${result.hint})` : '';
+        throw new Error((result.error || "Erreur lors de la création du compte") + errorDetail);
       }
 
       await loadTeam();
