@@ -43,7 +43,6 @@ export function GuidecrmTooltip() {
     const element = document.querySelector(`[data-onboarding="${highlightedTarget}"]`) as HTMLElement;
 
     if (!element) {
-      console.log(`[GuideCRM] Target not found: ${highlightedTarget}`);
       setPosition(null);
       setTargetElement(null);
       return;
