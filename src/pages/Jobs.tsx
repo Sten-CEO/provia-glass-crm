@@ -163,6 +163,7 @@ const Jobs = () => {
         employe_nom: employe?.nom || "",
         statut: newJob.statut,
         date: newJob.date,
+        company_id: companyId,
       },
     ]);
 

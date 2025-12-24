@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { recomputeInvoiceTotals } from "@/lib/invoiceUtils";
 import { InvoiceSendModal } from "@/components/factures/InvoiceSendModal";
+import { useCompany } from "@/hooks/useCompany";
 
 interface LigneFacture {
   description: string;
@@ -22,6 +23,7 @@ interface LigneFacture {
 const FactureDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { company } = useCompany();
   const [facture, setFacture] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [lignes, setLignes] = useState<LigneFacture[]>([]);
@@ -32,9 +34,11 @@ const FactureDetail = () => {
   useEffect(() => {
     if (id) {
       loadFacture();
+    }
+    if (company?.id) {
       loadClients();
     }
-  }, [id]);
+  }, [id, company?.id]);
 
   const loadFacture = async () => {
     const { data } = await supabase
@@ -52,7 +56,8 @@ const FactureDetail = () => {
   };
 
   const loadClients = async () => {
-    const { data } = await supabase.from("clients").select("*");
+    if (!company?.id) return;
+    const { data } = await supabase.from("clients").select("*").eq("company_id", company.id);
     setClients(data || []);
   };
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,7 @@ interface Job {
 }
 
 const Timesheets = () => {
+  const { company } = useCompany();
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -130,29 +132,35 @@ const Timesheets = () => {
   } = useDisplaySettings("timesheets", availableColumns.map(c => c.key));
 
   useEffect(() => {
-    loadData();
+    if (company?.id) {
+      loadData();
+    }
 
     const channel = supabase
       .channel("timesheets-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "timesheets_entries" }, loadData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "timesheets_entries" }, () => {
+        if (company?.id) loadData();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, company?.id]);
 
   const loadData = async () => {
+    if (!company?.id) return;
     const [entriesRes, employeesRes, clientsRes, jobsRes] = await Promise.all([
       supabase
         .from("timesheets_entries")
         .select("*")
+        .eq("company_id", company.id)
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date", { ascending: false }),
-      supabase.from("equipe").select("id, nom, hourly_rate, is_manager"),
-      supabase.from("clients").select("id, nom"),
-      supabase.from("jobs").select("id, titre, client_id"),
+      supabase.from("equipe").select("id, nom, hourly_rate, is_manager").eq("company_id", company.id),
+      supabase.from("clients").select("id, nom").eq("company_id", company.id),
+      supabase.from("jobs").select("id, titre, client_id").eq("company_id", company.id),
     ]);
 
     if (entriesRes.data) {

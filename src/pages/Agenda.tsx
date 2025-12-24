@@ -152,6 +152,7 @@ export default function Agenda() {
         status: 'à venir',
         attendees: event.attendees,
         location: event.location,
+        company_id: companyId,
       });
 
     if (error) {
