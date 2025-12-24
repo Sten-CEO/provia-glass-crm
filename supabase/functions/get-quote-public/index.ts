@@ -42,29 +42,39 @@ serve(async (req) => {
       throw new Error('Devis introuvable ou lien invalide');
     }
 
-    // Récupérer les informations de la société séparément (pas de FK entre devis et companies)
+    // Récupérer les informations de la société
+    // Stratégie: 1) quote.company_id, 2) client.company_id comme fallback
     let company = null;
+    let companyId = quote.company_id;
+
     console.log('=== GET-QUOTE-PUBLIC DEBUG ===');
     console.log('Quote numero:', quote.numero);
     console.log('Quote company_id:', quote.company_id);
+    console.log('Client company_id:', quote.clients?.company_id);
 
-    if (quote.company_id) {
+    // Fallback: si le devis n'a pas de company_id, utiliser celui du client
+    if (!companyId && quote.clients?.company_id) {
+      companyId = quote.clients.company_id;
+      console.log('Using client company_id as fallback:', companyId);
+    }
+
+    if (companyId) {
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('*')
-        .eq('id', quote.company_id)
+        .eq('id', companyId)
         .single();
 
       if (companyError) {
         console.error('Error fetching company:', companyError);
       } else if (!companyData) {
-        console.error('Company not found for id:', quote.company_id);
+        console.error('Company not found for id:', companyId);
       } else {
         company = companyData;
         console.log('Company loaded successfully:', { name: company.name, email: company.email });
       }
     } else {
-      console.warn('Quote has no company_id!');
+      console.warn('No company_id found on quote or client!');
     }
 
     // IMPORTANT: Attacher les données de la société au quote pour le PDF generator
