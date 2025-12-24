@@ -77,8 +77,6 @@ export const CreateEmployeeAccessDialog = ({
       });
 
       if (response.error) {
-        console.error("Edge function error:", response.error);
-
         if (response.error.message?.includes('Unauthorized') ||
             response.error.message?.includes('Insufficient permissions')) {
           toast.error("Vous n'avez pas les permissions nécessaires");
@@ -100,8 +98,7 @@ export const CreateEmployeeAccessDialog = ({
         onSuccess();
         onOpenChange(false);
       }
-    } catch (error: any) {
-      console.error("Error creating access:", error);
+    } catch {
       toast.error("Erreur lors de la création de l'accès");
     } finally {
       setLoading(false);
