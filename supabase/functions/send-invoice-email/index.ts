@@ -107,13 +107,12 @@ serve(async (req) => {
       finalCompanyId = employee.company_id;
     }
 
-    // Récupérer la facture avec les infos client et entreprise
+    // Récupérer la facture avec les infos client (sans la jointure companies)
     const { data: invoice, error: invoiceError } = await supabase
       .from('factures')
       .select(`
         *,
-        clients:client_id (nom, email, telephone, adresse),
-        companies:company_id (*)
+        clients:client_id (nom, email, telephone, adresse)
       `)
       .eq('id', invoiceId)
       .eq('company_id', finalCompanyId) // Sécurité : vérifier que la facture appartient à la company
@@ -124,9 +123,15 @@ serve(async (req) => {
       throw new Error('Facture introuvable ou accès non autorisé');
     }
 
-    // Récupérer les informations de la société
-    const company = invoice.companies;
-    if (!company) {
+    // Récupérer les informations de la société séparément (pas de FK entre factures et companies)
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', finalCompanyId)
+      .single();
+
+    if (companyError || !company) {
+      console.error('Company error:', companyError);
       throw new Error('Informations de société manquantes');
     }
 
