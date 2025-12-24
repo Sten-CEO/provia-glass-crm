@@ -19,6 +19,9 @@ const ALLOWED_ORIGINS = [
   'https://www.proviabase.fr',
   'https://app.proviabase.fr',
   'https://download.proviabase.fr',
+
+  // Vercel deployment
+  'https://provia-glass-crm.vercel.app',
 ];
 
 // Allowed domain patterns for dynamic checking
