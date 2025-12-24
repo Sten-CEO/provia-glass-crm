@@ -4,15 +4,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Phone, CheckCircle } from "lucide-react";
+import { CheckCircle, Send, Loader2 } from "lucide-react";
 
 const Support = () => {
   const [formData, setFormData] = useState({ nom: "", email: "", message: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Message envoyé avec succès!");
-    setFormData({ nom: "", email: "", message: "" });
+
+    if (!formData.nom || !formData.email || !formData.message) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-support-email`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nom: formData.nom,
+            email: formData.email,
+            message: formData.message,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de l'envoi");
+      }
+
+      toast.success("Message envoyé avec succès! Notre équipe vous répondra rapidement.");
+      setFormData({ nom: "", email: "", message: "" });
+    } catch (error: any) {
+      console.error("Error sending support message:", error);
+      toast.error(error.message || "Erreur lors de l'envoi du message");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -32,6 +67,7 @@ const Support = () => {
                 value={formData.nom}
                 onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                 className="glass-card"
+                disabled={isSubmitting}
               />
             </div>
             <div>
@@ -42,6 +78,7 @@ const Support = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="glass-card"
+                disabled={isSubmitting}
               />
             </div>
             <div>
@@ -51,30 +88,30 @@ const Support = () => {
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 className="glass-card min-h-[120px]"
+                disabled={isSubmitting}
               />
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold">
-              Envoyer
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Envoyer
+                </>
+              )}
             </Button>
           </form>
         </div>
 
         <div className="space-y-6">
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Phone className="h-6 w-6 text-primary" />
-              <h2 className="text-xl font-bold uppercase tracking-wide">
-                Onboarding assisté
-              </h2>
-            </div>
-            <p className="text-muted-foreground mb-4">
-              Besoin d'aide pour configurer votre CRM? Appelez un conseiller pour 30 minutes d'assistance personnalisée.
-            </p>
-            <Button variant="outline" className="w-full">
-              Appeler un conseiller
-            </Button>
-          </div>
-
           <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-4">
               <CheckCircle className="h-6 w-6 text-secondary" />

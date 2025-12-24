@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Smartphone } from "lucide-react";
+import { Plus, Edit, Trash2, Smartphone, CreditCard, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCompany } from "@/hooks/useCompany";
 import {
@@ -33,6 +33,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CreateEmployeeAccessDialog } from "@/components/equipe/CreateEmployeeAccessDialog";
 import { guidecrmMemberInvited } from "@/components/guidecrm"; // GUIDECRM
+import {
+  useBillingSubscription,
+  getCompanyOwnerUserId,
+  updateBillingSeats,
+} from "@/hooks/useBillingSubscription"; // BILLING
 
 interface TeamMember {
   id: string;
@@ -75,6 +80,20 @@ const Equipe = () => {
   const [temporaryPassword, setTemporaryPassword] = useState<string>("");
   const [createdMemberEmail, setCreatedMemberEmail] = useState<string>("");
   const [createdMemberRole, setCreatedMemberRole] = useState<string>("");
+
+  // BILLING: State for seat confirmation
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const [billingConfirmOpen, setBillingConfirmOpen] = useState(false);
+  const [pendingAddMember, setPendingAddMember] = useState(false);
+  const { seatsAvailable, refreshSubscription } = useBillingSubscription(ownerUserId || undefined);
+
+  // BILLING: Get owner user ID for this company
+  useEffect(() => {
+    if (company?.id) {
+      getCompanyOwnerUserId(company.id).then(setOwnerUserId);
+    }
+  }, [company?.id]);
+
   const [newMember, setNewMember] = useState({
     nom: "",
     role: "Employé terrain",
@@ -154,6 +173,32 @@ const Equipe = () => {
     return roleMapping[role] || "employe_terrain";
   };
 
+  // BILLING: Check if adding a member will exceed seat limit
+  const checkSeatLimitAndAdd = async () => {
+    if (!newMember.nom || !newMember.email) {
+      toast.error("Nom et email requis");
+      return;
+    }
+
+    if (!company?.id) {
+      console.error("❌ [Equipe] Cannot create member: company is undefined", company);
+      toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
+      return;
+    }
+
+    const currentMemberCount = team.length;
+    const newTotalMembers = currentMemberCount + 1;
+
+    // If adding this member will exceed seat limit, show confirmation
+    if (newTotalMembers > seatsAvailable) {
+      setBillingConfirmOpen(true);
+      return;
+    }
+
+    // Otherwise, proceed with adding
+    await handleAddMember();
+  };
+
   const handleAddMember = async () => {
     if (!newMember.nom || !newMember.email) {
       toast.error("Nom et email requis");
@@ -164,6 +209,8 @@ const Equipe = () => {
       toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
       return;
     }
+
+    setPendingAddMember(true);
 
     try {
       const { data: newEmployeeData, error: insertError } = await supabase
@@ -184,6 +231,7 @@ const Equipe = () => {
 
       if (insertError || !newEmployeeData) {
         toast.error("Échec de création");
+        setPendingAddMember(false);
         return;
       }
 
@@ -191,6 +239,7 @@ const Equipe = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         toast.error("Session expirée");
+        setPendingAddMember(false);
         return;
       }
 
@@ -254,8 +303,11 @@ const Equipe = () => {
         },
       });
       setOpen(false);
+      setBillingConfirmOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Erreur lors de la création du membre");
+    } finally {
+      setPendingAddMember(false);
     }
   };
 
@@ -296,9 +348,23 @@ const Equipe = () => {
       return;
     }
 
+    // BILLING: Update seats after successful member deletion (downgrade)
+    if (ownerUserId) {
+      const newTotalMembers = Math.max(1, team.length - 1); // At least 1 seat
+      const billingResult = await updateBillingSeats(ownerUserId, newTotalMembers);
+
+      if (billingResult.success) {
+        // Refresh subscription data
+        await refreshSubscription();
+      } else {
+        console.warn("[Billing] Failed to update seats after deletion:", billingResult.error);
+      }
+    }
+
     toast.success("Employé supprimé avec succès");
     setDeleteOpen(false);
     setSelectedMember(null);
+    loadTeam(); // Reload to update the list
   };
 
   const getAccessControlLabel = (key: string): string => {
@@ -474,11 +540,11 @@ const Equipe = () => {
               )}
               <Button
                 data-onboarding="btn-create-member" /* GUIDECRM */
-                onClick={handleAddMember}
+                onClick={checkSeatLimitAndAdd}
                 className="w-full bg-primary hover:bg-primary/90 text-foreground font-semibold"
-                disabled={!company?.id}
+                disabled={!company?.id || pendingAddMember}
               >
-                {!company?.id ? "Chargement..." : "Inviter"}
+                {pendingAddMember ? "Création en cours..." : !company?.id ? "Chargement..." : "Inviter"}
               </Button>
             </div>
           </DialogContent>
@@ -824,6 +890,48 @@ const Equipe = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* BILLING: Seat Limit Confirmation Dialog */}
+      <AlertDialog open={billingConfirmOpen} onOpenChange={setBillingConfirmOpen}>
+        <AlertDialogContent className="glass-modal">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                <CreditCard className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <AlertDialogTitle className="text-lg">Facturation supplémentaire</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-left space-y-3">
+              <p>
+                Vous avez atteint votre limite de <strong>{seatsAvailable} membre{seatsAvailable > 1 ? 's' : ''}</strong>.
+              </p>
+              <p>
+                L'ajout de ce nouveau membre entraînera une facturation immédiate au prorata pour le siège supplémentaire.
+              </p>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                  <span>Membres actuels: {team.length}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm mt-1">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <span>Sièges payés: {seatsAvailable}</span>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pendingAddMember}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAddMember}
+              disabled={pendingAddMember}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {pendingAddMember ? "Création en cours..." : "Confirmer et facturer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
