@@ -672,8 +672,25 @@ export function convertQuoteToRenderData(quote: any): QuoteRenderData {
   console.log('=== convertQuoteToRenderData DEBUG ===');
   console.log('quote.companies:', quote.companies);
   console.log('quote.clients:', quote.clients);
+  console.log('quote.lignes type:', typeof quote.lignes);
 
-  const lines: QuoteLine[] = (quote.lignes || []).map((line: any) => ({
+  // Handle lignes being a string (JSON) or array
+  let lignesData = quote.lignes || [];
+  if (typeof lignesData === 'string') {
+    try {
+      lignesData = JSON.parse(lignesData);
+    } catch (e) {
+      console.error('Failed to parse lignes JSON:', e);
+      lignesData = [];
+    }
+  }
+  // Ensure lignesData is an array
+  if (!Array.isArray(lignesData)) {
+    console.warn('lignesData is not an array, using empty array');
+    lignesData = [];
+  }
+
+  const lines: QuoteLine[] = lignesData.map((line: any) => ({
     name: line.name || line.description,
     description: line.description,
     reference: line.reference,

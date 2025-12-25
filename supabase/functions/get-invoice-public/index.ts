@@ -106,8 +106,24 @@ serve(async (req) => {
     console.log('Company attached to invoice:', company ? { name: company.name, email: company.email } : 'NULL - WILL USE FALLBACK');
     console.log('Invoice lignes count:', (invoice.lignes || []).length);
 
-    // Générer le PDF
-    const { buffer: pdfBuffer, filename: pdfFilename } = await generateInvoicePDF(invoice, supabase);
+    // Générer le PDF avec gestion d'erreur détaillée
+    let pdfBuffer: Uint8Array;
+    let pdfFilename: string;
+    try {
+      const result = await generateInvoicePDF(invoice, supabase);
+      pdfBuffer = result.buffer;
+      pdfFilename = result.filename;
+    } catch (pdfError: any) {
+      console.error('PDF generation error:', pdfError);
+      console.error('Invoice data for debugging:', JSON.stringify({
+        id: invoice.id,
+        numero: invoice.numero,
+        hasLignes: !!invoice.lignes,
+        lignesType: typeof invoice.lignes,
+        hasCompanies: !!invoice.companies,
+      }));
+      throw new Error(`Erreur génération PDF: ${pdfError.message}`);
+    }
 
     // Convertir le PDF en base64
     const pdfBase64 = base64Encode(pdfBuffer);
