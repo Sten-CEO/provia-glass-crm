@@ -101,8 +101,12 @@ export async function syncQuoteInventoryStatus(
 
 /**
  * When an intervention linked to a quote is completed, consume stock and release reservations
- * - Consumables: decrement both qty_on_hand and qty_reserved
- * - Materials: only decrement qty_reserved (they return to stock)
+ * - Consumables: create "out" movement (updateItemStock handles the stock decrement automatically)
+ * - Materials: just release the reservation (no stock change - they return to available)
+ *
+ * IMPORTANT: createInventoryMovement with status "done" automatically calls updateItemStock
+ * which recalculates qty_on_hand and qty_reserved from all movements.
+ * Do NOT manually update stock after creating movements - this would cause double updates!
  */
 export async function consumeQuoteInventory(
   quoteId: string,
@@ -121,12 +125,15 @@ export async function consumeQuoteInventory(
       .eq("type", "reserve")
       .eq("status", "planned");
 
+    // Import updateItemStock for materials (which don't create movements)
+    const { updateItemStock } = await import("./inventoryMovements");
+
     // For each item: check type and handle accordingly
     for (const [itemId, qty] of Object.entries(desiredByItem)) {
-      // Fetch stock AND type
+      // Fetch item type and company_id
       const { data: item } = await supabase
         .from("inventory_items")
-        .select("qty_on_hand, qty_reserved, type")
+        .select("type, company_id")
         .eq("id", itemId)
         .single();
 
@@ -135,7 +142,9 @@ export async function consumeQuoteInventory(
       const isConsumable = item.type === "consommable";
 
       if (isConsumable) {
-        // CONSUMABLE: Create consumption movement and decrement stock
+        // CONSUMABLE: Create "out" movement
+        // updateItemStock is automatically called by createInventoryMovement
+        // It will recalculate qty_on_hand (subtracting this "out") and qty_reserved (from remaining planned)
         await createInventoryMovement({
           item_id: itemId,
           type: "out",
@@ -146,35 +155,14 @@ export async function consumeQuoteInventory(
           note: `Consommation intervention ${interventionNumber}`,
           status: "done",
         });
-
-        // Decrement both qty_on_hand and qty_reserved
-        await supabase
-          .from("inventory_items")
-          .update({
-            qty_on_hand: Math.max(0, (item.qty_on_hand || 0) - Number(qty)),
-            qty_reserved: Math.max(0, (item.qty_reserved || 0) - Number(qty)),
-          })
-          .eq("id", itemId);
+        // NO manual stock update needed - updateItemStock handles everything!
       } else {
-        // MATERIAL: Create return movement, only decrement qty_reserved (returns to stock)
-        await createInventoryMovement({
-          item_id: itemId,
-          type: "in", // Return/release
-          qty: Number(qty),
-          source: "intervention",
-          ref_id: interventionId,
-          ref_number: interventionNumber,
-          note: `Restitution matériel intervention ${interventionNumber}`,
-          status: "done",
-        });
-
-        // Only decrement qty_reserved - materials return to stock
-        await supabase
-          .from("inventory_items")
-          .update({
-            qty_reserved: Math.max(0, (item.qty_reserved || 0) - Number(qty)),
-          })
-          .eq("id", itemId);
+        // MATERIAL: No "in" movement - materials don't leave stock, they were just borrowed
+        // The planned reservation was already canceled above
+        // Just recalculate the stock/reserved quantities from movements
+        await updateItemStock(itemId, item.company_id);
+        // This recalculates qty_reserved from remaining planned movements (now 0)
+        // and qty_on_hand stays the same (no "in" or "out" movement created)
       }
     }
 

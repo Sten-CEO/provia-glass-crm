@@ -60,8 +60,12 @@ export async function reserveInventoryForIntervention(
 
 /**
  * Convert planned reservations to actual consumption when intervention is completed
- * - Consumables: decrement both qty_on_hand and qty_reserved
- * - Materials: only decrement qty_reserved (they return to stock)
+ * - Consumables: create "out" movement (updateItemStock handles stock decrement automatically)
+ * - Materials: just release the reservation (no stock change - they return to available)
+ *
+ * IMPORTANT: createInventoryMovement with status "done" automatically calls updateItemStock
+ * which recalculates qty_on_hand and qty_reserved from all movements.
+ * Do NOT manually update stock after creating movements - this would cause double updates!
  */
 export async function consumeReservedInventory(
   interventionId: string,
@@ -100,14 +104,17 @@ export async function consumeReservedInventory(
       .eq("status", "planned")
       .in("type", ["reserve", "out"]);
 
+    // Import updateItemStock for materials (which don't create movements)
+    const { updateItemStock } = await import("./inventoryMovements");
+
     // Create actual consumption movements
     for (const consumable of consumables || []) {
       if (!consumable.inventory_item_id) continue;
 
-      // Get item type to differentiate consumables from materials
+      // Get item type and company_id
       const { data: inventoryItem } = await supabase
         .from("inventory_items")
-        .select("type, qty_on_hand, qty_reserved")
+        .select("type, company_id")
         .eq("id", consumable.inventory_item_id)
         .single();
 
@@ -116,7 +123,9 @@ export async function consumeReservedInventory(
       const isConsumable = inventoryItem.type === "consommable";
 
       if (isConsumable) {
-        // CONSUMABLE: Create consumption movement and decrement stock
+        // CONSUMABLE: Create "out" movement
+        // updateItemStock is automatically called by createInventoryMovement
+        // It will recalculate qty_on_hand (subtracting this "out") and qty_reserved (from remaining planned)
         await createInventoryMovement({
           item_id: consumable.inventory_item_id,
           type: "out",
@@ -127,35 +136,14 @@ export async function consumeReservedInventory(
           note: `Consommation intervention ${interventionNumber}`,
           status: "done",
         });
-
-        // Decrement both qty_on_hand and qty_reserved
-        await supabase
-          .from("inventory_items")
-          .update({
-            qty_on_hand: Math.max(0, (inventoryItem.qty_on_hand || 0) - consumable.quantity),
-            qty_reserved: Math.max(0, (inventoryItem.qty_reserved || 0) - consumable.quantity)
-          })
-          .eq("id", consumable.inventory_item_id);
+        // NO manual stock update needed - updateItemStock handles everything!
       } else {
-        // MATERIAL: Create return movement and only decrement qty_reserved (returns to stock)
-        await createInventoryMovement({
-          item_id: consumable.inventory_item_id,
-          type: "in", // Return/release
-          qty: consumable.quantity,
-          source: "intervention",
-          ref_id: interventionId,
-          ref_number: interventionNumber,
-          note: `Restitution matériel intervention ${interventionNumber}`,
-          status: "done",
-        });
-
-        // Only decrement qty_reserved - materials return to stock
-        await supabase
-          .from("inventory_items")
-          .update({
-            qty_reserved: Math.max(0, (inventoryItem.qty_reserved || 0) - consumable.quantity)
-          })
-          .eq("id", consumable.inventory_item_id);
+        // MATERIAL: No "in" movement - materials don't leave stock, they were just borrowed
+        // The planned reservation was already canceled above
+        // Just recalculate the stock/reserved quantities from movements
+        await updateItemStock(consumable.inventory_item_id, inventoryItem.company_id);
+        // This recalculates qty_reserved from remaining planned movements (now 0)
+        // and qty_on_hand stays the same (no "in" or "out" movement created)
       }
     }
   } catch (error) {
