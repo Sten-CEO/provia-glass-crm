@@ -27,12 +27,12 @@ serve(async (req) => {
     );
 
     // Récupérer la facture par token (accès public) - sans la jointure companies (pas de FK)
+    // Note: invoice_signatures removed since invoices are view-only (no signature functionality)
     const { data: invoice, error: invoiceError } = await supabase
       .from('factures')
       .select(`
         *,
-        clients:client_id (nom, email, telephone, adresse, company_id),
-        invoice_signatures(*)
+        clients:client_id (nom, email, telephone, adresse, company_id)
       `)
       .eq('token', token)
       .single();
@@ -131,7 +131,6 @@ serve(async (req) => {
             telephone: company?.telephone || '',
             adresse: company?.adresse || '',
           },
-          signature: invoice.invoice_signatures?.[0] || null,
         },
         pdf: {
           filename: pdfFilename,
