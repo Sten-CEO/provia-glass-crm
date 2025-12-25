@@ -123,6 +123,7 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
 
   // Bloquer l'accès UNIQUEMENT pour les OWNERS si leur abonnement n'est pas actif
   // Les membres ne sont JAMAIS bloqués - ils accèdent via l'abonnement du propriétaire
+  // v2.0 - Fix membre subscription check
   const isOwner = role === 'owner';
 
   if (isOwner && !isActive && !isBillingExempt && !location.pathname.startsWith('/employee')) {
