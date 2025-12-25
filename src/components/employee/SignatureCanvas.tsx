@@ -101,36 +101,14 @@ export const SignatureCanvas = ({
     try {
       setSaving(true);
 
-      // Convertir le canvas en blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob!), "image/png");
-      });
-
-      // Générer un nom de fichier unique
-      const timestamp = Date.now();
-      const fileName = `signature-${timestamp}.png`;
-      const filePath = `${jobId}/${fileName}`;
-
-      // Upload vers Supabase Storage bucket "signatures"
-      const { error: uploadError } = await supabase.storage
-        .from("signatures")
-        .upload(filePath, blob, {
-          contentType: "image/png",
-          cacheControl: "3600",
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Récupérer l'URL publique
-      const { data: { publicUrl } } = supabase.storage
-        .from("signatures")
-        .getPublicUrl(filePath);
+      // Convertir le canvas en data URL (base64) - plus fiable que le storage
+      const signatureDataUrl = canvas.toDataURL("image/png");
 
       // Enregistrer dans jobs (intervention) avec la nouvelle colonne signature_url
       const { error: jobError } = await supabase
         .from("jobs")
         .update({
-          signature_url: publicUrl,
+          signature_url: signatureDataUrl,
           signature_signer: signerName,
           signed_at: new Date().toISOString(),
         })
@@ -138,7 +116,7 @@ export const SignatureCanvas = ({
 
       if (jobError) throw jobError;
 
-      // Optionnel: Enregistrer aussi dans job_signatures pour historique détaillé
+      // Enregistrer aussi dans job_signatures pour historique détaillé
       const { error: sigError } = await supabase
         .from("job_signatures")
         .insert({
@@ -147,7 +125,7 @@ export const SignatureCanvas = ({
           company_id: companyId,
           signer_name: signerName,
           signer_email: signerEmail || null,
-          image_url: publicUrl,
+          image_url: signatureDataUrl,
           signed_at: new Date().toISOString(),
         });
 
