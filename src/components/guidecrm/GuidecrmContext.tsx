@@ -50,6 +50,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [tableExists, setTableExists] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null); // Track user role
 
   // =========================================
   // FETCH PROGRESS
@@ -69,20 +70,28 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
       setUserId(user.id);
       log('User ID:', user.id);
 
-      // Get user's company
-      const { data: userRole } = await supabase
+      // Get user's company and role
+      const { data: userRoleData } = await supabase
         .from('user_roles')
-        .select('company_id')
+        .select('company_id, role')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!userRole?.company_id) {
+      if (!userRoleData?.company_id) {
         log('No company found for user');
         setLoading(false);
         return;
       }
-      setCompanyId(userRole.company_id);
-      log('Company ID:', userRole.company_id);
+      setCompanyId(userRoleData.company_id);
+      setUserRole(userRoleData.role);
+      log('Company ID:', userRoleData.company_id, 'Role:', userRoleData.role);
+
+      // Only show onboarding for owners
+      if (userRoleData.role !== 'owner') {
+        log('User is not owner, skipping onboarding');
+        setLoading(false);
+        return;
+      }
 
       // Fetch or create onboarding progress
       // Use 'as any' to bypass TypeScript since table may not be in types yet
@@ -367,6 +376,11 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
       log('showGuide: false (no userId)');
       return false;
     }
+    // Don't show if user is not owner (only owners see onboarding)
+    if (userRole !== 'owner') {
+      log('showGuide: false (not owner)');
+      return false;
+    }
     // Don't show if onboarding is complete
     if (isOnboardingComplete) {
       log('showGuide: false (onboarding complete)');
@@ -390,7 +404,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
     }
     log('showGuide: true ✅');
     return true;
-  }, [loading, userId, isOnboardingComplete, dismissed]);
+  }, [loading, userId, userRole, isOnboardingComplete, dismissed]);
 
   // setShowGuide for compatibility (uses setDismissed internally)
   const setShowGuide = useCallback((value: boolean) => {
