@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FileText, Download, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { SignaturePad } from "@/components/signature/SignaturePad";
 
 interface InvoiceData {
   id: string;
@@ -25,10 +21,6 @@ interface InvoiceData {
     telephone: string;
     adresse: string;
   };
-  signature: {
-    signer_name: string;
-    signed_at: string;
-  } | null;
 }
 
 const PublicInvoiceView = () => {
@@ -39,13 +31,6 @@ const PublicInvoiceView = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-
-  // Signature form
-  const [signerName, setSignerName] = useState("");
-  const [signerEmail, setSignerEmail] = useState("");
-  const [signatureImage, setSignatureImage] = useState<string | null>(null);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [signing, setSigning] = useState(false);
 
   useEffect(() => {
     loadInvoice();
@@ -103,14 +88,6 @@ const PublicInvoiceView = () => {
         setPdfUrl(url);
       }
 
-      // Pré-remplir le nom et email du client
-      if (data.invoice.client_nom) {
-        setSignerName(data.invoice.client_nom);
-      }
-      if (data.invoice.client_email) {
-        setSignerEmail(data.invoice.client_email);
-      }
-
     } catch (error: any) {
       console.error('Error loading invoice:', error);
       setError(error.message || 'Erreur lors du chargement de la facture');
@@ -154,53 +131,6 @@ const PublicInvoiceView = () => {
     toast.success('Téléchargement de la facture en cours');
   };
 
-  const handleSign = async () => {
-    if (!signerName.trim()) {
-      toast.error('Veuillez entrer votre nom');
-      return;
-    }
-
-    if (!signatureImage) {
-      toast.error('Veuillez dessiner ou taper votre signature');
-      return;
-    }
-
-    if (!acceptTerms) {
-      toast.error('Veuillez accepter les conditions');
-      return;
-    }
-
-    setSigning(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('sign-invoice', {
-        body: {
-          token,
-          signerName: signerName.trim(),
-          signerEmail: signerEmail.trim() || undefined,
-          signatureImage: signatureImage,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      toast.success('Facture validée avec succès !');
-
-      // Recharger la facture
-      await loadInvoice();
-
-    } catch (error: any) {
-      console.error('Error signing invoice:', error);
-      toast.error(error.message || 'Erreur lors de la validation de la facture');
-    } finally {
-      setSigning(false);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR');
   };
@@ -242,8 +172,6 @@ const PublicInvoiceView = () => {
     return null;
   }
 
-  const isAlreadySigned = !!invoice.signature;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-slate-100 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -259,12 +187,7 @@ const PublicInvoiceView = () => {
               </p>
             </div>
             <div className="text-right">
-              {isAlreadySigned ? (
-                <div className="flex items-center gap-2 text-green-600 font-semibold">
-                  <CheckCircle className="h-5 w-5" />
-                  Validée
-                </div>
-              ) : invoice.statut === 'Payée' ? (
+              {invoice.statut === 'Payée' ? (
                 <div className="flex items-center gap-2 text-green-600 font-semibold">
                   <CheckCircle className="h-5 w-5" />
                   Payée
@@ -272,7 +195,7 @@ const PublicInvoiceView = () => {
               ) : (
                 <div className="flex items-center gap-2 text-orange-600 font-semibold">
                   <Clock className="h-5 w-5" />
-                  En attente
+                  En attente de paiement
                 </div>
               )}
             </div>
@@ -304,7 +227,7 @@ const PublicInvoiceView = () => {
         </div>
 
         {/* PDF Viewer */}
-        <div className="bg-white shadow-xl p-6 border-b">
+        <div className="bg-white rounded-b-lg shadow-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -327,87 +250,6 @@ const PublicInvoiceView = () => {
           ) : (
             <div className="p-8 text-center text-slate-500">
               Chargement du document...
-            </div>
-          )}
-        </div>
-
-        {/* Signature Section */}
-        <div className="bg-white rounded-b-lg shadow-xl p-8">
-          {isAlreadySigned ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <div className="flex items-start gap-4">
-                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="text-lg font-semibold text-green-800 mb-2">
-                    Facture validée électroniquement
-                  </h3>
-                  <p className="text-green-700 mb-1">
-                    <strong>Signataire :</strong> {invoice.signature.signer_name}
-                  </p>
-                  <p className="text-sm text-green-600">
-                    <strong>Date de validation :</strong> {formatDate(invoice.signature.signed_at)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">
-                Validation électronique
-              </h2>
-              <p className="text-slate-600 mb-6">
-                Pour valider la réception de cette facture, veuillez remplir les informations ci-dessous et signer électroniquement.
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="signerName">Nom et prénom *</Label>
-                  <Input
-                    id="signerName"
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    placeholder="Jean Dupont"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="signerEmail">Email (optionnel)</Label>
-                  <Input
-                    id="signerEmail"
-                    type="email"
-                    value={signerEmail}
-                    onChange={(e) => setSignerEmail(e.target.value)}
-                    placeholder="jean.dupont@example.com"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="pt-4">
-                  <SignaturePad onSignatureChange={setSignatureImage} />
-                </div>
-
-                <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border">
-                  <Checkbox
-                    id="accept"
-                    checked={acceptTerms}
-                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-                  />
-                  <Label htmlFor="accept" className="text-sm leading-relaxed cursor-pointer">
-                    Je confirme avoir reçu et vérifié cette facture.
-                    En signant électroniquement, j'accepte que cette validation ait la même valeur juridique qu'une signature manuscrite.
-                  </Label>
-                </div>
-
-                <Button
-                  onClick={handleSign}
-                  disabled={signing || !signerName.trim() || !signatureImage || !acceptTerms}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-6 text-lg"
-                  size="lg"
-                >
-                  {signing ? 'Validation en cours...' : 'Valider électroniquement'}
-                </Button>
-              </div>
             </div>
           )}
         </div>

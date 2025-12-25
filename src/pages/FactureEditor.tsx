@@ -317,7 +317,34 @@ export default function FactureEditor() {
     if (isNew) {
       const { data, error } = await supabase.from("factures").insert([payload]).select().single();
       if (error) {
-        toast.error("Erreur de création");
+        console.error("Invoice creation error:", error);
+        // Handle duplicate numero error (409 Conflict / unique constraint)
+        if (error.code === "23505" || error.message?.includes("duplicate") || error.message?.includes("unique")) {
+          // Generate a new number and retry
+          try {
+            const newNum = await new Promise<string>((resolve, reject) => {
+              generateNumberMutation.mutate(undefined, {
+                onSuccess: resolve,
+                onError: reject,
+              });
+            });
+            payload.numero = newNum;
+            const { data: retryData, error: retryError } = await supabase.from("factures").insert([payload]).select().single();
+            if (retryError) {
+              toast.error("Erreur de création: " + retryError.message);
+              return;
+            }
+            setFacture((f) => ({ ...f, id: retryData.id, numero: newNum }));
+            toast.success("Facture créée avec le numéro " + newNum);
+            guidecrmInvoiceCreated();
+            navigate(`/factures/${retryData.id}`);
+            return;
+          } catch (genError) {
+            toast.error("Erreur lors de la génération d'un nouveau numéro");
+            return;
+          }
+        }
+        toast.error("Erreur de création: " + error.message);
         return;
       }
       setFacture((f) => ({ ...f, id: data.id }));
@@ -343,10 +370,37 @@ export default function FactureEditor() {
     } else {
       const { error } = await supabase.from("factures").update(payload).eq("id", facture.id);
       if (error) {
-        toast.error("Erreur de sauvegarde");
+        toast.error("Erreur de sauvegarde: " + error.message);
         return;
       }
       toast.success("Facture sauvegardée");
+    }
+  };
+
+  const handleSendEmail = async () => {
+    // First check if the invoice has been saved
+    if (isNew || !facture.id) {
+      toast.error("Veuillez d'abord enregistrer la facture");
+      return;
+    }
+
+    if (!clientInfo?.email) {
+      toast.error("Le client n'a pas d'adresse email");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-invoice-email", {
+        body: { invoiceId: facture.id },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Facture envoyée par email à " + clientInfo.email);
+    } catch (error: any) {
+      console.error("Error sending invoice:", error);
+      toast.error(error.message || "Erreur lors de l'envoi de la facture");
     }
   };
 
@@ -376,7 +430,7 @@ export default function FactureEditor() {
           >
             <FileText className="h-4 w-4 mr-2" /> PDF
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleSendEmail}>
             <Mail className="h-4 w-4 mr-2" /> Envoyer
           </Button>
           <Button onClick={handleSave} data-onboarding="btn-save-facture">
