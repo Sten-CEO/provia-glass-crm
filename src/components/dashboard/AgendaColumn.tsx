@@ -51,6 +51,7 @@ export const AgendaColumn = () => {
       .from('agenda_events' as any)
       .select('*')
       .eq('company_id', companyId)
+      .neq('status', 'terminé') // Exclude completed appointments
       .gte('start_at', now.toISOString())
       .lte('start_at', nextWeek.toISOString())
       .order('start_at');

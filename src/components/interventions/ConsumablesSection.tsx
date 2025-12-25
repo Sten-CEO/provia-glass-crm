@@ -114,6 +114,8 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
   };
 
   const updateLine = async (lineId: string, field: string, value: any) => {
+    const line = lines.find(l => l.id === lineId);
+
     const { error } = await supabase
       .from("intervention_consumables")
       .update({ [field]: value })
@@ -122,6 +124,42 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     if (error) {
       toast.error("Erreur lors de la mise à jour");
       return;
+    }
+
+    // If quantity is being updated and this line has an inventory item, update the reservation
+    if (field === "quantity" && line?.inventory_item_id && interventionId) {
+      const oldQty = line.quantity || 1;
+      const newQty = value || 1;
+      const qtyDiff = newQty - oldQty;
+
+      if (qtyDiff !== 0) {
+        // Update the planned inventory movement qty
+        await supabase
+          .from("inventory_movements")
+          .update({ qty: newQty })
+          .eq("ref_id", interventionId)
+          .eq("item_id", line.inventory_item_id)
+          .eq("status", "planned");
+
+        // Update the reserved quantity on the inventory item
+        const { data: item } = await supabase
+          .from("inventory_items")
+          .select("qty_reserved")
+          .eq("id", line.inventory_item_id)
+          .single();
+
+        if (item) {
+          await supabase
+            .from("inventory_items")
+            .update({
+              qty_reserved: Math.max(0, (item.qty_reserved || 0) + qtyDiff)
+            })
+            .eq("id", line.inventory_item_id);
+        }
+
+        // Reload inventory items to show updated availability
+        loadInventoryItems();
+      }
     }
 
     setLines(lines.map(l => l.id === lineId ? { ...l, [field]: value } : l));
