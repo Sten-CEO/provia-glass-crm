@@ -101,6 +101,8 @@ export async function syncQuoteInventoryStatus(
 
 /**
  * When an intervention linked to a quote is completed, consume stock and release reservations
+ * - Consumables: decrement both qty_on_hand and qty_reserved
+ * - Materials: only decrement qty_reserved (they return to stock)
  */
 export async function consumeQuoteInventory(
   quoteId: string,
@@ -119,35 +121,61 @@ export async function consumeQuoteInventory(
       .eq("type", "reserve")
       .eq("status", "planned");
 
-    // For each item: create consumption movement and update stock + reserved
+    // For each item: check type and handle accordingly
     for (const [itemId, qty] of Object.entries(desiredByItem)) {
-      // Fetch stock
+      // Fetch stock AND type
       const { data: item } = await supabase
         .from("inventory_items")
-        .select("qty_on_hand, qty_reserved")
+        .select("qty_on_hand, qty_reserved, type")
         .eq("id", itemId)
         .single();
 
       if (!item) continue;
 
-      await createInventoryMovement({
-        item_id: itemId,
-        type: "out",
-        qty: Number(qty),
-        source: "intervention",
-        ref_id: interventionId,
-        ref_number: interventionNumber,
-        note: `Consommation intervention ${interventionNumber}`,
-        status: "done",
-      });
+      const isConsumable = item.type === "consommable";
 
-      await supabase
-        .from("inventory_items")
-        .update({
-          qty_on_hand: Math.max(0, (item.qty_on_hand || 0) - Number(qty)),
-          qty_reserved: Math.max(0, (item.qty_reserved || 0) - Number(qty)),
-        })
-        .eq("id", itemId);
+      if (isConsumable) {
+        // CONSUMABLE: Create consumption movement and decrement stock
+        await createInventoryMovement({
+          item_id: itemId,
+          type: "out",
+          qty: Number(qty),
+          source: "intervention",
+          ref_id: interventionId,
+          ref_number: interventionNumber,
+          note: `Consommation intervention ${interventionNumber}`,
+          status: "done",
+        });
+
+        // Decrement both qty_on_hand and qty_reserved
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_on_hand: Math.max(0, (item.qty_on_hand || 0) - Number(qty)),
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - Number(qty)),
+          })
+          .eq("id", itemId);
+      } else {
+        // MATERIAL: Create return movement, only decrement qty_reserved (returns to stock)
+        await createInventoryMovement({
+          item_id: itemId,
+          type: "in", // Return/release
+          qty: Number(qty),
+          source: "intervention",
+          ref_id: interventionId,
+          ref_number: interventionNumber,
+          note: `Restitution matériel intervention ${interventionNumber}`,
+          status: "done",
+        });
+
+        // Only decrement qty_reserved - materials return to stock
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - Number(qty)),
+          })
+          .eq("id", itemId);
+      }
     }
 
     return { success: true, message: "Stock consommé" };
