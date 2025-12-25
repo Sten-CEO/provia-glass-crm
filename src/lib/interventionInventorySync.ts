@@ -60,6 +60,8 @@ export async function reserveInventoryForIntervention(
 
 /**
  * Convert planned reservations to actual consumption when intervention is completed
+ * - Consumables: decrement both qty_on_hand and qty_reserved
+ * - Materials: only decrement qty_reserved (they return to stock)
  */
 export async function consumeReservedInventory(
   interventionId: string,
@@ -102,31 +104,56 @@ export async function consumeReservedInventory(
     for (const consumable of consumables || []) {
       if (!consumable.inventory_item_id) continue;
 
-      // Create consumption movement
-      await createInventoryMovement({
-        item_id: consumable.inventory_item_id,
-        type: "out",
-        qty: consumable.quantity,
-        source: "intervention",
-        ref_id: interventionId,
-        ref_number: interventionNumber,
-        note: `Consommation intervention ${interventionNumber}`,
-        status: "done",
-      });
-
-      // Update stock quantities
-      const { data: item } = await supabase
+      // Get item type to differentiate consumables from materials
+      const { data: inventoryItem } = await supabase
         .from("inventory_items")
-        .select("qty_on_hand, qty_reserved")
+        .select("type, qty_on_hand, qty_reserved")
         .eq("id", consumable.inventory_item_id)
         .single();
 
-      if (item) {
+      if (!inventoryItem) continue;
+
+      const isConsumable = inventoryItem.type === "consommable";
+
+      if (isConsumable) {
+        // CONSUMABLE: Create consumption movement and decrement stock
+        await createInventoryMovement({
+          item_id: consumable.inventory_item_id,
+          type: "out",
+          qty: consumable.quantity,
+          source: "intervention",
+          ref_id: interventionId,
+          ref_number: interventionNumber,
+          note: `Consommation intervention ${interventionNumber}`,
+          status: "done",
+        });
+
+        // Decrement both qty_on_hand and qty_reserved
         await supabase
           .from("inventory_items")
           .update({
-            qty_on_hand: Math.max(0, item.qty_on_hand - consumable.quantity),
-            qty_reserved: Math.max(0, item.qty_reserved - consumable.quantity)
+            qty_on_hand: Math.max(0, (inventoryItem.qty_on_hand || 0) - consumable.quantity),
+            qty_reserved: Math.max(0, (inventoryItem.qty_reserved || 0) - consumable.quantity)
+          })
+          .eq("id", consumable.inventory_item_id);
+      } else {
+        // MATERIAL: Create return movement and only decrement qty_reserved (returns to stock)
+        await createInventoryMovement({
+          item_id: consumable.inventory_item_id,
+          type: "in", // Return/release
+          qty: consumable.quantity,
+          source: "intervention",
+          ref_id: interventionId,
+          ref_number: interventionNumber,
+          note: `Restitution matériel intervention ${interventionNumber}`,
+          status: "done",
+        });
+
+        // Only decrement qty_reserved - materials return to stock
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_reserved: Math.max(0, (inventoryItem.qty_reserved || 0) - consumable.quantity)
           })
           .eq("id", consumable.inventory_item_id);
       }

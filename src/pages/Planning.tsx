@@ -118,7 +118,7 @@ const Planning = () => {
       start: `${job.date}T${job.heure_debut || "09:00"}`,
       end: `${job.date}T${job.heure_fin || "17:00"}`,
       resourceId: job.employe_id,
-      backgroundColor: job.statut === "Terminé" ? "#10b981" : job.statut === "En cours" ? "#3b82f6" : "#6b7280",
+      backgroundColor: job.statut === "Terminée" ? "#10b981" : job.statut === "En cours" ? "#3b82f6" : "#6b7280",
     }));
     
     setEvents(formattedEvents);
@@ -265,7 +265,7 @@ const Planning = () => {
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="À faire">À faire</SelectItem>
                 <SelectItem value="En cours">En cours</SelectItem>
-                <SelectItem value="Terminé">Terminé</SelectItem>
+                <SelectItem value="Terminée">Terminée</SelectItem>
               </SelectContent>
             </Select>
           </div>
