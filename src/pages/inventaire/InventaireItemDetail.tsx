@@ -77,6 +77,7 @@ const InventaireItemDetail = () => {
     const newQty = (item.qty_on_hand || 0) + qty;
 
     const { error: moveError } = await supabase.from("inventory_movements").insert({
+      company_id: item.company_id,
       item_id: id,
       type,
       source: "manuel",
