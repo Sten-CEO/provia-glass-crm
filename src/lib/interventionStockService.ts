@@ -75,7 +75,22 @@ export async function completeInterventionStock(
         status: "done",
         date: new Date().toISOString(),
       });
-      // NO manual stock update needed - createInventoryMovement handles it!
+
+      // Also decrement qty_reserved since the planned reservation is now consumed
+      const { data: item } = await supabase
+        .from("inventory_items")
+        .select("qty_reserved")
+        .eq("id", movement.item_id)
+        .single();
+
+      if (item) {
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - movement.qty),
+          })
+          .eq("id", movement.item_id);
+      }
     } else {
       // MATERIAL: Just unreserve - NO stock movement needed
       // Materials were never "out" of stock, just reserved/borrowed
