@@ -180,13 +180,6 @@ const Equipe = () => {
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newMember.email)) {
-      toast.error("Format d'email invalide");
-      return;
-    }
-
     if (!company?.id) {
       console.error("❌ [Equipe] Cannot create member: company is undefined", company);
       toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
