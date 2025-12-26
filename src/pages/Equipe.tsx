@@ -186,9 +186,26 @@ const Equipe = () => {
       return;
     }
 
-    // BILLING: Include owner in seat count (owner = 1 seat + team members)
-    const currentTotalSeats = team.length + 1; // +1 for the owner
-    const newTotalSeats = currentTotalSeats + 1; // +1 for the new member
+    // Check if email already exists in equipe table (across all companies for security)
+    const { data: existingMember, error: checkError } = await supabase
+      .from("equipe")
+      .select("id, email")
+      .eq("email", newMember.email.toLowerCase().trim())
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking email:", checkError);
+      toast.error("Erreur lors de la vérification de l'email");
+      return;
+    }
+
+    if (existingMember) {
+      toast.error("Cet email est déjà utilisé par un autre membre. Veuillez utiliser une adresse email différente.");
+      return;
+    }
+
+    const currentMemberCount = team.length;
+    const newTotalMembers = currentMemberCount + 1;
 
     // If adding this member will exceed seat limit, show confirmation
     if (newTotalSeats > seatsAvailable) {
