@@ -103,22 +103,22 @@ export function initializeInventoryEventHandlers() {
     }
   });
 
-  // Job completed: convert planned to actual outputs
+  // Job completed: stock processing is now handled directly in the UI code
+  // (consumeReservedInventory) with proper idempotency checks.
+  // This event is kept for potential notifications/logging only.
   eventBus.on(EVENTS.JOB_COMPLETED, async (data: { jobId: string }) => {
-    try {
-      await convertPlannedToOut(data.jobId, "intervention");
-    } catch (error) {
-      console.error("Error handling JOB_COMPLETED:", error);
-    }
+    // NO-OP: Stock is already processed by consumeReservedInventory
+    // which is called directly before this event is emitted.
+    // Do NOT call convertPlannedToOut here - it would cause double deduction!
+    console.log(`[JOB_COMPLETED] Event received for job ${data.jobId} - stock already processed`);
   });
 
-  // Job canceled: cancel planned movements
+  // Job canceled: stock reservations are now handled directly in the UI code
+  // (cancelInventoryReservations) which is called before this event is emitted.
+  // This event is kept for potential notifications/logging only.
   eventBus.on(EVENTS.JOB_CANCELED, async (data: { jobId: string }) => {
-    try {
-      await cancelPlannedMovements(data.jobId, "intervention");
-    } catch (error) {
-      console.error("Error handling JOB_CANCELED:", error);
-    }
+    // NO-OP: Reservations are already canceled by cancelInventoryReservations
+    console.log(`[JOB_CANCELED] Event received for job ${data.jobId} - reservations already canceled`);
   });
 
   // Purchase received is handled directly in the purchase module
