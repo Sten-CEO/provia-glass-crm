@@ -62,9 +62,29 @@ export async function createInventoryMovement(params: CreateMovementParams) {
 
   if (movementError) throw movementError;
 
-  // Update stock if movement is done
+  // Update stock if movement is done - use simple increment/decrement
+  // instead of recalculating from all movements (which destroys manual initial stock)
   if (status === "done") {
-    await updateItemStock(item_id, company_id);
+    const { data: currentItem } = await supabase
+      .from("inventory_items")
+      .select("qty_on_hand")
+      .eq("id", item_id)
+      .single();
+
+    if (currentItem) {
+      let newStock = currentItem.qty_on_hand || 0;
+      if (type === "in") {
+        newStock += qty;
+      } else if (type === "out") {
+        newStock -= qty;
+      }
+      // reserve and expected_out don't affect qty_on_hand
+
+      await supabase
+        .from("inventory_items")
+        .update({ qty_on_hand: newStock })
+        .eq("id", item_id);
+    }
   }
 
   return movement;
