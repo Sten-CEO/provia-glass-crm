@@ -172,8 +172,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     const line = lines.find(l => l.id === lineId);
     const qty = line?.quantity || 1;
 
-    // If the line already had a different inventory item, clean up the old reservation first
-    if (line?.inventory_item_id && line.inventory_item_id !== itemId && interventionId) {
+    // SKIP if same item already selected (prevent duplicates)
+    if (line?.inventory_item_id === itemId) {
+      console.log("Item already selected, skipping");
+      return;
+    }
+
+    // ALWAYS cancel any existing planned movements for this line first
+    if (line?.inventory_item_id && interventionId) {
       // Cancel old planned movement
       await supabase
         .from("inventory_movements")
@@ -182,7 +188,7 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         .eq("item_id", line.inventory_item_id)
         .eq("status", "planned");
 
-      // Reduce qty_reserved on old item
+      // Get fresh qty_reserved and reduce it
       const { data: oldItem } = await supabase
         .from("inventory_items")
         .select("qty_reserved")
@@ -199,8 +205,52 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
       }
     }
 
-    // Calculate available stock
-    const available = (item.qty_on_hand || 0) - (item.qty_reserved || 0);
+    // Also cancel any existing planned movements for THIS NEW item on this intervention
+    // (in case of duplicates from previous bugs)
+    if (interventionId) {
+      const { data: existingMovements } = await supabase
+        .from("inventory_movements")
+        .select("id, qty")
+        .eq("ref_id", interventionId)
+        .eq("item_id", itemId)
+        .eq("status", "planned");
+
+      if (existingMovements && existingMovements.length > 0) {
+        // Cancel them and reduce qty_reserved
+        for (const mov of existingMovements) {
+          await supabase
+            .from("inventory_movements")
+            .update({ status: "canceled" })
+            .eq("id", mov.id);
+        }
+
+        // Get fresh qty_reserved
+        const { data: freshItem } = await supabase
+          .from("inventory_items")
+          .select("qty_reserved")
+          .eq("id", itemId)
+          .single();
+
+        if (freshItem) {
+          const totalToRemove = existingMovements.reduce((sum, m) => sum + (m.qty || 0), 0);
+          await supabase
+            .from("inventory_items")
+            .update({
+              qty_reserved: Math.max(0, (freshItem.qty_reserved || 0) - totalToRemove)
+            })
+            .eq("id", itemId);
+        }
+      }
+    }
+
+    // Calculate available stock (get fresh data)
+    const { data: freshItemData } = await supabase
+      .from("inventory_items")
+      .select("qty_on_hand, qty_reserved")
+      .eq("id", itemId)
+      .single();
+
+    const available = (freshItemData?.qty_on_hand || 0) - (freshItemData?.qty_reserved || 0);
 
     // Check stock availability - block for materials, warn for consumables
     if (available < qty) {
@@ -247,6 +297,9 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     }
 
     // Different logic for consumables vs materials
+    // IMPORTANT: Use freshItemData.qty_reserved, not item.qty_reserved (which could be stale)
+    const currentQtyReserved = freshItemData?.qty_reserved || 0;
+
     if (itemCategory === "consumable") {
       // Consumables: create planned_deduction (will decrement stock when intervention completes)
       await supabase.from("inventory_movements").insert([{
@@ -261,14 +314,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         scheduled_at: interventionDate,
       }]);
 
-      // Update reserved quantity for planned consumables too
+      // Update reserved quantity for planned consumables too (use fresh data)
       await supabase
         .from("inventory_items")
-        .update({ 
-          qty_reserved: (item.qty_reserved || 0) + qty 
+        .update({
+          qty_reserved: currentQtyReserved + qty
         })
         .eq("id", itemId);
-      
+
       toast.success(`Consommable ajouté - À prévoir le ${new Date(interventionDate).toLocaleDateString()}`);
     } else {
       // Materials: reserve immediately (won't decrement stock, will be returned)
@@ -284,11 +337,11 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         scheduled_at: interventionDate,
       }]);
 
-      // Reserve the stock
+      // Reserve the stock (use fresh data)
       await supabase
         .from("inventory_items")
-        .update({ 
-          qty_reserved: (item.qty_reserved || 0) + qty 
+        .update({
+          qty_reserved: currentQtyReserved + qty
         })
         .eq("id", itemId);
 

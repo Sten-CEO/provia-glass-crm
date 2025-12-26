@@ -6,7 +6,7 @@ import { Edit, FileText, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { completeInterventionStock, cancelInterventionStock } from "@/lib/interventionStockService";
+import { consumeReservedInventory, cancelInventoryReservations } from "@/lib/interventionInventorySync";
 import { eventBus, EVENTS } from "@/lib/eventBus";
 
 interface InterventionDataTabProps {
@@ -32,7 +32,7 @@ export function InterventionDataTab({ job, onUpdate }: InterventionDataTabProps)
 
     // Process stock: consume consumables, return materials
     try {
-      await completeInterventionStock(
+      await consumeReservedInventory(
         job.id,
         job.intervention_number || "INT-" + job.id
       );
@@ -68,10 +68,7 @@ export function InterventionDataTab({ job, onUpdate }: InterventionDataTabProps)
     }
 
     try {
-      await cancelInterventionStock(
-        job.id,
-        job.intervention_number || "INT-" + job.id
-      );
+      await cancelInventoryReservations(job.id);
       
       // Log action
       await supabase.from("intervention_logs").insert({
