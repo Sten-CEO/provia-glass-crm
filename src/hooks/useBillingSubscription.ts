@@ -33,18 +33,21 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
       setLoading(true);
       setError(null);
 
-      // If ownerUserId is provided, use it. Otherwise, get the current user.
-      let userId = ownerUserId;
-
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setSubscription(null);
-          setLoading(false);
-          return;
-        }
-        userId = user.id;
+      // IMPORTANT: Only check subscription if ownerUserId is explicitly provided
+      // This prevents the bug where members are blocked because the hook
+      // falls back to checking their own subscription (which doesn't exist)
+      // Members should only be checked via their company owner's subscription
+      if (!ownerUserId) {
+        // No ownerUserId provided - don't block access
+        // The AuthGuard handles this case with its own logic
+        console.log('[Billing] No ownerUserId provided, skipping subscription check');
+        setSubscription(null);
+        setLoading(false);
+        return;
       }
+
+      console.log('[Billing] Checking subscription for owner:', ownerUserId);
+      const userId = ownerUserId;
 
       // Fetch subscription from billing_subscriptions table
       const { data, error: fetchError } = await supabase
@@ -67,6 +70,7 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
         return;
       }
 
+      console.log('[Billing] Subscription data for owner', ownerUserId, ':', data);
       setSubscription(data as BillingSubscription | null);
     } catch (err) {
       console.error('[Billing] Unexpected error:', err);
@@ -99,22 +103,59 @@ export function useBillingSubscription(ownerUserId?: string): UseBillingSubscrip
 /**
  * Get the owner user ID for a company
  * This is needed because billing is tied to the owner, not individual users
+ * Uses companies.owner_id as the source of truth
  */
 export async function getCompanyOwnerUserId(companyId: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase
+    console.log('[Billing] Getting owner for company:', companyId);
+
+    // Use RPC function that bypasses RLS to get the owner
+    // This is necessary because members can't see other users' roles due to RLS
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_company_owner_user_id', { p_company_id: companyId });
+
+    console.log('[Billing] RPC get_company_owner_user_id result:', { rpcData, rpcError });
+
+    if (rpcData) {
+      console.log('[Billing] Found owner from RPC:', rpcData);
+      return rpcData;
+    }
+
+    if (rpcError) {
+      console.warn('[Billing] RPC failed, falling back to direct queries:', rpcError.message);
+    }
+
+    // Fallback: try user_roles directly (may work depending on RLS)
+    const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('company_id', companyId)
       .eq('role', 'owner')
       .maybeSingle();
 
-    if (error || !data) {
-      console.error('[Billing] Error getting company owner:', error);
-      return null;
+    console.log('[Billing] user_roles owner result:', { roleData, roleError });
+
+    if (roleData?.user_id) {
+      console.log('[Billing] Found owner from user_roles:', roleData.user_id);
+      return roleData.user_id;
     }
 
-    return data.user_id;
+    // Last fallback: try companies.owner_id
+    const { data, error } = await supabase
+      .from('companies')
+      .select('owner_id')
+      .eq('id', companyId)
+      .maybeSingle();
+
+    console.log('[Billing] companies.owner_id result:', { data, error });
+
+    if (data?.owner_id) {
+      console.log('[Billing] Found owner_id from companies:', data.owner_id);
+      return data.owner_id;
+    }
+
+    console.error('[Billing] Could not find company owner from any source');
+    return null;
   } catch (err) {
     console.error('[Billing] Unexpected error getting company owner:', err);
     return null;

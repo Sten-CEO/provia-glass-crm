@@ -44,9 +44,11 @@ export function useUserRole(): UserRoleData {
         .single();
 
       if (userRole) {
+        console.log('[useUserRole] User role data:', { userId: user.id, role: userRole.role, companyId: userRole.company_id });
         setRole(userRole.role as UserRole);
         setCompanyId(userRole.company_id);
       } else {
+        console.log('[useUserRole] No role found for user:', user.id);
         setRole(null);
         setCompanyId(null);
       }

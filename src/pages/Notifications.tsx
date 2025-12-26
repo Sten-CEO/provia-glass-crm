@@ -178,8 +178,8 @@ export default function Notifications() {
                         <h3 className={`text-base ${!notification.read_at ? 'font-semibold' : 'font-medium'}`}>
                           {notification.title}
                         </h3>
-                        <Badge className={getNotificationBadgeColor(notification.kind)}>
-                          {notification.kind.replace('_', ' ')}
+                        <Badge className={getNotificationBadgeColor(notification.kind || '')}>
+                          {(notification.kind || 'info').replace('_', ' ')}
                         </Badge>
                         {!notification.read_at && (
                           <Badge variant="default" className="ml-auto">Nouveau</Badge>

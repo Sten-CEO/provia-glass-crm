@@ -208,7 +208,7 @@ const Equipe = () => {
     const newTotalMembers = currentMemberCount + 1;
 
     // If adding this member will exceed seat limit, show confirmation
-    if (newTotalMembers > seatsAvailable) {
+    if (newTotalSeats > seatsAvailable) {
       setBillingConfirmOpen(true);
       return;
     }
@@ -296,6 +296,19 @@ const Equipe = () => {
       window.dispatchEvent(new Event('company-updated'));
       setTimeout(() => loadTeam(), 1000);
 
+      // BILLING: Update seats after successful member creation (upgrade)
+      // New total = current team + owner + new member = team.length + 1 + 1
+      if (ownerUserId) {
+        const newTotalSeats = team.length + 1 + 1; // team.length is before the new member was added to state
+        const billingResult = await updateBillingSeats(ownerUserId, newTotalSeats);
+
+        if (billingResult.success) {
+          await refreshSubscription();
+        } else {
+          console.warn("[Billing] Failed to update seats after creation:", billingResult.error);
+        }
+      }
+
       setCreatedMemberEmail(newMember.email);
       setTemporaryPassword(tempPassword);
       setCreatedMemberRole(newMember.role);
@@ -372,9 +385,10 @@ const Equipe = () => {
     }
 
     // BILLING: Update seats after successful member deletion (downgrade)
+    // After deletion: (team.length - 1) members + 1 owner = team.length total seats
     if (ownerUserId) {
-      const newTotalMembers = Math.max(1, team.length - 1); // At least 1 seat
-      const billingResult = await updateBillingSeats(ownerUserId, newTotalMembers);
+      const newTotalSeats = Math.max(1, team.length); // At least 1 seat (owner always counts)
+      const billingResult = await updateBillingSeats(ownerUserId, newTotalSeats);
 
       if (billingResult.success) {
         // Refresh subscription data
@@ -934,7 +948,7 @@ const Equipe = () => {
               <div className="p-3 bg-muted rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
                   <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                  <span>Membres actuels: {team.length}</span>
+                  <span>Personnes actuelles: {team.length + 1}</span> {/* +1 for owner */}
                 </div>
                 <div className="flex items-center gap-2 text-sm mt-1">
                   <CreditCard className="h-4 w-4 text-primary" />
