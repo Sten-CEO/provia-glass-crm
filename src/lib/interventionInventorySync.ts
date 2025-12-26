@@ -104,9 +104,6 @@ export async function consumeReservedInventory(
       .eq("status", "planned")
       .in("type", ["reserve", "out"]);
 
-    // Import updateItemStock for materials (which don't create movements)
-    const { updateItemStock } = await import("./inventoryMovements");
-
     // Create actual consumption movements
     for (const consumable of consumables || []) {
       if (!consumable.inventory_item_id) continue;
@@ -123,9 +120,8 @@ export async function consumeReservedInventory(
       const isConsumable = inventoryItem.type === "consommable";
 
       if (isConsumable) {
-        // CONSUMABLE: Create "out" movement
-        // updateItemStock is automatically called by createInventoryMovement
-        // It will recalculate qty_on_hand (subtracting this "out") and qty_reserved (from remaining planned)
+        // CONSUMABLE: Create "out" movement - decrements stock
+        // createInventoryMovement with status "done" automatically decrements qty_on_hand
         await createInventoryMovement({
           item_id: consumable.inventory_item_id,
           type: "out",
@@ -136,14 +132,25 @@ export async function consumeReservedInventory(
           note: `Consommation intervention ${interventionNumber}`,
           status: "done",
         });
-        // NO manual stock update needed - updateItemStock handles everything!
+        // NO manual stock update needed - createInventoryMovement handles it!
       } else {
-        // MATERIAL: No "in" movement - materials don't leave stock, they were just borrowed
+        // MATERIAL: No stock movement - materials don't leave stock, they were just borrowed
         // The planned reservation was already canceled above
-        // Just recalculate the stock/reserved quantities from movements
-        await updateItemStock(consumable.inventory_item_id, inventoryItem.company_id);
-        // This recalculates qty_reserved from remaining planned movements (now 0)
-        // and qty_on_hand stays the same (no "in" or "out" movement created)
+        // Just unreserve the material (decrement qty_reserved)
+        const { data: item } = await supabase
+          .from("inventory_items")
+          .select("qty_reserved")
+          .eq("id", consumable.inventory_item_id)
+          .single();
+
+        if (item) {
+          await supabase
+            .from("inventory_items")
+            .update({
+              qty_reserved: Math.max(0, (item.qty_reserved || 0) - consumable.quantity),
+            })
+            .eq("id", consumable.inventory_item_id);
+        }
       }
     }
   } catch (error) {

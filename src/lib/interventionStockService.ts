@@ -63,6 +63,7 @@ export async function completeInterventionStock(
 
     if (isConsumable) {
       // CONSUMABLE: Convert planned to actual consumption - decrements stock
+      // createInventoryMovement with status "done" automatically decrements qty_on_hand
       await createInventoryMovement({
         item_id: movement.item_id,
         type: "out",
@@ -74,36 +75,10 @@ export async function completeInterventionStock(
         status: "done",
         date: new Date().toISOString(),
       });
-
-      // Decrement stock
-      const { data: item } = await supabase
-        .from("inventory_items")
-        .select("qty_on_hand")
-        .eq("id", movement.item_id)
-        .single();
-
-      if (item) {
-        await supabase
-          .from("inventory_items")
-          .update({
-            qty_on_hand: Math.max(0, (item.qty_on_hand || 0) - movement.qty),
-          })
-          .eq("id", movement.item_id);
-      }
+      // NO manual stock update needed - createInventoryMovement handles it!
     } else {
-      // MATERIAL: Create return/release movement - unreserve only, NO stock deduction
-      await createInventoryMovement({
-        item_id: movement.item_id,
-        type: "in", // Return/release
-        qty: movement.qty,
-        source: "intervention",
-        ref_id: interventionId,
-        ref_number: interventionNumber,
-        note: `Restitution matériel intervention ${interventionNumber}`,
-        status: "done",
-        date: new Date().toISOString(),
-      });
-
+      // MATERIAL: Just unreserve - NO stock movement needed
+      // Materials were never "out" of stock, just reserved/borrowed
       // Unreserve the material (no stock change)
       const { data: item } = await supabase
         .from("inventory_items")
