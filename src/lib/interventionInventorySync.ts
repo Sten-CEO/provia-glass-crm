@@ -72,6 +72,21 @@ export async function consumeReservedInventory(
   interventionNumber: string
 ) {
   try {
+    // IDEMPOTENCY CHECK: Skip if already processed (done "out" movements exist)
+    const { data: existingDoneMovements } = await supabase
+      .from("inventory_movements")
+      .select("id")
+      .eq("source", "intervention")
+      .eq("ref_id", interventionId)
+      .eq("status", "done")
+      .eq("type", "out")
+      .limit(1);
+
+    if (existingDoneMovements && existingDoneMovements.length > 0) {
+      console.log(`[consumeReservedInventory] Already processed for ${interventionId}, skipping`);
+      return;
+    }
+
     // First, check if this intervention is linked to a quote
     const { data: intervention } = await supabase
       .from("jobs")
