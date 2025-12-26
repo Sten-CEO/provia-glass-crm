@@ -478,6 +478,24 @@ const AchatEditor = () => {
         return;
       }
 
+      // Cancel existing planned movements for this purchase first
+      if (company?.id) {
+        const { data: existingMovements } = await supabase
+          .from("inventory_movements")
+          .select("id, status")
+          .eq("source", "achat")
+          .eq("ref_id", id)
+          .eq("company_id", company.id);
+
+        if (existingMovements && existingMovements.length > 0) {
+          for (const m of existingMovements) {
+            if (m.status === "planned") {
+              await cancelMovement(m.id);
+            }
+          }
+        }
+      }
+
       // Créer un mouvement d'entrée par ligne reçue (>0)
       for (const item of formData.items) {
         const qty = Number(item.qty_received) || 0;

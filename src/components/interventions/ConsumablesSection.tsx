@@ -172,6 +172,33 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     const line = lines.find(l => l.id === lineId);
     const qty = line?.quantity || 1;
 
+    // If the line already had a different inventory item, clean up the old reservation first
+    if (line?.inventory_item_id && line.inventory_item_id !== itemId && interventionId) {
+      // Cancel old planned movement
+      await supabase
+        .from("inventory_movements")
+        .update({ status: "canceled" })
+        .eq("ref_id", interventionId)
+        .eq("item_id", line.inventory_item_id)
+        .eq("status", "planned");
+
+      // Reduce qty_reserved on old item
+      const { data: oldItem } = await supabase
+        .from("inventory_items")
+        .select("qty_reserved")
+        .eq("id", line.inventory_item_id)
+        .single();
+
+      if (oldItem) {
+        await supabase
+          .from("inventory_items")
+          .update({
+            qty_reserved: Math.max(0, (oldItem.qty_reserved || 0) - (line.quantity || 1))
+          })
+          .eq("id", line.inventory_item_id);
+      }
+    }
+
     // Calculate available stock
     const available = (item.qty_on_hand || 0) - (item.qty_reserved || 0);
 
