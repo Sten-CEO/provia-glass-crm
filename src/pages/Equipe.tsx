@@ -180,9 +180,34 @@ const Equipe = () => {
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newMember.email)) {
+      toast.error("Format d'email invalide");
+      return;
+    }
+
     if (!company?.id) {
       console.error("❌ [Equipe] Cannot create member: company is undefined", company);
       toast.error("Erreur: Aucune entreprise sélectionnée. Veuillez rafraîchir la page.");
+      return;
+    }
+
+    // Check if email already exists in equipe table (across all companies for security)
+    const { data: existingMember, error: checkError } = await supabase
+      .from("equipe")
+      .select("id, email")
+      .eq("email", newMember.email.toLowerCase().trim())
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking email:", checkError);
+      toast.error("Erreur lors de la vérification de l'email");
+      return;
+    }
+
+    if (existingMember) {
+      toast.error("Cet email est déjà utilisé par un autre membre. Veuillez utiliser une adresse email différente.");
       return;
     }
 
