@@ -96,13 +96,13 @@ export async function consumeReservedInventory(
 
     if (error) throw error;
 
-    // Cancel planned reservations (both reserve and out types)
+    // Cancel planned reservations (reserve, out, and expected_out types)
     await supabase
       .from("inventory_movements")
       .update({ status: "canceled" })
       .eq("ref_id", interventionId)
       .eq("status", "planned")
-      .in("type", ["reserve", "out"]);
+      .in("type", ["reserve", "out", "expected_out"]);
 
     // Create actual consumption movements
     for (const consumable of consumables || []) {
@@ -132,7 +132,22 @@ export async function consumeReservedInventory(
           note: `Consommation intervention ${interventionNumber}`,
           status: "done",
         });
-        // NO manual stock update needed - createInventoryMovement handles it!
+
+        // Also decrement qty_reserved since the planned reservation is now consumed
+        const { data: item } = await supabase
+          .from("inventory_items")
+          .select("qty_reserved")
+          .eq("id", consumable.inventory_item_id)
+          .single();
+
+        if (item) {
+          await supabase
+            .from("inventory_items")
+            .update({
+              qty_reserved: Math.max(0, (item.qty_reserved || 0) - consumable.quantity),
+            })
+            .eq("id", consumable.inventory_item_id);
+        }
       } else {
         // MATERIAL: No stock movement - materials don't leave stock, they were just borrowed
         // The planned reservation was already canceled above
@@ -216,7 +231,7 @@ export async function rescheduleInventoryReservations(
       .update({ scheduled_at: newScheduledDate })
       .eq("ref_id", interventionId)
       .eq("status", "planned")
-      .in("type", ["reserve", "out"]);
+      .in("type", ["reserve", "out", "expected_out"]);
   } catch (error) {
     console.error("Error rescheduling reservations:", error);
     throw error;
