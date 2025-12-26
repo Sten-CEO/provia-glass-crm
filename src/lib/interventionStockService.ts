@@ -22,7 +22,8 @@ export async function completeInterventionStock(
   interventionId: string,
   interventionNumber: string
 ): Promise<void> {
-  // Get all consumables/materials for this intervention
+  // Get all consumables/materials for this intervention from intervention_consumables
+  // This is the single source of truth for what was actually used
   const { data: items, error } = await supabase
     .from("intervention_consumables")
     .select("*")
@@ -35,39 +36,35 @@ export async function completeInterventionStock(
 
   if (!items || items.length === 0) return;
 
-  // Get planned movements for this intervention
-  const { data: plannedMovements } = await supabase
+  // Cancel ALL planned movements for this intervention first (to prevent duplicates)
+  await supabase
     .from("inventory_movements")
-    .select("*")
+    .update({ status: "canceled" })
     .eq("source", "intervention")
     .eq("ref_id", interventionId)
     .eq("status", "planned");
 
-  if (!plannedMovements || plannedMovements.length === 0) return;
+  // Process each item from intervention_consumables (not from movements)
+  for (const consumable of items) {
+    if (!consumable.inventory_item_id) continue;
 
-  for (const movement of plannedMovements) {
     // Get item type from inventory_items
-    const { data: item } = await supabase
+    const { data: inventoryItem } = await supabase
       .from("inventory_items")
       .select("type")
-      .eq("id", movement.item_id)
+      .eq("id", consumable.inventory_item_id)
       .single();
 
-    const isConsumable = item?.type === "consommable";
+    if (!inventoryItem) continue;
 
-    // Mark planned movement as canceled
-    await supabase
-      .from("inventory_movements")
-      .update({ status: "canceled" })
-      .eq("id", movement.id);
+    const isConsumable = inventoryItem.type === "consommable";
 
     if (isConsumable) {
       // CONSUMABLE: Convert planned to actual consumption - decrements stock
-      // createInventoryMovement with status "done" automatically decrements qty_on_hand
       await createInventoryMovement({
-        item_id: movement.item_id,
+        item_id: consumable.inventory_item_id,
         type: "out",
-        qty: movement.qty,
+        qty: consumable.quantity,
         source: "intervention",
         ref_id: interventionId,
         ref_number: interventionNumber,
@@ -80,34 +77,32 @@ export async function completeInterventionStock(
       const { data: item } = await supabase
         .from("inventory_items")
         .select("qty_reserved")
-        .eq("id", movement.item_id)
+        .eq("id", consumable.inventory_item_id)
         .single();
 
       if (item) {
         await supabase
           .from("inventory_items")
           .update({
-            qty_reserved: Math.max(0, (item.qty_reserved || 0) - movement.qty),
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - consumable.quantity),
           })
-          .eq("id", movement.item_id);
+          .eq("id", consumable.inventory_item_id);
       }
     } else {
       // MATERIAL: Just unreserve - NO stock movement needed
-      // Materials were never "out" of stock, just reserved/borrowed
-      // Unreserve the material (no stock change)
       const { data: item } = await supabase
         .from("inventory_items")
         .select("qty_reserved")
-        .eq("id", movement.item_id)
+        .eq("id", consumable.inventory_item_id)
         .single();
 
       if (item) {
         await supabase
           .from("inventory_items")
           .update({
-            qty_reserved: Math.max(0, (item.qty_reserved || 0) - movement.qty),
+            qty_reserved: Math.max(0, (item.qty_reserved || 0) - consumable.quantity),
           })
-          .eq("id", movement.item_id);
+          .eq("id", consumable.inventory_item_id);
       }
     }
   }
