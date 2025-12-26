@@ -22,6 +22,21 @@ export async function completeInterventionStock(
   interventionId: string,
   interventionNumber: string
 ): Promise<void> {
+  // IDEMPOTENCY CHECK: Skip if already processed (done "out" movements exist)
+  const { data: existingDoneMovements } = await supabase
+    .from("inventory_movements")
+    .select("id")
+    .eq("source", "intervention")
+    .eq("ref_id", interventionId)
+    .eq("status", "done")
+    .eq("type", "out")
+    .limit(1);
+
+  if (existingDoneMovements && existingDoneMovements.length > 0) {
+    console.log(`[completeInterventionStock] Already processed for ${interventionId}, skipping`);
+    return;
+  }
+
   // Get all consumables/materials for this intervention from intervention_consumables
   // This is the single source of truth for what was actually used
   const { data: items, error } = await supabase
