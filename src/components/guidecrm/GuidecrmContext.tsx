@@ -99,7 +99,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
         .from('onboarding_progress' as any)
         .select('*')
         .eq('user_id', user.id)
-        .eq('company_id', userRole.company_id)
+        .eq('company_id', userRoleData.company_id)
         .maybeSingle() as any);
 
       if (fetchError) {
@@ -132,7 +132,7 @@ export function GuidecrmProvider({ children }: GuidecrmProviderProps) {
           .from('onboarding_progress' as any)
           .insert({
             user_id: user.id,
-            company_id: userRole.company_id,
+            company_id: userRoleData.company_id,
           })
           .select()
           .single() as any);
