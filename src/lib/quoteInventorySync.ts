@@ -114,6 +114,21 @@ export async function consumeQuoteInventory(
   interventionNumber: string
 ) {
   try {
+    // IDEMPOTENCY CHECK: Skip if already processed (done "out" movements exist for this intervention)
+    const { data: existingDoneMovements } = await supabase
+      .from("inventory_movements")
+      .select("id")
+      .eq("source", "intervention")
+      .eq("ref_id", interventionId)
+      .eq("status", "done")
+      .eq("type", "out")
+      .limit(1);
+
+    if (existingDoneMovements && existingDoneMovements.length > 0) {
+      console.log(`[consumeQuoteInventory] Already processed for ${interventionId}, skipping`);
+      return { success: true, message: "Déjà traité" };
+    }
+
     const lines = await fetchQuoteInventoryLines(quoteId);
     const desiredByItem = await aggregateDesiredReservations(lines);
 
