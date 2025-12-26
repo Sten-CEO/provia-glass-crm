@@ -297,6 +297,9 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
     }
 
     // Different logic for consumables vs materials
+    // IMPORTANT: Use freshItemData.qty_reserved, not item.qty_reserved (which could be stale)
+    const currentQtyReserved = freshItemData?.qty_reserved || 0;
+
     if (itemCategory === "consumable") {
       // Consumables: create planned_deduction (will decrement stock when intervention completes)
       await supabase.from("inventory_movements").insert([{
@@ -311,14 +314,14 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         scheduled_at: interventionDate,
       }]);
 
-      // Update reserved quantity for planned consumables too
+      // Update reserved quantity for planned consumables too (use fresh data)
       await supabase
         .from("inventory_items")
-        .update({ 
-          qty_reserved: (item.qty_reserved || 0) + qty 
+        .update({
+          qty_reserved: currentQtyReserved + qty
         })
         .eq("id", itemId);
-      
+
       toast.success(`Consommable ajouté - À prévoir le ${new Date(interventionDate).toLocaleDateString()}`);
     } else {
       // Materials: reserve immediately (won't decrement stock, will be returned)
@@ -334,11 +337,11 @@ export function ConsumablesSection({ interventionId }: ConsumablesSectionProps) 
         scheduled_at: interventionDate,
       }]);
 
-      // Reserve the stock
+      // Reserve the stock (use fresh data)
       await supabase
         .from("inventory_items")
-        .update({ 
-          qty_reserved: (item.qty_reserved || 0) + qty 
+        .update({
+          qty_reserved: currentQtyReserved + qty
         })
         .eq("id", itemId);
 
